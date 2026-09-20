@@ -101,8 +101,8 @@ def render(math_data):
         if target_value == 0:
             target_value = 1.0
             
-        line_color = st.get_option("theme.primaryColor") or "#FFFFFF"
-        bg_color = st.get_option("theme.backgroundColor") or "#0041BA"
+        line_color = st.get_option("theme.primaryColor") or "#000000"
+        bg_color = st.get_option("theme.backgroundColor") or "#FFFFFF"
 
         fig = go.Figure()
         x_lines, y_lines = [], []
