@@ -120,8 +120,8 @@ def render(
     pos2 = generate_positions(nodes, lengths2, directions2)
 
     # Tema-inställningar från Streamlit
-    line_color = st.get_option("theme.primaryColor") or "#FFFFFF"
-    bg_color = st.get_option("theme.backgroundColor") or "#0041BA"
+    line_color = st.get_option("theme.primaryColor") 
+    bg_color = st.get_option("theme.backgroundColor") 
 
     # Skapa figuren med subplots
     fig = make_subplots(
