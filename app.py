@@ -128,7 +128,7 @@ def render_tab_iso(math_data):
 
         rotate_fig2 = st.checkbox("Rotate", value=False)
         show_nodes = st.checkbox("Nodes", value=False)
-        node_size = st.slider("Node size", 1, 3, 0)
+        node_size = st.slider("Node size", 1, 3, 1)
         linewidth = st.slider("Line width", 0.1, 1.0, 0.3, 0.1)     
 
     with col_plot:
