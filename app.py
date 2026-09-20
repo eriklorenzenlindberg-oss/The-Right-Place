@@ -105,7 +105,7 @@ tab_iso, tab_circles, tab_rect, tab_pyr = st.tabs(
         "n-face",
         "1-faces",
         "2-faces",
-        "3-faces",
+       # "3-faces",
     ],
     on_change="rerun", 
     key="main_navigation_tabs"
