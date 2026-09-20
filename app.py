@@ -6,7 +6,7 @@ import rectangles
 import pyramid
 import sympy as sp
 
-st.subheader("THE RIGHT PLACE")
+st.subheader("The Right Place")
 
 # --------------------------------------------------
 # 1. BYGG GRÄNSSNITTET MED STREAMLITS INBYGGDA INSTÄLLNINGAR
