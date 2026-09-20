@@ -6,7 +6,7 @@ import rectangles
 import pyramid
 import sympy as sp
 
-st.title.latex(r"\text{THE RIGHT PLACE}")
+st.title.("THE RIGHT PLACE")
 
 st.sidebar.latex(r"\text{THE RIGHT PLACE}")
 
