@@ -168,7 +168,7 @@ def render(math_data):
 
         fig.add_trace(go.Scatter(
             x=x_lines, y=y_lines, mode="lines", 
-            line=dict(color=line_color, width=0.5), 
+            line=dict(color=line_color, width=0.3), 
             hoverinfo="skip", showlegend=False
         ))
         
