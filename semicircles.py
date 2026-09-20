@@ -138,7 +138,7 @@ def render(math_data):
                 
                 fig.add_trace(go.Scatter(
                     x=cx, y=cy, mode="none", fill="toself",
-                    fillcolor="rgba(255, 255, 255, 1.0)",
+                    fillcolor="rgba(0, 0, 0, 1.0)",
                     hoverinfo="skip", showlegend=False
                 ))
                 
