@@ -11,10 +11,10 @@ def render(math_data):
     n, v_num = math_data["n"], math_data["v_numeric"]
     powers = [math_data["numeric_powers"][k] for k in range(len(math_data["numeric_powers"]))]
     
-    line_color = st.get_option("theme.primaryColor") or "#FFFFFF"
+    line_color = st.get_option("theme.primaryColor") or "#000000"
     
     # KORRIGERING: Här är raden som saknades i mitt förra block!
-    bg_color = st.get_option("theme.backgroundColor") or "#0041BA"
+    bg_color = st.get_option("theme.backgroundColor") or "#FFFFFF"
     
     rotate = st.checkbox("Rotate", value=False)
     
