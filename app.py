@@ -172,6 +172,6 @@ with tab_rect:
     if tab_rect.open:
         render_tab_rect(math_data)
 
-with tab_pyr:
+#with tab_pyr:
     if tab_pyr.open:
         render_tab_pyr(math_data)
