@@ -8,8 +8,6 @@ import sympy as sp
 
 st.title("THE RIGHT PLACE")
 
-st.sidebar.latex(r"\text{THE RIGHT PLACE}")
-
 # --------------------------------------------------
 # 1. BYGG GRÄNSSNITTET MED STREAMLITS INBYGGDA INSTÄLLNINGAR
 # --------------------------------------------------
