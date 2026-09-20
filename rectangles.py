@@ -111,7 +111,7 @@ def render(math_data):
     # --------------------------------------------------
     # BYGG PLOTLY-GRAFEN (Endast TVÅ traces totalt)
     # --------------------------------------------------
-    fig.add_trace(go.Scatter(x=x_lines, y=y_lines, mode="lines", line=dict(color=line_color, width=1), hoverinfo="skip", showlegend=False))
+    fig.add_trace(go.Scatter(x=x_lines, y=y_lines, mode="lines", line=dict(color=line_color, width=0.5), hoverinfo="skip", showlegend=False))
     
     fig.add_trace(go.Scatter(
         x=x_texts, y=y_texts, text=text_labels, mode="text",
