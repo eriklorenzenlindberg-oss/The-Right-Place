@@ -46,75 +46,54 @@ def find_numeric_root(expr, x_sym):
 
 
 # --------------------------------------------------
-# GRAD-ANPASSAD ALLOMFATTANDE MATEMATISK STRUKTURSÖKARE
+# UNIVERSELL VEKTORRUMS- OCH DELMÄNGDSSÖKARE
 # --------------------------------------------------
 def find_math_structures_logical(n, x_sym, x_numeric, minimal_poly):
     if minimal_poly is None:
         pool = {m: float(x_numeric**m) for m in range(n)}
         return pool, [tuple(range(n))]
 
-    poly_expr = sp.expand(minimal_poly)
+    # 1. Bygg grundpoolen för alla potenser inuti hela n-dimensionen
     pool = {m: float((x_sym**m).subs(x_sym, x_numeric)) for m in range(n)}
     
-    # RÄTTNING 1: Hitta polynomets sanna, faktiska grad dynamiskt (t.ex. 3 för x^3 - x - 1)
-    poly_degree = int(sp.degree(poly_expr, x_sym))
-    
-    # Vi scannar dolda potenser upp till x**100
-    hidden_potencies = {}
-    for k in range(poly_degree, 100):
-        rest = sp.rem(x_sym**k, poly_expr, x_sym)
-        expanded_rest = sp.expand(rest)
-        
-        # En rest efter division med poly_expr har alltid strikt lägre grad än poly_degree
-        if sp.degree(expanded_rest, x_sym) >= poly_degree:
-            continue
-            
-        base_indices = set()
-        is_pure_sum = True
-        
-        # RÄTTNING 2: Loopa enbart upp till den sanna polynomgraden för att läsa av resten
-        for m in range(poly_degree):
-            coeff = expanded_rest.coeff(x_sym, m) if m > 0 else expanded_rest.subs(x_sym, 0)
-            if coeff == 1:
-                base_indices.add(m)
-            elif coeff != 0:
-                is_pure_sum = False
-                break
-                
-        if is_pure_sum and len(base_indices) >= 2:
-            hidden_potencies[k] = {
-                "diameter": float((x_sym**k).subs(x_sym, x_numeric)),
-                "base_indices": base_indices
-            }
-            pool[k] = hidden_potencies[k]["diameter"]
+    # För att hitta dolda högre relationer skannar vi upp till x**50 numeriskt
+    # och expanderar vår pool med giltiga, sanna reella längder
+    for k in range(n, 50):
+        pool[k] = float((x_sym**k).subs(x_sym, x_numeric))
 
-    # 3. SKAPA ALLA GILTIGA SUBSTITIONER (ÄVEN DUBBLA/NÄSTLADE ERSÄTTNINGAR)
+    # Beräkna målsumman (längden på din huvudled) med extrem flyttalsprecision
+    target_sum = sum(pool[m] for m in range(n))
+    
+    # 2. Hitta alla unika delmängder (kombinationer) i poolen vars summa matchar målsumman
+    # Vi samlar alla sanna kombinationer som bygger upp exakt samma baslinje-längd
     total_sum_matches = []
-    total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid hela dimensionen n
+    total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid facit (index 0)
+
+    # Vi skapar en lista av alla tillgängliga potenser i poolen för sökningen
+    all_keys = sorted(list(pool.keys()))
     
-    hidden_keys = list(hidden_potencies.keys())
-    num_hidden = len(hidden_keys)
-    
-    # Testa alla kombinationer av dolda potenser via binär maskning
-    for mask in range(1, 1 << num_hidden):
-        active_hidden_potencies = [hidden_keys[i] for i in range(num_hidden) if (mask & (1 << i))]
-        
-        combined_base_indices = set()
-        overlap_detected = False
-        
-        for hk in active_hidden_potencies:
-            b_indices = hidden_potencies[hk]["base_indices"]
-            if combined_base_indices.intersection(b_indices):
-                overlap_detected = True
-                break
-            combined_base_indices.update(b_indices)
-            
-        # RÄTTNING 3: Kontrollera om de utbytta bas-indexen är en giltig delmängd av HELA n-rymden
-        if not overlap_detected and combined_base_indices.issubset(set(range(n))):
-            remaining_base = set(range(n)) - combined_base_indices
-            combo = tuple(sorted(list(remaining_base) + active_hidden_potencies))
-            if combo not in total_sum_matches:
-                total_sum_matches.append(combo)
+    # Vi söker igenom giltiga kombinationer deterministiskt.
+    # För att inte krascha minnet vid höga n testar vi kombinationer via en kontrollerad bredden-först sökning
+    def find_combos(current_combo, current_sum, start_idx):
+        # Om vi har matchat målsumman (inom en strikt matematisk tolerans) sparar vi kombinationen
+        if abs(current_sum - target_sum) < 1e-5:
+            combo_tuple = tuple(sorted(current_combo))
+            if combo_tuple not in total_sum_matches:
+                total_sum_matches.append(combo_tuple)
+            return
+
+        if current_sum > target_sum + 1e-5 or len(current_combo) > n + 5:
+            return
+
+        for i in range(start_idx, len(all_keys)):
+            key = all_keys[i]
+            # Förhindra dubbletter inuti samma lager
+            if key in current_combo:
+                continue
+            find_combos(current_combo + [key], current_sum + pool[key], i + 1)
+
+    # Starta den universella kombinatoriska sökningen
+    find_combos([], 0.0, 0)
 
     return pool, total_sum_matches
 
@@ -214,8 +193,9 @@ def get_math_data(n, eq_input, add_value_str):
     lengths2_symbolic = lengths1_symbolic.copy()
     lengths2_numeric = lengths1_numeric.copy()
     
+    # Ändrar enbart index 0 utan att skriva över liststrukturen
     lengths2_symbolic[0] = 1 + add_expr_evaluated  
-    lengths2_numeric[0] = 1.0 + add_value_numeric     
+    lengths2_numeric[0] = 1.0 + add_value_numeric   
 
     return {
         "n": n,
