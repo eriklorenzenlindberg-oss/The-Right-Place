@@ -26,9 +26,10 @@ def format_label(power, is_fig2=False):
 
 
 # --------------------------------------------------
-# GEOMETRI OCH HYPERKUB-LOGIK
+# GEOMETRI OCH HYPERKUB-LOGIK (CACHE-OPTIMERAD)
 # --------------------------------------------------
 
+@st.cache_data # Sparar kubstrukturen i minnet så att den inte beräknas om vid varje slider-drag
 def generate_ncube_graph(n):
     nodes = list(itertools.product([0, 1], repeat=n))
     edges = []
@@ -87,207 +88,206 @@ def calculate_bounds(pos1, pos2):
 
 
 # --------------------------------------------------
-# RENDER (Subplots med Convex Hull-baserad märkning)
+# RENDER (Självständig modul med inbyggda kontroller)
 # --------------------------------------------------
 
-def render(
-    math_data,
-    linewidth,
-    node_size,
-    show_nodes,
-    rotate_fig2,
-):
+def render(math_data): # <--- Tar nu endast emot math_data!
     n = math_data["n"]
     lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
 
-    nodes, edges = generate_ncube_graph(n)
-
-    # 1. Beräkna kameragränser baserat på omaroterat utgångsläge
-    base_directions = generate_directions(n, offset_deg=0.0)
-    pos1_base = generate_positions(nodes, lengths1, base_directions)
-    pos2_base = generate_positions(nodes, lengths2, base_directions)
-    xmin, xmax, ymin, ymax = calculate_bounds(pos1_base, pos2_base)
-
-    # 2. Beräkna de faktiska positionerna för ritningen
-    directions1 = generate_directions(n, offset_deg=0.0)
+    # --- DIAGRAMSPECIFIKA KONTROLLER (Flyttade från app.py) ---
+    col_plot, col_controls = st.columns([7, 1])
     
-    # Rotera endast om checkboxen är aktiv
-    rotation_offset = (-180.0 / n) if rotate_fig2 else 0.0
-    directions2 = generate_directions(n, offset_deg=rotation_offset)
+    with col_controls:
+        st.text(" ")
+        st.text(" ")
+        st.text(" ")
+        st.text(" ")
+        st.text(" ")
+        st.text(" ")
 
-    pos1 = generate_positions(nodes, lengths1, directions1)
-    pos2 = generate_positions(nodes, lengths2, directions2)
+        rotate_fig2 = st.checkbox("Rotate", value=False, key="iso_rotate")
+        show_nodes = st.checkbox("Nodes", value=False, key="iso_nodes")
+        node_size = st.slider("Node size", 1, 3, 1, key="iso_node_size")
+        linewidth = st.slider("Line width", 0.1, 1.0, 0.3, 0.1, key="iso_linewidth")     
 
-    # Tema-inställningar från Streamlit
-    line_color = "#000000"
-    bg_color = "#FFFFFF" 
+    with col_plot:
+        # Hämtas nu blixtsnabbt från cachen eller beräknas om bara om n ändras
+        nodes, edges = generate_ncube_graph(n)
 
-    # Skapa figuren med subplots
-    fig = make_subplots(
-        rows=1, 
-        cols=2, 
-        shared_yaxes=True, 
-        horizontal_spacing=0.05
-    )
+        # 1. Beräkna kameragränser baserat på omaroterat utgångsläge
+        base_directions = generate_directions(n, offset_deg=0.0)
+        pos1_base = generate_positions(nodes, lengths1, base_directions)
+        pos2_base = generate_positions(nodes, lengths2, base_directions)
+        xmin, xmax, ymin, ymax = calculate_bounds(pos1_base, pos2_base)
 
-    # --- PANEL 1: FIGUR 1 (Vänster) ---
-    x1_lines, y1_lines = [], []
-    for a, b in edges:
-        pa, pb = pos1[a], pos1[b]
-        x1_lines.extend([pa[0], pb[0], None])
-        y1_lines.extend([pa[1], pb[1], None])
+        # 2. Beräkna de faktiska positionerna för ritningen
+        directions1 = generate_directions(n, offset_deg=0.0)
+        
+        # Rotera endast om checkboxen är aktiv
+        rotation_offset = (-180.0 / n) if rotate_fig2 else 0.0
+        directions2 = generate_directions(n, offset_deg=rotation_offset)
 
-    fig.add_trace(
-        go.Scatter(
-            x=x1_lines, y=y1_lines, mode="lines",
-            line=dict(color=line_color, width=linewidth),
-            hoverinfo="none"
-        ),
-        row=1, col=1
-    )
+        pos1 = generate_positions(nodes, lengths1, directions1)
+        pos2 = generate_positions(nodes, lengths2, directions2)
 
-    if show_nodes:
+        # Fasta färg-inställningar (Svart/Vit)
+        line_color = "#000000"
+        bg_color = "#FFFFFF" 
+
+        # Skapa figuren med subplots
+        fig = make_subplots(
+            rows=1, 
+            cols=2, 
+            shared_yaxes=True, 
+            horizontal_spacing=0.05
+        )
+
+        # --- PANEL 1: FIGUR 1 (Vänster) ---
+        x1_lines, y1_lines = [], []
+        for a, b in edges:
+            pa, pb = pos1[a], pos1[b]
+            x1_lines.extend([pa[0], pb[0], None])
+            y1_lines.extend([pa[1], pb[1], None])
+
         fig.add_trace(
             go.Scatter(
-                x=[pos1[node][0] for node in nodes], y=[pos1[node][1] for node in nodes],
-                mode="markers", marker=dict(color=line_color, size=node_size),
+                x=x1_lines, y=y1_lines, mode="lines",
+                line=dict(color=line_color, width=linewidth),
                 hoverinfo="none"
             ),
             row=1, col=1
         )
 
-    # --- PANEL 2: FIGUR 2 (Höger) ---
-    x2_lines, y2_lines = [], []
-    for a, b in edges:
-        pa, pb = pos2[a], pos2[b]
-        x2_lines.extend([pa[0], pb[0], None])
-        y2_lines.extend([pa[1], pb[1], None])
+        if show_nodes:
+            fig.add_trace(
+                go.Scatter(
+                    x=[pos1[node][0] for node in nodes], y=[pos1[node][1] for node in nodes],
+                    mode="markers", marker=dict(color=line_color, size=node_size),
+                    hoverinfo="none"
+                ),
+                row=1, col=1
+            )
 
-    fig.add_trace(
-        go.Scatter(
-            x=x2_lines, y=y2_lines, mode="lines",
-            line=dict(color=line_color, width=linewidth),
-            hoverinfo="none"
-        ),
-        row=1, col=2
-    )
+        # --- PANEL 2: FIGUR 2 (Höger) ---
+        x2_lines, y2_lines = [], []
+        for a, b in edges:
+            pa, pb = pos2[a], pos2[b]
+            x2_lines.extend([pa[0], pb[0], None])
+            y2_lines.extend([pa[1], pb[1], None])
 
-    if show_nodes:
         fig.add_trace(
             go.Scatter(
-                x=[pos2[node][0] for node in nodes], y=[pos2[node][1] for node in nodes],
-                mode="markers", marker=dict(color=line_color, size=node_size),
+                x=x2_lines, y=y2_lines, mode="lines",
+                line=dict(color=line_color, width=linewidth),
                 hoverinfo="none"
             ),
             row=1, col=2
         )
 
-    # --- FUNKTION FÖR ANNOTATIONER VIA CONVEX HULL ---
-    def add_contour_annotations(positions, col_idx):
-        # Extrahera alla 2D-punkter till en numpy-matris för ConvexHull
-        node_list = list(positions.keys())
-        points = np.array([positions[node] for node in node_list])
-        
-        try:
-            # Beräkna det konvexa höljet (silhuetten) runt alla punkter
-            hull = ConvexHull(points)
+        if show_nodes:
+            fig.add_trace(
+                go.Scatter(
+                    x=[pos2[node][0] for node in nodes], y=[pos2[node][1] for node in nodes],
+                    mode="markers", marker=dict(color=line_color, size=node_size),
+                    hoverinfo="none"
+                ),
+                row=1, col=2
+            )
+
+        # --- FUNKTION FÖR ANNOTATIONER VIA CONVEX HULL ---
+        def add_contour_annotations(positions, col_idx):
+            node_list = list(positions.keys())
+            points = np.array([positions[node] for node in node_list])
             
-            # Identifiera de yttre linjesegmenten
-            hull_edges = set()
-            for simplex in hull.simplices:
-                node_a = node_list[simplex[0]]
-                node_b = node_list[simplex[1]]
-                hull_edges.add(tuple(sorted([node_a, node_b])))
-        except Exception:
-            return
+            try:
+                hull = ConvexHull(points)
+                hull_edges = set()
+                for simplex in hull.simplices:
+                    node_a = node_list[simplex[0]]
+                    node_b = node_list[simplex[1]]
+                    hull_edges.add(tuple(sorted([node_a, node_b])))
+            except Exception:
+                return
 
-        # Samla giltiga ytterkanter som existerar i vår hyperkubs-graf
-        outer_edge_data = []
-        for a, b in edges:
-            edge_key = tuple(sorted([a, b]))
-            if edge_key in hull_edges:
-                # Identifiera dimensionen (k)
-                dim_k = -1
-                for k in range(n):
-                    if a[k] != b[k]:
-                        dim_k = k
-                        break
+            outer_edge_data = []
+            for a, b in edges:
+                edge_key = tuple(sorted([a, b]))
+                if edge_key in hull_edges:
+                    dim_k = -1
+                    for k in range(n):
+                        if a[k] != b[k]:
+                            dim_k = k
+                            break
+                    
+                    pa, pb = positions[a], positions[b]
+                    midpoint = (pa + pb) / 2.0
+                    
+                    outer_edge_data.append({
+                        'dim': dim_k,
+                        'pa': pa,
+                        'pb': pb,
+                        'midpoint': midpoint
+                    })
+
+            annotated_dimensions = set()
+            x_ref_target = "x" if col_idx == 1 else "x2"
+            y_ref_target = "y"
+            is_fig2 = (col_idx == 2)
+
+            for edge in outer_edge_data:
+                dim_k = edge['dim']
+                if dim_k in annotated_dimensions:
+                    continue
                 
-                pa, pb = positions[a], positions[b]
-                midpoint = (pa + pb) / 2.0
+                pa, pb = edge['pa'], edge['pb']
+                midpoint = edge['midpoint']
+                edge_vector = pb - pa
+                edge_len = np.linalg.norm(edge_vector)
                 
-                outer_edge_data.append({
-                    'dim': dim_k,
-                    'pa': pa,
-                    'pb': pb,
-                    'midpoint': midpoint
-                })
+                if edge_len > 0:
+                    T = edge_vector / edge_len
+                    N = np.array([-T[1], T[0]])
+                    if np.dot(midpoint, N) < 0:
+                        N = -N
+                    
+                    anno_pos = midpoint + N * 0.5
+                    
+                    fig.add_annotation(
+                        x=anno_pos[0],
+                        y=anno_pos[1],
+                        text=format_label(dim_k, is_fig2=is_fig2),
+                        showarrow=False,
+                        font=dict(color=line_color, size=10),
+                        xref=x_ref_target,
+                        yref=y_ref_target
+                    )
+                    annotated_dimensions.add(dim_k)
 
-        # Annotera exakt en ytterkant per dimension
-        annotated_dimensions = set()
-        x_ref_target = "x" if col_idx == 1 else "x2"
-        y_ref_target = "y"
-        is_fig2 = (col_idx == 2)
+        # Kör Convex Hull-märkningen för båda panelerna separat
+        add_contour_annotations(pos1, col_idx=1)
+        add_contour_annotations(pos2, col_idx=2)
 
-        for edge in outer_edge_data:
-            dim_k = edge['dim']
+        # --- LAYOUT OCH ABSOLUT AXELLÅSNING ---
+        fig.update_layout(
+            plot_bgcolor=bg_color,
+            paper_bgcolor=bg_color,
+            showlegend=False,
+            margin=dict(l=10, r=10, t=10, b=10),
+            dragmode=False,
             
-            if dim_k in annotated_dimensions:
-                continue
+            xaxis=dict(visible=False, range=[xmin, xmax], scaleanchor="y", scaleratio=1),
+            xaxis2=dict(visible=False, range=[xmin, xmax], scaleanchor="y2", scaleratio=1),
             
-            pa, pb = edge['pa'], edge['pb']
-            midpoint = edge['midpoint']
-            edge_vector = pb - pa
-            edge_len = np.linalg.norm(edge_vector)
-            
-            if edge_len > 0:
-                # Vinkelrät normalvektor utåt
-                T = edge_vector / edge_len
-                N = np.array([-T[1], T[0]])
-                
-                # Eftersom figuren är centrerad runt (0,0) pekar vi bort från origo
-                if np.dot(midpoint, N) < 0:
-                    N = -N
-                
-                # Applicera offset på 0.5 vinkelrätt utåt
-                anno_pos = midpoint + N * 0.5
-                
-                fig.add_annotation(
-                    x=anno_pos[0],
-                    y=anno_pos[1],
-                    text=format_label(dim_k, is_fig2=is_fig2),  # Skickar med flagga för Figur 2
-                    showarrow=False,
-                    font=dict(color=line_color, size=10),
-                    xref=x_ref_target,
-                    yref=y_ref_target
-                )
-                
-                annotated_dimensions.add(dim_k)
+            yaxis=dict(visible=False, range=[ymin, ymax]),
+            yaxis2=dict(visible=False, range=[ymin, ymax])
+        )
 
-    # Kör Convex Hull-märkningen för båda panelerna separat
-    add_contour_annotations(pos1, col_idx=1)
-    add_contour_annotations(pos2, col_idx=2)
+        fig.update_xaxes(matches='x')
 
-    # --- LAYOUT OCH ABSOLUT AXELLÅSNING ---
-    fig.update_layout(
-        plot_bgcolor=bg_color,
-        paper_bgcolor=bg_color,
-        showlegend=False,
-        margin=dict(l=10, r=10, t=10, b=10),
-        dragmode=False,
-        
-        xaxis=dict(visible=False, range=[xmin, xmax], scaleanchor="y", scaleratio=1),
-        xaxis2=dict(visible=False, range=[xmin, xmax], scaleanchor="y2", scaleratio=1),
-        
-        yaxis=dict(visible=False, range=[ymin, ymax]),
-        yaxis2=dict(visible=False, range=[ymin, ymax])
-    )
-
-    fig.update_xaxes(matches='x')
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True,
-        key="iso_subplots"
-    )
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            key="iso_subplots"
+        )
