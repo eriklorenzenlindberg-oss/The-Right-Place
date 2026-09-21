@@ -96,7 +96,7 @@ def render(math_data):
         return
 
     # Breddförhållande för kolumnerna
-    col_plot, col_controls = st.columns()
+    col_plot, col_controls = st.columns([6, 3])
     
     with col_controls:
         max_overlap = False
