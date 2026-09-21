@@ -129,5 +129,4 @@ def render_tab_iso(math_data):
 # --------------------------------------------------
 
 with tab_iso:
-    if tab_iso.open:
         render_tab_iso(math_data)
