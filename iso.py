@@ -29,7 +29,7 @@ def format_label(power, is_fig2=False):
 # GEOMETRI OCH HYPERKUB-LOGIK (CACHE-OPTIMERAD)
 # --------------------------------------------------
 
-@st.cache_data # Sparar kubstrukturen i minnet så att den inte beräknas om vid varje slider-drag
+@st.cache_data
 def generate_ncube_graph(n):
     nodes = list(itertools.product([0, 1], repeat=n))
     edges = []
@@ -91,12 +91,12 @@ def calculate_bounds(pos1, pos2):
 # RENDER (Självständig modul med inbyggda kontroller)
 # --------------------------------------------------
 
-def render(math_data): # <--- Tar nu endast emot math_data!
+def render(math_data):
     n = math_data["n"]
     lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
 
-    # --- DIAGRAMSPECIFIKA KONTROLLER (Flyttade från app.py) ---
+    # --- DIAGRAMSPECIFIKA KONTROLLER ---
     col_plot, col_controls = st.columns([7, 1])
     
     with col_controls:
@@ -112,8 +112,10 @@ def render(math_data): # <--- Tar nu endast emot math_data!
         node_size = st.slider("Node size", 1, 3, 1, key="iso_node_size")
         linewidth = st.slider("Line width", 0.1, 1.0, 0.3, 0.1, key="iso_linewidth")     
 
+    # --- PARAMETER FÖR MARGINAL OVANTILL ---
+    top_margin_px = 40  # <--- ÄNDRA DETTA VÄRDE för att justera avståndet uppåt!
+
     with col_plot:
-        # Hämtas nu blixtsnabbt från cachen eller beräknas om bara om n ändras
         nodes, edges = generate_ncube_graph(n)
 
         # 1. Beräkna kameragränser baserat på omaroterat utgångsläge
@@ -274,7 +276,7 @@ def render(math_data): # <--- Tar nu endast emot math_data!
             plot_bgcolor=bg_color,
             paper_bgcolor=bg_color,
             showlegend=False,
-            margin=dict(l=10, r=10, t=10, b=10),
+            margin=dict(l=10, r=10, t=top_margin_px, b=10), # <--- Här appliceras variabeln
             dragmode=False,
             
             xaxis=dict(visible=False, range=[xmin, xmax], scaleanchor="y", scaleratio=1),
