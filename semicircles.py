@@ -1,6 +1,6 @@
 import numpy as np
 import plotly.graph_objects as go
-import streamlit st
+import streamlit as st
 
 # --------------------------------------------------
 # TEXTFORMATERING FÖR MATEMATISKA TEXTER
