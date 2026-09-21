@@ -290,8 +290,23 @@ def render(math_data):
 
         fig.update_xaxes(matches='x')
 
+                # --- FIX FÖR ATT FLYTTA UPP DIAGRAMMET VIA STREAMLIT ISTÄLLET ---
+        # Genom att lägga ett HTML-block med negativ marginal precis ovanför diagrammet
+        # tvingar vi hela rutan att flyttas uppåt på sidan, oavsett Plotlys interna låsningar.
+        st.markdown(
+            f"""
+            <style>
+            element-container:has(iframe) {{
+                margin-top: -{top_margin_px}px !important;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
         st.plotly_chart(
             fig,
             use_container_width=True,
             key="iso_subplots"
         )
+
