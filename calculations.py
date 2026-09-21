@@ -46,7 +46,7 @@ def find_numeric_root(expr, x_sym):
 
 
 # --------------------------------------------------
-# RENODLAD MATEMATISK STRUKTURSÖKARE
+# ALLOMFATTANDE MATEMATISK STRUKTURSÖKARE (UPPGRADUR)
 # --------------------------------------------------
 def find_math_structures_logical(n, x_sym, x_numeric, minimal_poly):
     if minimal_poly is None:
@@ -57,6 +57,7 @@ def find_math_structures_logical(n, x_sym, x_numeric, minimal_poly):
     pool = {m: float((x_sym**m).subs(x_sym, x_numeric)) for m in range(n)}
     hidden_potencies = {}
     
+    # 1. Hitta alla enkla dolda högre potenser upp till x**100
     for k in range(n, 100):
         rest = sp.rem(x_sym**k, poly_expr, x_sym)
         expanded_rest = sp.expand(rest)
@@ -85,14 +86,36 @@ def find_math_structures_logical(n, x_sym, x_numeric, minimal_poly):
             }
             pool[k] = hidden_potencies[k]["diameter"]
 
+    # 2. SKAPA ALLA GILTIGA SUBSTITIONER (ÄVEN DUBBLA/NÄSTLADE ERSÄTTNINGAR)
     total_sum_matches = []
-    total_sum_matches.append(tuple(range(n)))
+    total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid basen
     
-    for k, data in hidden_potencies.items():
-        if data["base_indices"].issubset(set(range(n))):
-            remaining_base = set(range(n)) - data["base_indices"]
-            combo = tuple(sorted(list(remaining_base) + [k]))
-            total_sum_matches.append(combo)
+    hidden_keys = list(hidden_potencies.keys())
+    num_hidden = len(hidden_keys)
+    
+    # Testa alla kombinationer av dolda potenser (en i taget, två i taget, tre i taget...)
+    # Vi använder binär maskning för att testa alla delmängder av dolda potenser linjärt och snabbt
+    for mask in range(1, 1 << num_hidden):
+        active_hidden_potencies = [hidden_keys[i] for i in range(num_hidden) if (mask & (1 << i))]
+        
+        # Kontrollera om de aktiva dolda potenserna krockar algebraiskt
+        combined_base_indices = set()
+        overlap_detected = False
+        
+        for hk in active_hidden_potencies:
+            b_indices = hidden_potencies[hk]["base_indices"]
+            if combined_base_indices.intersection(b_indices):
+                overlap_detected = True
+                break
+            combined_base_indices.update(b_indices)
+            
+        # Om de inte krockar, betyder det att de kan ersätta sina respektive bas-termer samtidigt!
+        if not overlap_detected and combined_base_indices.issubset(set(range(n))):
+            remaining_base = set(range(n)) - combined_base_indices
+            # Bygg den nya kombinationen: Återstående bas-termer + alla aktiva dolda potenser
+            combo = tuple(sorted(list(remaining_base) + active_hidden_potencies))
+            if combo not in total_sum_matches:
+                total_sum_matches.append(combo)
 
     return pool, total_sum_matches
 
@@ -100,7 +123,7 @@ def find_math_structures_logical(n, x_sym, x_numeric, minimal_poly):
 # --------------------------------------------------
 # HUVUDDATA-FUNKTION (HÄMTAS AV APP.PY)
 # --------------------------------------------------
-@st.cache_data
+@st.cache_data # Skyddar prestandan centralt
 def get_math_data(n, eq_input, add_value_str):
     x_sym = sp.Symbol("x")
     n_sym = sp.Symbol("n")
@@ -110,7 +133,6 @@ def get_math_data(n, eq_input, add_value_str):
 
     is_equation = "=" in eq_input
 
-    # --- DATATEKNISK FIX FÖR OJJÄMNA BRÅKEXPONENTER ---
     has_fraction_exponent = "n/2" in eq_input or "n / 2" in eq_input
     use_substitution = is_equation and has_fraction_exponent and (n % 2 != 0)
 
@@ -145,7 +167,6 @@ def get_math_data(n, eq_input, add_value_str):
                 circle_pool[k // 2] = v
                 
     else:
-        # --- STANDARDLÄGE ---
         if is_equation:
             left_str, right_str = eq_input.split("=")
             raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
@@ -165,7 +186,6 @@ def get_math_data(n, eq_input, add_value_str):
             n, x_sym, x_numeric, minimal_poly
         )
 
-    # --- HANDLING AV DET SYMBOLISKA V-VÄRDET (EXAKT PRECISION) ---
     try:
         add_expr = sp.sympify(add_value_str)
     except Exception:
@@ -189,16 +209,14 @@ def get_math_data(n, eq_input, add_value_str):
     symbolic_powers = {k: x_sym**k for k in range(max_terms)}
     numeric_powers = {k: float(x_numeric**k) for k in range(max_terms)}
     
-    # --- RÄTTNING: Skapa exakta listor för de andra flikarna ---
     lengths1_symbolic = [x_sym**k for k in range(n)]
     lengths1_numeric = [float(x_numeric**k) for k in range(n)]
 
-    # Kopiera listorna korrekt och ändra ENBART index [0] utan att skriva över hela listan
     lengths2_symbolic = lengths1_symbolic.copy()
     lengths2_numeric = lengths1_numeric.copy()
     
-    lengths2_symbolic[0] = 1 + add_expr_evaluated  # Helt symboliskt SymPy-uttryck i botten
-    lengths2_numeric[0] = 1.0 + add_value_numeric   # Ren flyttalskopia för Plotly-geometrin
+    lengths2_symbolic[0] = 1 + add_expr_evaluated  
+    lengths2_numeric[0] = 1.0 + add_value_numeric   
 
     return {
         "n": n,
