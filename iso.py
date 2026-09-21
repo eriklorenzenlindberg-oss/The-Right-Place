@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
 from scipy.spatial import ConvexHull
+import math
 
 # --------------------------------------------------
 # TEXTFORMATERING FÖR MATEMATISKA TEXTER
@@ -16,7 +17,7 @@ def format_label(power, is_fig2=False):
     """
     if is_fig2 and power == 0:
         return "1 + v"
-
+    
     if power == 0:
         return "1"
     elif power == 1:
@@ -31,7 +32,6 @@ def format_label(power, is_fig2=False):
 
 @st.cache_data
 def generate_ncube_graph(n):
-    # RÄTTAT: Lagt till [0, 1] som saknades i förra meddelandet
     nodes = list(itertools.product([0, 1], repeat=n))
     edges = []
     for i, a in enumerate(nodes):
@@ -84,38 +84,72 @@ def calculate_bounds(pos1, pos2):
     # Hitta det maximala avståndet från origo för en perfekt kvadratisk vy
     max_val = max(max(abs(x) for x in xs), max(abs(y) for y in ys))
     margin = max_val * 1.35  # Väl tilltagen marginal för att rymma texterna på utsidan
-
+    
     return -margin, margin, -margin, margin
 
 
 # --------------------------------------------------
-# RENDER (Självständig modul med inbyggda kontroller)
+# RENDER (Självständig modul med Modulo-perspektiv)
 # --------------------------------------------------
 
 def render(math_data):
     n = math_data["n"]
-    lengths1 = math_data["lengths1_numeric"]
-    lengths2 = math_data["lengths2_numeric"]
+    lengths1_raw = math_data["lengths1_numeric"]
+    lengths2_raw = math_data["lengths2_numeric"]
 
     # --- DIAGRAMSPECIFIKA KONTROLLER ---
-    col_plot, col_controls = st.columns([7, 1])
-
+    col_plot, col_controls = st.columns([7, 2])
+    
     with col_controls:
         st.text(" ")
         st.text(" ")
-        st.text(" ")
-        st.text(" ")
-        st.text(" ")
-        st.text(" ")
-
+        
         rotate_fig2 = st.checkbox("Rotate", value=False, key="iso_rotate")
         show_nodes = st.checkbox("Nodes", value=False, key="iso_nodes")
         node_size = st.slider("Node size", 1, 3, 1, key="iso_node_size")
         linewidth = st.slider("Line width", 0.1, 1.0, 0.3, 0.1, key="iso_linewidth")     
 
-    # --- PARAMETER FÖR MARGINAL OVANTILL ---
-    top_margin_px = 5  # <--- Ändra detta värde för att justera avståndet uppåt!
-    top_margin_px = 1  # <--- Ändra detta värde för att justera avståndet uppåt!
+        # --- DYNAMISK GENERERING AV MODULO-PERSPEKTIV ---
+        st.markdown("**Perspectives (Modulo):**")
+        
+        # Hitta alla giltiga kliv (k) som är relativt prima med n, upp till hälften av n
+        valid_strides = []
+        for k in range(2, math.ceil(n / 2)):
+            if math.gcd(k, n) == 1:
+                valid_strides.append(k)
+        
+        selected_stride = 1  # Standard = ingen omkastning (kliv 1)
+        
+        if not valid_strides:
+            st.caption("No alternative perspectives available for this n.")
+        else:
+            # Skapa en lista med alternativ för användaren (Kliv 1 är alltid standard/None)
+            perspective_options = ["Standard"] + [f"Perspective {k}" for k in valid_strides]
+            
+            chosen_perspective = st.radio(
+                "Select view:",
+                options=perspective_options,
+                index=0,
+                key=f"iso_perspective_{n}",
+                label_visibility="collapsed"
+            )
+            
+            if chosen_perspective != "Standard":
+                # Hämta ut det valda kliv-numret ur textsträngen
+                selected_stride = int(chosen_perspective.split()[-1])
+
+    # --- APPLICERA MODULO-PERSPEKTIVET PÅ MATEMATIKEN ---
+    # Vi bygger den exakta permutations-ordningen baserat på klock-matematiken (modulo n)
+    permutation_indices = []
+    current_idx = 0  # Vi börjar på index 0 (motsvarar 1 i din 1-baserade lista)
+    
+    for _ in range(n):
+        permutation_indices.append(current_idx)
+        current_idx = (current_idx + selected_stride) % n
+
+    # Kasta om de numeriska längderna enligt det valda perspektivets ordning
+    lengths1 = [lengths1_raw[i] for i in permutation_indices]
+    lengths2 = [lengths2_raw[i] for i in permutation_indices]
 
     with col_plot:
         nodes, edges = generate_ncube_graph(n)
@@ -128,7 +162,7 @@ def render(math_data):
 
         # 2. Beräkna de faktiska positionerna för ritningen
         directions1 = generate_directions(n, offset_deg=0.0)
-
+        
         # Rotera endast om checkboxen är aktiv
         rotation_offset = (-180.0 / n) if rotate_fig2 else 0.0
         directions2 = generate_directions(n, offset_deg=rotation_offset)
@@ -136,11 +170,9 @@ def render(math_data):
         pos1 = generate_positions(nodes, lengths1, directions1)
         pos2 = generate_positions(nodes, lengths2, directions2)
 
-        # Fasta färg-inställningar (Svart/Vit)
         line_color = "#000000"
         bg_color = "#FFFFFF" 
 
-        # Skapa figuren med subplots
         fig = make_subplots(
             rows=1, 
             cols=2, 
@@ -204,7 +236,7 @@ def render(math_data):
         def add_contour_annotations(positions, col_idx):
             node_list = list(positions.keys())
             points = np.array([positions[node] for node in node_list])
-
+            
             try:
                 hull = ConvexHull(points)
                 hull_edges = set()
@@ -224,10 +256,10 @@ def render(math_data):
                         if a[k] != b[k]:
                             dim_k = k
                             break
-
+                    
                     pa, pb = positions[a], positions[b]
                     midpoint = (pa + pb) / 2.0
-
+                    
                     outer_edge_data.append({
                         'dim': dim_k,
                         'pa': pa,
@@ -244,55 +276,15 @@ def render(math_data):
                 dim_k = edge['dim']
                 if dim_k in annotated_dimensions:
                     continue
-
+                
                 pa, pb = edge['pa'], edge['pb']
                 midpoint = edge['midpoint']
                 edge_vector = pb - pa
                 edge_len = np.linalg.norm(edge_vector)
-
+                
                 if edge_len > 0:
                     T = edge_vector / edge_len
                     N = np.array([-T[1], T[0]])
                     if np.dot(midpoint, N) < 0:
                         N = -N
-
-                    anno_pos = midpoint + N * 0.5
-
-                    fig.add_annotation(
-                        x=anno_pos[0],
-                        y=anno_pos[1],
-                        text=format_label(dim_k, is_fig2=is_fig2),
-                        showarrow=False,
-                        font=dict(color=line_color, size=10),
-                        xref=x_ref_target,
-                        yref=y_ref_target
-                    )
-                    annotated_dimensions.add(dim_k)
-
-        # Kör Convex Hull-märkningen för båda panelerna separat
-        add_contour_annotations(pos1, col_idx=1)
-        add_contour_annotations(pos2, col_idx=2)
-
-        # --- LAYOUT OCH ABSOLUT AXELLÅSNING ---
-        fig.update_layout(
-            title=None,
-            plot_bgcolor=bg_color,
-            paper_bgcolor=bg_color,
-            showlegend=False,
-            margin=dict(l=10, r=10, t=top_margin_px, b=10),
-            dragmode=False,
-
-            xaxis=dict(visible=False, range=[xmin, xmax], scaleanchor="y", scaleratio=1),
-            xaxis2=dict(visible=False, range=[xmin, xmax], scaleanchor="y2", scaleratio=1),
-
-            yaxis=dict(visible=False, range=[ymin, ymax]),
-            yaxis2=dict(visible=False, range=[ymin, ymax])
-        )
-
-        fig.update_xaxes(matches='x')
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True,
-            key="iso_subplots"
-        )
+                    
