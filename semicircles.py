@@ -97,7 +97,7 @@ def render(math_data):
     sorted_matches = [main_line] + hidden_lines
 
     # Breddförhållande för kolumnerna
-    col_plot, col_controls = st.columns()
+    col_plot, col_controls = st.columns([6, 3])
     
     with col_controls:
         max_overlap = False
