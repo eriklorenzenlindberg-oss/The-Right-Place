@@ -40,11 +40,11 @@ def get_layer_geometry(combo, pool):
 
 
 # --- MATEMATISK INDEX-MAPPAD OVERLAP-ALGORITM ---
+# --- OPTIMAL INDEX-MAPPAD & STORLEKSKALIBRERAD OVERLAP ---
 def evaluate_global_layout(main_order, sorted_matches, pool):
     """
-    Ordnar alla komplexa kombinationer (även dubbla substitutioner som 4,6) 
-    genom att mappa in ersättarna linjärt i huvudledens lediga positioner.
-    Garanterar perfekt alignment utan brute force.
+    Ordnar alla komplexa kombinationer genom att placera dolda element i 
+    huvudledens luckor, men sorterar dem lokalt efter deras geometriska storlek.
     """
     current_layout = []
     main_set = set(main_order)
@@ -52,25 +52,25 @@ def evaluate_global_layout(main_order, sorted_matches, pool):
     for combo in sorted_matches:
         combo_set = set(combo)
         
-        # 1. Identifiera de gemensamma bas-elementen och de nya ersättarna
+        # 1. Hitta gemensamma element och de nya dolda ersättarna
         shared_elements = main_set.intersection(combo_set)
-        replacements = sorted(list(combo_set - main_set))
+        
+        # 2. Sortera de dolda ersättarna lokalt efter deras sanna fysiska storlek (diameter)
+        # Detta gör att sammansatta block (som 4,6) internt lägger sig i rätt geometrisk ordning
+        replacements = sorted(list(combo_set - main_set), key=lambda k: pool.get(k, 0.0))
         
         aligned_combo = []
         rep_idx = 0
         
-        # 2. Stega igenom huvudledens naturliga ordning
+        # 3. Mappa in i huvudledens struktur
         for elem in main_order:
             if elem in shared_elements:
-                # Om elementet finns kvar, behåll dess position
                 aligned_combo.append(elem)
             else:
-                # Om elementet har tagits bort, skjut in nästa tillgängliga ersättare i hålet
                 if rep_idx < len(replacements):
                     aligned_combo.append(replacements[rep_idx])
                     rep_idx += 1
                     
-        # Säkerhetsventil: Om det finns överblivna ersättare, lägg dem i slutet
         while rep_idx < len(replacements):
             aligned_combo.append(replacements[rep_idx])
             rep_idx += 1
@@ -78,6 +78,7 @@ def evaluate_global_layout(main_order, sorted_matches, pool):
         current_layout.append(tuple(aligned_combo))
         
     return current_layout
+
 
 
 # --------------------------------------------------
