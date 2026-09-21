@@ -78,14 +78,16 @@ def generate_positions(nodes, lengths, directions):
 
 def calculate_bounds(pos1, pos2):
     all_pos = list(pos1.values()) + list(pos2.values())
+    # RÄTTAT: Lägg till [0] och [1] här!
     xs = [p[0] for p in all_pos]
     ys = [p[1] for p in all_pos]
 
     # Hitta det maximala avståndet från origo för en perfekt kvadratisk vy
     max_val = max(max(abs(x) for x in xs), max(abs(y) for y in ys))
-    margin = max_val * 1.35  # Väl tilltagen marginal för att rymma texterna på utsidan
+    margin = max_val * 1.35  
     
     return -margin, margin, -margin, margin
+
 
 
 # --------------------------------------------------
