@@ -13,7 +13,7 @@ def get_math_label(power):
         return f"x**{power}"
     
     power_int = int(power)
-    superscripts = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}
+    superscripts = {'0':'⁰','1':'¹','2':'²','3':'³','4 HARDWARE':'⁴','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}
     try:
         return f"x{''.join(superscripts.get(c, c) for c in str(power_int))}"
     except Exception:
@@ -39,51 +39,46 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
-# --- DETERMINISTISK GEOMETRISK MÅLSÖKARE ---
+# --- DETERMINISTISK ERSÄTTNINGSMODELL (SUBSTITUTION) ---
 def evaluate_global_layout(main_order, total_sum_matches, pool):
     """
-    Placerar cirklarna deterministiskt genom att matcha dolda skarvar 
-    mot huvudledens kända koordinater. Garanterar O(n^2) komplexitet.
+    Ordnar de dolda leden genom att spåra vilka element i huvudleden som har 
+    ersatts, och placerar de nya elementen i exakt samma geometriska lucka.
     """
-    # 1. Kartlägg huvudledens exakta geometriska startpunkter (vårt facit)
-    main_starts, _ = get_layer_geometry(main_order, pool)
-    main_positions = set(main_starts.values())
-    
     current_layout = [main_order]
+    main_set = set(main_order)
     
-    # 2. Rikta in varje dolt led linjärt utifrån facit
     for idx, combo in enumerate(total_sum_matches):
         if idx == 0:
             continue
             
-        remaining_elements = list(combo)
-        aligned_combo = []
-        current_x = 0.0
+        combo_set = set(combo)
         
-        while remaining_elements:
-            best_element = remaining_elements[0]
-            min_distance = float('inf')
+        # 1. Hitta vilka element som är gemensamma med huvudleden
+        shared_elements = main_set.intersection(combo_set)
+        
+        # 2. Hitta de nya elementen som har tillkommit (ersättarna)
+        replacements = sorted(list(combo_set - main_set))
+        
+        # 3. Bygg det nya ledets ordning genom att stega igenom huvudleden.
+        # När vi stöter på ett element som har ersatts, sätter vi in ersättarna i den luckan!
+        aligned_combo = []
+        replacements_inserted = False
+        
+        for elem in main_order:
+            if elem in shared_elements:
+                aligned_combo.append(elem)
+            else:
+                # Om detta element i huvudleden har tagits bort, och vi inte har satt in 
+                # ersättarna än, så skjuter vi in hela gruppen av ersättare i denna lucka.
+                if not replacements_inserted:
+                    aligned_combo.extend(replacements)
+                    replacements_inserted = True
+                    
+        # Om inga element matchade (eller om alla var nya), lägg till ersättarna i slutet
+        if not replacements_inserted:
+            aligned_combo.extend(replacements)
             
-            # Hitta det element som lägger sin startpunkt närmast en existerande skarv i huvudleden
-            for elem in remaining_elements:
-                # Beräkna potentiellt fel/avstånd till närmaste skarv
-                distances = [abs(current_x - pos) for pos in main_positions]
-                current_min = min(distances) if distances else 0.0
-                
-                # Om elementet dessutom har ett strukturellt släktskap, ge det prioritet
-                if elem in main_starts and round(current_x, 4) == main_starts[elem]:
-                    current_min -= 10.0  # Matematisk bonus för perfekt passform
-                
-                if current_min < min_distance:
-                    min_distance = current_min
-                    best_element = elem
-            
-            # Registrera elementet och stega framåt längs baslinjen
-            aligned_combo.append(best_element)
-            remaining_elements.remove(best_element)
-            if best_element in pool:
-                current_x += pool[best_element]
-                
         current_layout.append(tuple(aligned_combo))
         
     return current_layout
@@ -99,7 +94,7 @@ def render(math_data):
         st.info("The main line is missing from the data.")
         return
 
-    # Breddförhållande för kolumnerna (60% / 30%)
+    # Breddförhållande för kolumnerna
     col_plot, col_controls = st.columns([6, 3])
     
     with col_controls:
@@ -139,13 +134,13 @@ def render(math_data):
         x_texts, y_texts, text_labels, text_positions = [], [], [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        # Huvudleden (index 0) sorteras strikt i sin naturliga grundordning
+        # Huvudleden (index 0) i sin fasta grundordning
         main_base_order = tuple(sorted(total_sum_matches[0]))
 
         if not max_overlap or len(total_sum_matches) <= 1:
             final_layouts = [tuple(sorted(combo)) for combo in total_sum_matches]
         else:
-            # Anropar den nya geometriska målsökaren
+            # Anropar den nya matematiska ersättningsmodellen
             final_layouts = evaluate_global_layout(main_base_order, total_sum_matches, pool)
 
         # --- STEG 1: SOLID VIT FYLLNING OCH TEXTER ---
