@@ -214,8 +214,8 @@ def get_math_data(n, eq_input, add_value_str):
     lengths2_symbolic = lengths1_symbolic.copy()
     lengths2_numeric = lengths1_numeric.copy()
     
-    lengths2_symbolic = 1 + add_expr_evaluated  
-    lengths2_numeric = 1.0 + add_value_numeric   
+    lengths2_symbolic[0] = 1 + add_expr_evaluated  
+    lengths2_numeric[0] = 1.0 + add_value_numeric     
 
     return {
         "n": n,
