@@ -1,7 +1,7 @@
 import streamlit as st
 import calculations as calc
 import iso
-#import semicircles # <--- Aktiverad igen!
+#import semicircles 
 # TILLFÄLLIGT BORTKOMMENTERADE IMPORTER:
 # import rectangles
 # import pyramid
@@ -94,7 +94,7 @@ with placeholder_v:
 #tab_iso, tab_circles = st.tabs(
     [
         "n-face",
-        "1-faces",
+#        "1-faces",
     ],
     key="main_navigation_tabs"
 )
