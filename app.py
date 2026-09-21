@@ -109,7 +109,7 @@ def render_tab_iso(math_data):
 
 
 #def render_tab_circles(math_data):
-    semicircles.render(math_data)
+#    semicircles.render(math_data)
 
 
 # --------------------------------------------------
