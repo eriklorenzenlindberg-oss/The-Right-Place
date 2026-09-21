@@ -1,7 +1,7 @@
 import streamlit as st
 import calculations as calc
 import iso
-# TILLFÄLLIGT BORTKOMMENTERADE IMPORTER:
+# TILLFÄLLIGT BORTKOMMENTERADE IMPORTER (Slås på sen när vi fixar deras filer):
 # import semicircles
 # import rectangles
 # import pyramid
@@ -89,44 +89,28 @@ with placeholder_v:
 
 
 # --------------------------------------------------
-# TABS (Bortkommenterat on_change och övriga flikar)
+# TABS
 # --------------------------------------------------
-# Vi skapar bara en flik nu för att testa iso-vyn isolerat
 tab_iso, = st.tabs(
     [
         "n-face",
     ],
-    # on_change="rerun",  # Borttaget då det kan orsaka oändliga laddnings-loopar
     key="main_navigation_tabs"
 )
 
 
 # --------------------------------------------------
-# ISOLERADE RENDER-FUNKTIONER
+# ISOLERADE RENDER-FUNKTIONER (Helt renodlade!)
 # --------------------------------------------------
 
 def render_tab_iso(math_data):
-    col_plot, col_controls = st.columns([7, 1])
-    with col_controls:
-        st.text(" ")
-        st.text(" ")
-        st.text(" ")
-        st.text(" ")
-        st.text(" ")
-        st.text(" ")
-
-        rotate_fig2 = st.checkbox("Rotate", value=False)
-        show_nodes = st.checkbox("Nodes", value=False)
-        node_size = st.slider("Node size", 1, 3, 1)
-        linewidth = st.slider("Line width", 0.1, 1.0, 0.3, 0.1)     
-
-    with col_plot:
-        iso.render(math_data, linewidth, node_size, show_nodes, rotate_fig2)
+    # Alla reglage och layout sköts nu helt internt av iso.py!
+    iso.render(math_data)
 
 
 # --------------------------------------------------
-# ÄKTA LAZY LOADING (Endast ISO aktiv)
+# ÄKTA LAZY LOADING
 # --------------------------------------------------
 
 with tab_iso:
-        render_tab_iso(math_data)
+    render_tab_iso(math_data)
