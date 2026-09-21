@@ -31,7 +31,6 @@ def format_label(power, is_fig2=False):
 
 @st.cache_data
 def generate_ncube_graph(n):
-    # RÄTTAT: Lagt till [0, 1] som saknades i förra meddelandet
     nodes = list(itertools.product([0, 1], repeat=n))
     edges = []
     for i, a in enumerate(nodes):
@@ -114,7 +113,8 @@ def render(math_data):
         linewidth = st.slider("Line width", 0.1, 1.0, 0.3, 0.1, key="iso_linewidth")     
 
     # --- PARAMETER FÖR MARGINAL OVANTILL ---
-    top_margin_px = 1  # <--- Ändra detta värde för att justera avståndet uppåt!
+    # Ändra denna siffra (t.ex. till 40, 60 eller 80) för att dra upp diagrammet ännu mer!
+    top_margin_px = 50  
 
     with col_plot:
         nodes, edges = generate_ncube_graph(n)
@@ -278,7 +278,7 @@ def render(math_data):
             plot_bgcolor=bg_color,
             paper_bgcolor=bg_color,
             showlegend=False,
-            margin=dict(l=10, r=10, t=top_margin_px, b=10),
+            margin=dict(l=10, r=10, t=10, b=10),
             dragmode=False,
             
             xaxis=dict(visible=False, range=[xmin, xmax], scaleanchor="y", scaleratio=1),
@@ -290,23 +290,8 @@ def render(math_data):
 
         fig.update_xaxes(matches='x')
 
-                # --- FIX FÖR ATT FLYTTA UPP DIAGRAMMET VIA STREAMLIT ISTÄLLET ---
-        # Genom att lägga ett HTML-block med negativ marginal precis ovanför diagrammet
-        # tvingar vi hela rutan att flyttas uppåt på sidan, oavsett Plotlys interna låsningar.
+        # --- INJEKTERA NEGATIV MARGINAL UTIFRÅN ---
         st.markdown(
             f"""
             <style>
-            element-container:has(iframe) {{
-                margin-top: -{top_margin_px}px !important;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True,
-            key="iso_subplots"
-        )
-
+            div[data-testid="stPlotlyChart"] {{
