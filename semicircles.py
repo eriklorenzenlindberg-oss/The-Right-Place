@@ -13,7 +13,7 @@ def get_math_label(power):
         return f"x**{power}"
     
     power_int = int(power)
-    superscripts = {'0':'⁰','1':'¹','2':'²','3':'³','4 HARDWARE':'⁴','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}
+    superscripts = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}
     try:
         return f"x{''.join(superscripts.get(c, c) for c in str(power_int))}"
     except Exception:
@@ -39,81 +39,62 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
-# --- DETERMINISTISK ERSÄTTNINGSMODELL (SUBSTITUTION) ---
-def evaluate_global_layout(main_order, total_sum_matches, pool):
+def evaluate_global_layout(main_order, sorted_matches, pool):
     """
-    Ordnar de dolda leden genom att spåra vilka element i huvudleden som har 
-    ersatts, och placerar de nya elementen i exakt samma geometriska lucka.
+    Ordnar alla kombinationer linjärt utifrån deras sanna exponenter.
+    Använder den färdigstrukturerade listan från vyn.
     """
-    current_layout = [main_order]
-    main_set = set(main_order)
-    
-    for idx, combo in enumerate(total_sum_matches):
-        if idx == 0:
-            continue
-            
-        combo_set = set(combo)
-        
-        # 1. Hitta vilka element som är gemensamma med huvudleden
-        shared_elements = main_set.intersection(combo_set)
-        
-        # 2. Hitta de nya elementen som har tillkommit (ersättarna)
-        replacements = sorted(list(combo_set - main_set))
-        
-        # 3. Bygg det nya ledets ordning genom att stega igenom huvudleden.
-        # När vi stöter på ett element som har ersatts, sätter vi in ersättarna i den luckan!
-        aligned_combo = []
-        replacements_inserted = False
-        
-        for elem in main_order:
-            if elem in shared_elements:
-                aligned_combo.append(elem)
-            else:
-                # Om detta element i huvudleden har tagits bort, och vi inte har satt in 
-                # ersättarna än, så skjuter vi in hela gruppen av ersättare i denna lucka.
-                if not replacements_inserted:
-                    aligned_combo.extend(replacements)
-                    replacements_inserted = True
-                    
-        # Om inga element matchade (eller om alla var nya), lägg till ersättarna i slutet
-        if not replacements_inserted:
-            aligned_combo.extend(replacements)
-            
-        current_layout.append(tuple(aligned_combo))
-        
+    current_layout = []
+    for combo in sorted_matches:
+        current_layout.append(tuple(sorted(list(combo))))
     return current_layout
 
 
 # --------------------------------------------------
-# RENDER (Självständig modul med inbyggda kontroller)
+# RENDER (Självständig modul med diagramspecifik sortering)
 # --------------------------------------------------
 
 def render(math_data):
-    total_sum_matches = math_data.get("total_sum_matches", [])
-    if not total_sum_matches or len(total_sum_matches) == 0:
+    raw_matches = math_data.get("total_sum_matches", [])
+    if not raw_matches or len(raw_matches) == 0:
         st.info("The main line is missing from the data.")
         return
+
+    # --- DIAGRAMSPECIFIK STRUKTURERING AV DATAN ---
+    # 1. Tvätta datan: Gör om alla kombinationer till sorterade tupler och ta bort ev. dubbletter
+    unique_combos = set(tuple(sorted(list(combo))) for combo in raw_matches)
+    
+    # 2. Hitta huvudleden (den som har flest element)
+    main_line = max(unique_combos, key=len)
+    
+    # 3. Sortera resten av de dolda leden efter längd och exponenter
+    hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
+    
+    # 4. Sätt ihop den slutgiltiga listan för diagrammet: Huvudleden ALLTID först (index 0)
+    sorted_matches = [main_line] + hidden_lines
 
     # Breddförhållande för kolumnerna
     col_plot, col_controls = st.columns([6, 3])
     
     with col_controls:
         max_overlap = False
-        if len(total_sum_matches) > 1:
+        if len(sorted_matches) > 1:
             max_overlap = st.checkbox("Overlap", value=False, key="circles_overlap")
         
         combo_labels = []
-        for combo in total_sum_matches:
-            label = " + ".join(get_math_label(k) for k in sorted(combo))
+        for combo in sorted_matches:
+            label = " + ".join(get_math_label(k) for k in combo)
             combo_labels.append(label)
             
         combo_options = ["None"] + combo_labels
         
+        # Unik key baserad på 'n' tvingar Streamlit att rita om radioknapparna rent 
+        # när användaren byter n, vilket helt eliminerar spökkombinationer från session_state
         selected_option = st.radio(
             "Select combination to highlight:",
             options=combo_options,
             index=0,
-            key="circles_highlight"
+            key=f"circles_highlight_{math_data['n']}"
         )
         
         selected_idx = combo_options.index(selected_option) - 1
@@ -134,13 +115,10 @@ def render(math_data):
         x_texts, y_texts, text_labels, text_positions = [], [], [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        main_base_order = tuple(sorted(total_sum_matches))
-
-        if not max_overlap or len(total_sum_matches) <= 1:
-            final_layouts = [tuple(sorted(combo)) for combo in total_sum_matches]
+        if not max_overlap or len(sorted_matches) <= 1:
+            final_layouts = sorted_matches
         else:
-            # Anropar den nya matematiska ersättningsmodellen
-            final_layouts = evaluate_global_layout(main_base_order, total_sum_matches, pool)
+            final_layouts = evaluate_global_layout(main_line, sorted_matches, pool)
 
         # --- STEG 1: SOLID VIT FYLLNING OCH TEXTER ---
         if selected_idx >= 0 and selected_idx < len(final_layouts):
