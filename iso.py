@@ -114,7 +114,7 @@ def render(math_data):
         linewidth = st.slider("Line width", 0.1, 1.0, 0.3, 0.1, key="iso_linewidth")     
 
     # --- PARAMETER FÖR MARGINAL OVANTILL ---
-    top_margin_px = 5  # <--- Ändra detta värde för att justera avståndet uppåt!
+    top_margin_px = 1  # <--- Ändra detta värde för att justera avståndet uppåt!
 
     with col_plot:
         nodes, edges = generate_ncube_graph(n)
