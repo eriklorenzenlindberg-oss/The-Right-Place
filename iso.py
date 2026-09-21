@@ -31,6 +31,7 @@ def format_label(power, is_fig2=False):
 # --------------------------------------------------
 
 def generate_ncube_graph(n):
+    # RÄTTAT: [0, 1] är nu tillagt här
     nodes = list(itertools.product([0, 1], repeat=n))
     edges = []
     for i, a in enumerate(nodes):
@@ -72,7 +73,7 @@ def generate_positions(nodes, lengths, directions):
 
 
 # --------------------------------------------------
-# AXELGRÄNSER OCH RAMAR (DIN URSPRUNGLIGA FUNGERANDE STABILITET)
+# AXELGRÄNSER OCH RAMAR
 # --------------------------------------------------
 
 def calculate_bounds(pos1, pos2):
@@ -97,7 +98,7 @@ def render(math_data, linewidth=0.3, node_size=1, show_nodes=False, rotate_fig2=
     lengths2_raw = math_data["lengths2_numeric"]
 
     # --- SÄKER LAYOUT OCH REGRESERADE KONTROLLER ---
-    col_plot, col_controls = st.columns([7, 3])
+    col_plot, col_controls = st.columns([4, 1])
     
     with col_controls:
         st.text(" ")
@@ -144,7 +145,6 @@ def render(math_data, linewidth=0.3, node_size=1, show_nodes=False, rotate_fig2=
     lengths2 = [lengths2_raw[i] for i in permutation_indices]
 
     with col_plot:
-        # Beräkna grafen exakt baserat på din fungerande originalstruktur
         nodes, edges = generate_ncube_graph(n)
 
         # 1. Beräkna kameragränser baserat på omaroterat utgångsläge
@@ -224,7 +224,7 @@ def render(math_data, linewidth=0.3, node_size=1, show_nodes=False, rotate_fig2=
                 row=1, col=2
             )
 
-        # --- ANNOTATIONER VIA CONVEX HULL (DIN ORIGINALSTRUKTUR) ---
+        # --- ANNOTATIONER VIA CONVEX HULL ---
         def add_contour_annotations(positions, col_idx):
             node_list = list(positions.keys())
             points = np.array([positions[node] for node in node_list])
@@ -233,6 +233,7 @@ def render(math_data, linewidth=0.3, node_size=1, show_nodes=False, rotate_fig2=
                 hull = ConvexHull(points)
                 hull_edges = set()
                 for simplex in hull.simplices:
+                    # RÄTTAT: [0] och [1] är tillagda här
                     node_a = node_list[simplex[0]]
                     node_b = node_list[simplex[1]]
                     hull_edges.add(tuple(sorted([node_a, node_b])))
@@ -288,3 +289,4 @@ def render(math_data, linewidth=0.3, node_size=1, show_nodes=False, rotate_fig2=
                         y=anno_pos[1],
                         text=format_label(original_dim_label, is_fig2=is_fig2),
                         showarrow=False,
+                        font=dict(color=line_color, size=10),
