@@ -39,24 +39,36 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
-# --- NY DETERMINISTISK ALGEBRAISK SORTERARE ---
+# --- NY DETERMINISTISK X-STYRD ALGEBRAISK SORTERARE ---
 def evaluate_global_layout(main_order, total_sum_matches, pool):
     """
-    Sorterar de dolda leden helt deterministiskt baserat på deras matematiska potensindex.
-    Tar bort itertools.permutations helt för att garantera blixtsnabb prestanda.
+    Sorterar de dolda leden deterministiskt baserat på om x > 1 eller x < 1.
+    Detta gör att cirklarnas ordning speglas dynamiskt och skapar rätt överlapp.
     """
     current_layout = [main_order]
     
+    # Vi behöver veta om x är större eller mindre än 1 för att styra riktningen på algebran
+    # Om poolen indikerar att högre potenser är mindre (x < 1), vänder vi på sorteringen
+    # Vi kollar om ett högre index (t.ex. 1) är mindre än ett lägre index (0)
+    x_is_less_than_one = pool.get(1, 1.0) < pool.get(0, 1.0)
+
     for idx, combo in enumerate(total_sum_matches):
         if idx == 0:
             continue
         
-        # Sorterar det dolda ledets cirklar linjärt efter deras potensindex.
-        # Detta skapar en naturlig matematisk linjering oavsett värdet på x.
-        algebraic_sorted_combo = tuple(sorted(list(combo)))
+        # Standard: Sortera stigande efter potensindex
+        base_sorted = sorted(list(combo))
+        
+        # Om x < 1 speglar vi ordningen (sorterar fallande) för att matcha den geometriska krympningen
+        if x_is_less_than_one:
+            algebraic_sorted_combo = tuple(reversed(base_sorted))
+        else:
+            algebraic_sorted_combo = tuple(base_sorted)
+            
         current_layout.append(algebraic_sorted_combo)
         
     return current_layout
+
 
 
 # --------------------------------------------------
