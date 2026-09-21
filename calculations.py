@@ -46,7 +46,7 @@ def find_numeric_root(expr, x_sym):
 
 
 # --------------------------------------------------
-# ALLOMFATTANDE MATEMATISK STRUKTURSÖKARE (UPPGRADUR)
+# GRAD-ANPASSAD ALLOMFATTANDE MATEMATISK STRUKTURSÖKARE
 # --------------------------------------------------
 def find_math_structures_logical(n, x_sym, x_numeric, minimal_poly):
     if minimal_poly is None:
@@ -55,25 +55,27 @@ def find_math_structures_logical(n, x_sym, x_numeric, minimal_poly):
 
     poly_expr = sp.expand(minimal_poly)
     pool = {m: float((x_sym**m).subs(x_sym, x_numeric)) for m in range(n)}
-    hidden_potencies = {}
     
-    # 1. Hitta alla enkla dolda högre potenser upp till x**100
-    for k in range(n, 100):
+    # RÄTTNING 1: Hitta polynomets sanna, faktiska grad dynamiskt (t.ex. 3 för x^3 - x - 1)
+    poly_degree = int(sp.degree(poly_expr, x_sym))
+    
+    # Vi scannar dolda potenser upp till x**100
+    hidden_potencies = {}
+    for k in range(poly_degree, 100):
         rest = sp.rem(x_sym**k, poly_expr, x_sym)
         expanded_rest = sp.expand(rest)
         
-        if sp.degree(expanded_rest, x_sym) >= n:
+        # En rest efter division med poly_expr har alltid strikt lägre grad än poly_degree
+        if sp.degree(expanded_rest, x_sym) >= poly_degree:
             continue
             
-        components = []
         base_indices = set()
         is_pure_sum = True
         
-        for m in range(n):
+        # RÄTTNING 2: Loopa enbart upp till den sanna polynomgraden för att läsa av resten
+        for m in range(poly_degree):
             coeff = expanded_rest.coeff(x_sym, m) if m > 0 else expanded_rest.subs(x_sym, 0)
             if coeff == 1:
-                val = float((x_sym**m).subs(x_sym, x_numeric))
-                components.append(val)
                 base_indices.add(m)
             elif coeff != 0:
                 is_pure_sum = False
@@ -86,19 +88,17 @@ def find_math_structures_logical(n, x_sym, x_numeric, minimal_poly):
             }
             pool[k] = hidden_potencies[k]["diameter"]
 
-    # 2. SKAPA ALLA GILTIGA SUBSTITIONER (ÄVEN DUBBLA/NÄSTLADE ERSÄTTNINGAR)
+    # 3. SKAPA ALLA GILTIGA SUBSTITIONER (ÄVEN DUBBLA/NÄSTLADE ERSÄTTNINGAR)
     total_sum_matches = []
-    total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid basen
+    total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid hela dimensionen n
     
     hidden_keys = list(hidden_potencies.keys())
     num_hidden = len(hidden_keys)
     
-    # Testa alla kombinationer av dolda potenser (en i taget, två i taget, tre i taget...)
-    # Vi använder binär maskning för att testa alla delmängder av dolda potenser linjärt och snabbt
+    # Testa alla kombinationer av dolda potenser via binär maskning
     for mask in range(1, 1 << num_hidden):
         active_hidden_potencies = [hidden_keys[i] for i in range(num_hidden) if (mask & (1 << i))]
         
-        # Kontrollera om de aktiva dolda potenserna krockar algebraiskt
         combined_base_indices = set()
         overlap_detected = False
         
@@ -109,10 +109,9 @@ def find_math_structures_logical(n, x_sym, x_numeric, minimal_poly):
                 break
             combined_base_indices.update(b_indices)
             
-        # Om de inte krockar, betyder det att de kan ersätta sina respektive bas-termer samtidigt!
+        # RÄTTNING 3: Kontrollera om de utbytta bas-indexen är en giltig delmängd av HELA n-rymden
         if not overlap_detected and combined_base_indices.issubset(set(range(n))):
             remaining_base = set(range(n)) - combined_base_indices
-            # Bygg den nya kombinationen: Återstående bas-termer + alla aktiva dolda potenser
             combo = tuple(sorted(list(remaining_base) + active_hidden_potencies))
             if combo not in total_sum_matches:
                 total_sum_matches.append(combo)
@@ -123,7 +122,7 @@ def find_math_structures_logical(n, x_sym, x_numeric, minimal_poly):
 # --------------------------------------------------
 # HUVUDDATA-FUNKTION (HÄMTAS AV APP.PY)
 # --------------------------------------------------
-@st.cache_data # Skyddar prestandan centralt
+@st.cache_data
 def get_math_data(n, eq_input, add_value_str):
     x_sym = sp.Symbol("x")
     n_sym = sp.Symbol("n")
@@ -215,8 +214,8 @@ def get_math_data(n, eq_input, add_value_str):
     lengths2_symbolic = lengths1_symbolic.copy()
     lengths2_numeric = lengths1_numeric.copy()
     
-    lengths2_symbolic[0] = 1 + add_expr_evaluated  
-    lengths2_numeric[0] = 1.0 + add_value_numeric   
+    lengths2_symbolic = 1 + add_expr_evaluated  
+    lengths2_numeric = 1.0 + add_value_numeric   
 
     return {
         "n": n,
