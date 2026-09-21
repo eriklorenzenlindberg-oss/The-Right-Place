@@ -113,7 +113,7 @@ def render(math_data):
         linewidth = st.slider("Line width", 0.1, 1.0, 0.3, 0.1, key="iso_linewidth")     
 
     # --- PARAMETER FÖR MARGINAL OVANTILL ---
-    top_margin_px = 1  # <--- ÄNDRA DETTA VÄRDE för att justera avståndet uppåt!
+    top_margin_px = 5  # <--- Sätt till 5 för minimal marginal, eller t.ex. 40 för mer utrymme.
 
     with col_plot:
         nodes, edges = generate_ncube_graph(n)
@@ -273,10 +273,11 @@ def render(math_data):
 
         # --- LAYOUT OCH ABSOLUT AXELLÅSNING ---
         fig.update_layout(
+            title=None,  # <--- STÄNGER AV AUTOMATISK TITEL-MARGINAL SÅ ATT t CONTROLERAR ALLT
             plot_bgcolor=bg_color,
             paper_bgcolor=bg_color,
             showlegend=False,
-            margin=dict(l=10, r=10, t=top_margin_px, b=10), # <--- Här appliceras variabeln
+            margin=dict(l=10, r=10, t=top_margin_px, b=10),
             dragmode=False,
             
             xaxis=dict(visible=False, range=[xmin, xmax], scaleanchor="y", scaleratio=1),
@@ -292,4 +293,3 @@ def render(math_data):
             fig,
             use_container_width=True,
             key="iso_subplots"
-        )
