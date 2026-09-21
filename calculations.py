@@ -100,7 +100,7 @@ def find_math_structures_logical(n, x_sym, x_numeric, minimal_poly):
 # --------------------------------------------------
 # HUVUDDATA-FUNKTION (HÄMTAS AV APP.PY)
 # --------------------------------------------------
-#@st.cache_data
+@st.cache_data
 def get_math_data(n, eq_input, add_value_str):
     x_sym = sp.Symbol("x")
     n_sym = sp.Symbol("n")
