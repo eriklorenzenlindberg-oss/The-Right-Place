@@ -1,4 +1,3 @@
-import itertools
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
@@ -40,34 +39,50 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
+# --- NY MATEMATISK STRUKTURSÖKARE (GIRIG ALGORITM) ---
 def evaluate_global_layout(main_order, total_sum_matches, pool):
+    """
+    Använder en girig algoritm (Best Fit) för att ordna de dolda leden linjärt.
+    Eliminerar itertools.permutations helt för att uppnå O(n^2) komplexitet.
+    """
+    # Lås huvudledens geometri och spara dess kända startpunkter
     main_starts, _ = get_layer_geometry(main_order, pool)
     current_layout = [main_order]
-    total_score = 0
     
     for idx, combo in enumerate(total_sum_matches):
         if idx == 0:
             continue
             
-        base_order = tuple(sorted(combo))
-        best_dold_order = base_order
-        best_dold_score = -1
+        remaining_elements = list(combo)
+        greedy_ordered_combo = []
         
-        for perm in itertools.permutations(base_order):
-            perm_starts, _ = get_layer_geometry(perm, pool)
-            current_score = 0
-            for k in perm:
-                if k in main_starts and perm_starts[k] == main_starts[k]:
-                    current_score += 1
-                    
-            if current_score > best_dold_score:
-                best_dold_score = current_score
-                best_dold_order = perm
+        # Bygg upp ordningen för det dolda ledet steg för steg (cirkel för cirkel)
+        current_x = 0.0
+        while remaining_elements:
+            best_element = remaining_elements[0]
+            best_match_score = -1
+            
+            # Testa vilket av de återstående elementen som passar bäst i just denna position
+            for elem in remaining_elements:
+                # Kolla om denna cirkels tänkta startpunkt matchar dess startpunkt i huvudleden
+                if elem in main_starts and round(current_x, 4) == main_starts[elem]:
+                    score = 2  # Perfekt strukturell matchning!
+                else:
+                    score = 0
                 
-        total_score += best_dold_score
-        current_layout.append(best_dold_order)
+                if score > best_match_score:
+                    best_match_score = score
+                    best_element = elem
+                    
+            # Registrera det bästa valet och flytta fram baslinjens position
+            greedy_ordered_combo.append(best_element)
+            remaining_elements.remove(best_element)
+            if best_element in pool:
+                current_x += pool[best_element]
+                
+        current_layout.append(tuple(greedy_ordered_combo))
         
-    return total_score, current_layout
+    return current_layout
 
 
 # --------------------------------------------------
@@ -80,8 +95,8 @@ def render(math_data):
         st.info("The main line is missing from the data.")
         return
 
-    # Breddförhållande för kolumnerna (60% / 30% för ren layout)
-    col_plot, col_controls = st.columns([6, 3])
+    # Breddförhållande för kolumnerna
+    col_plot, col_controls = st.columns()
     
     with col_controls:
         max_overlap = False
@@ -112,7 +127,6 @@ def render(math_data):
         if target_value == 0:
             target_value = 1.0
             
-        # FASTA STABILA TEMAFÄRGER (Inga st.get_option-anrop)
         line_color = "#000000"
         bg_color = "#FFFFFF"
 
@@ -121,20 +135,14 @@ def render(math_data):
         x_texts, y_texts, text_labels, text_positions = [], [], [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        # Hämta enbart huvudleden (index 0) och gör om till en tuple
-        main_base_order = tuple(sorted(total_sum_matches[0]))
+        # Huvudleden (index 0) sorteras strikt i sin matematiska grundordning
+        main_base_order = tuple(sorted(total_sum_matches))
 
         if not max_overlap or len(total_sum_matches) <= 1:
             final_layouts = [tuple(sorted(combo)) for combo in total_sum_matches]
         else:
-            best_global_score = -1
-            final_layouts = []
-            
-            for main_perm in itertools.permutations(main_base_order):
-                score, layout = evaluate_global_layout(main_perm, total_sum_matches, pool)
-                if score > best_global_score:
-                    best_global_score = score
-                    final_layouts = layout
+            # Anropar den nya blixtsnabba giriga logiken direkt
+            final_layouts = evaluate_global_layout(main_base_order, total_sum_matches, pool)
 
         # --- STEG 1: SOLID VIT FYLLNING OCH TEXTER ---
         if selected_idx >= 0 and selected_idx < len(final_layouts):
@@ -209,7 +217,7 @@ def render(math_data):
         y_min = y_center_point - (required_y_space / 2.0)
         y_max = y_center_point + (required_y_space / 2.0)
 
-        # --- LAYOUT OCH ABSOLUT AXELLÅSNING (Exakt din originalkod) ---
+        # --- LAYOUT OCH ABSOLUT AXELLÅSNING ---
         fig.update_layout(
             plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
             margin=dict(l=10, r=10, t=10, b=10),
