@@ -119,5 +119,5 @@ def render_tab_iso(math_data):
 with tab_iso:
     render_tab_iso(math_data)
 
-with tab_circles:
+#with tab_circles:
     render_tab_circles(math_data)
