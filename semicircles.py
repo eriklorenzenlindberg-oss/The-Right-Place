@@ -39,36 +39,54 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
-# --- NY DETERMINISTISK X-STYRD ALGEBRAISK SORTERARE ---
+# --- DETERMINISTISK GEOMETRISK MÅLSÖKARE ---
 def evaluate_global_layout(main_order, total_sum_matches, pool):
     """
-    Sorterar de dolda leden deterministiskt baserat på om x > 1 eller x < 1.
-    Detta gör att cirklarnas ordning speglas dynamiskt och skapar rätt överlapp.
+    Placerar cirklarna deterministiskt genom att matcha dolda skarvar 
+    mot huvudledens kända koordinater. Garanterar O(n^2) komplexitet.
     """
+    # 1. Kartlägg huvudledens exakta geometriska startpunkter (vårt facit)
+    main_starts, _ = get_layer_geometry(main_order, pool)
+    main_positions = set(main_starts.values())
+    
     current_layout = [main_order]
     
-    # Vi behöver veta om x är större eller mindre än 1 för att styra riktningen på algebran
-    # Om poolen indikerar att högre potenser är mindre (x < 1), vänder vi på sorteringen
-    # Vi kollar om ett högre index (t.ex. 1) är mindre än ett lägre index (0)
-    x_is_less_than_one = pool.get(1, 1.0) < pool.get(0, 1.0)
-
+    # 2. Rikta in varje dolt led linjärt utifrån facit
     for idx, combo in enumerate(total_sum_matches):
         if idx == 0:
             continue
-        
-        # Standard: Sortera stigande efter potensindex
-        base_sorted = sorted(list(combo))
-        
-        # Om x < 1 speglar vi ordningen (sorterar fallande) för att matcha den geometriska krympningen
-        if x_is_less_than_one:
-            algebraic_sorted_combo = tuple(reversed(base_sorted))
-        else:
-            algebraic_sorted_combo = tuple(base_sorted)
             
-        current_layout.append(algebraic_sorted_combo)
+        remaining_elements = list(combo)
+        aligned_combo = []
+        current_x = 0.0
+        
+        while remaining_elements:
+            best_element = remaining_elements[0]
+            min_distance = float('inf')
+            
+            # Hitta det element som lägger sin startpunkt närmast en existerande skarv i huvudleden
+            for elem in remaining_elements:
+                # Beräkna potentiellt fel/avstånd till närmaste skarv
+                distances = [abs(current_x - pos) for pos in main_positions]
+                current_min = min(distances) if distances else 0.0
+                
+                # Om elementet dessutom har ett strukturellt släktskap, ge det prioritet
+                if elem in main_starts and round(current_x, 4) == main_starts[elem]:
+                    current_min -= 10.0  # Matematisk bonus för perfekt passform
+                
+                if current_min < min_distance:
+                    min_distance = current_min
+                    best_element = elem
+            
+            # Registrera elementet och stega framåt längs baslinjen
+            aligned_combo.append(best_element)
+            remaining_elements.remove(best_element)
+            if best_element in pool:
+                current_x += pool[best_element]
+                
+        current_layout.append(tuple(aligned_combo))
         
     return current_layout
-
 
 
 # --------------------------------------------------
@@ -81,7 +99,7 @@ def render(math_data):
         st.info("The main line is missing from the data.")
         return
 
-    # Breddförhållande för kolumnerna (Rättat: Inga tomma st.columns)
+    # Breddförhållande för kolumnerna (60% / 30%)
     col_plot, col_controls = st.columns([6, 3])
     
     with col_controls:
@@ -121,13 +139,13 @@ def render(math_data):
         x_texts, y_texts, text_labels, text_positions = [], [], [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        # Huvudleden (index 0) sorteras i sin matematiska grundordning
+        # Huvudleden (index 0) sorteras strikt i sin naturliga grundordning
         main_base_order = tuple(sorted(total_sum_matches[0]))
 
         if not max_overlap or len(total_sum_matches) <= 1:
             final_layouts = [tuple(sorted(combo)) for combo in total_sum_matches]
         else:
-            # Anropar den nya stabila algebraiska logiken
+            # Anropar den nya geometriska målsökaren
             final_layouts = evaluate_global_layout(main_base_order, total_sum_matches, pool)
 
         # --- STEG 1: SOLID VIT FYLLNING OCH TEXTER ---
@@ -183,7 +201,7 @@ def render(math_data):
                 hoverinfo="skip", showlegend=False
             ))
 
-        # --- DYNAMISK GLOBAL CENTRERING I EN FAST RUTA ---
+        # --- DYNAMISK GLOBAL CENTRERING INUTI RAMEN ---
         max_actual_height = max(all_radii) if all_radii else (target_value * 0.5)
         base_x_margin = target_value * 0.05
         total_graph_width = target_value + (2 * base_x_margin)
