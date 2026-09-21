@@ -1,6 +1,6 @@
 import numpy as np
 import plotly.graph_objects as go
-import streamlit as st
+import streamlit st
 
 # --------------------------------------------------
 # TEXTFORMATERING FÖR MATEMATISKA TEXTER
@@ -39,14 +39,44 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
+# --- MATEMATISK INDEX-MAPPAD OVERLAP-ALGORITM ---
 def evaluate_global_layout(main_order, sorted_matches, pool):
     """
-    Ordnar alla kombinationer linjärt utifrån deras sanna exponenter.
-    Använder den färdigstrukturerade listan från vyn.
+    Ordnar alla komplexa kombinationer (även dubbla substitutioner som 4,6) 
+    genom att mappa in ersättarna linjärt i huvudledens lediga positioner.
+    Garanterar perfekt alignment utan brute force.
     """
     current_layout = []
+    main_set = set(main_order)
+    
     for combo in sorted_matches:
-        current_layout.append(tuple(sorted(list(combo))))
+        combo_set = set(combo)
+        
+        # 1. Identifiera de gemensamma bas-elementen och de nya ersättarna
+        shared_elements = main_set.intersection(combo_set)
+        replacements = sorted(list(combo_set - main_set))
+        
+        aligned_combo = []
+        rep_idx = 0
+        
+        # 2. Stega igenom huvudledens naturliga ordning
+        for elem in main_order:
+            if elem in shared_elements:
+                # Om elementet finns kvar, behåll dess position
+                aligned_combo.append(elem)
+            else:
+                # Om elementet har tagits bort, skjut in nästa tillgängliga ersättare i hålet
+                if rep_idx < len(replacements):
+                    aligned_combo.append(replacements[rep_idx])
+                    rep_idx += 1
+                    
+        # Säkerhetsventil: Om det finns överblivna ersättare, lägg dem i slutet
+        while rep_idx < len(replacements):
+            aligned_combo.append(replacements[rep_idx])
+            rep_idx += 1
+            
+        current_layout.append(tuple(aligned_combo))
+        
     return current_layout
 
 
@@ -61,20 +91,13 @@ def render(math_data):
         return
 
     # --- DIAGRAMSPECIFIK STRUKTURERING AV DATAN ---
-    # 1. Tvätta datan: Gör om alla kombinationer till sorterade tupler och ta bort ev. dubbletter
     unique_combos = set(tuple(sorted(list(combo))) for combo in raw_matches)
-    
-    # 2. Hitta huvudleden (den som har flest element)
     main_line = max(unique_combos, key=len)
-    
-    # 3. Sortera resten av de dolda leden efter längd och exponenter
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
-    
-    # 4. Sätt ihop den slutgiltiga listan för diagrammet: Huvudleden ALLTID först (index 0)
     sorted_matches = [main_line] + hidden_lines
 
     # Breddförhållande för kolumnerna
-    col_plot, col_controls = st.columns([6, 3])
+    col_plot, col_controls = st.columns()
     
     with col_controls:
         max_overlap = False
@@ -88,8 +111,6 @@ def render(math_data):
             
         combo_options = ["None"] + combo_labels
         
-        # Unik key baserad på 'n' tvingar Streamlit att rita om radioknapparna rent 
-        # när användaren byter n, vilket helt eliminerar spökkombinationer från session_state
         selected_option = st.radio(
             "Select combination to highlight:",
             options=combo_options,
