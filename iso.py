@@ -26,10 +26,9 @@ def format_label(power, is_fig2=False):
 
 
 # --------------------------------------------------
-# GEOMETRI OCH HYPERKUB-LOGIK (CACHE-OPTIMERAD)
+# GEOMETRI OCH HYPERKUB-LOGIK
 # --------------------------------------------------
 
-@st.cache_data  # <--- DETTA GÖR APPEN ROCKET-SNABB! Sparar kubstrukturen i minnet.
 def generate_ncube_graph(n):
     nodes = list(itertools.product([0, 1], repeat=n))
     edges = []
@@ -102,7 +101,6 @@ def render(
     lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
 
-    # Hämtas nu blixtsnabbt från cachen istället för att beräknas om varje gång
     nodes, edges = generate_ncube_graph(n)
 
     # 1. Beräkna kameragränser baserat på omaroterat utgångsläge
@@ -121,9 +119,9 @@ def render(
     pos1 = generate_positions(nodes, lengths1, directions1)
     pos2 = generate_positions(nodes, lengths2, directions2)
 
-    # HÅRDKODADE TEMA-INSTÄLLNINGAR (Slipper st.get_option-flaskhalsen)
-    line_color = "#000000"
-    bg_color = "#FFFFFF" 
+    # Tema-inställningar från Streamlit
+    line_color = st.get_option("theme.primaryColor") or "#000000"
+    bg_color = st.get_option("theme.backgroundColor") or "#FFFFFF" 
 
     # Skapa figuren med subplots
     fig = make_subplots(
@@ -187,11 +185,15 @@ def render(
 
     # --- FUNKTION FÖR ANNOTATIONER VIA CONVEX HULL ---
     def add_contour_annotations(positions, col_idx):
+        # Extrahera alla 2D-punkter till en numpy-matris för ConvexHull
         node_list = list(positions.keys())
         points = np.array([positions[node] for node in node_list])
         
         try:
+            # Beräkna det konvexa höljet (silhuetten) runt alla punkter
             hull = ConvexHull(points)
+            
+            # Identifiera de yttre linjesegmenten
             hull_edges = set()
             for simplex in hull.simplices:
                 node_a = node_list[simplex[0]]
@@ -200,10 +202,12 @@ def render(
         except Exception:
             return
 
+        # Samla giltiga ytterkanter som existerar i vår hyperkubs-graf
         outer_edge_data = []
         for a, b in edges:
             edge_key = tuple(sorted([a, b]))
             if edge_key in hull_edges:
+                # Identifiera dimensionen (k)
                 dim_k = -1
                 for k in range(n):
                     if a[k] != b[k]:
@@ -220,6 +224,7 @@ def render(
                     'midpoint': midpoint
                 })
 
+        # Annotera exakt en ytterkant per dimension
         annotated_dimensions = set()
         x_ref_target = "x" if col_idx == 1 else "x2"
         y_ref_target = "y"
@@ -227,6 +232,7 @@ def render(
 
         for edge in outer_edge_data:
             dim_k = edge['dim']
+            
             if dim_k in annotated_dimensions:
                 continue
             
@@ -236,22 +242,27 @@ def render(
             edge_len = np.linalg.norm(edge_vector)
             
             if edge_len > 0:
+                # Vinkelrät normalvektor utåt
                 T = edge_vector / edge_len
                 N = np.array([-T[1], T[0]])
+                
+                # Eftersom figuren är centrerad runt (0,0) pekar vi bort från origo
                 if np.dot(midpoint, N) < 0:
                     N = -N
                 
+                # Applicera offset på 0.5 vinkelrätt utåt
                 anno_pos = midpoint + N * 0.5
                 
                 fig.add_annotation(
                     x=anno_pos[0],
                     y=anno_pos[1],
-                    text=format_label(dim_k, is_fig2=is_fig2),
+                    text=format_label(dim_k, is_fig2=is_fig2),  # Skickar med flagga för Figur 2
                     showarrow=False,
                     font=dict(color=line_color, size=10),
                     xref=x_ref_target,
                     yref=y_ref_target
                 )
+                
                 annotated_dimensions.add(dim_k)
 
     # Kör Convex Hull-märkningen för båda panelerna separat
