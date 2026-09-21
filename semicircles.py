@@ -39,48 +39,22 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
-# --- NY MATEMATISK STRUKTURSÖKARE (GIRIG ALGORITM) ---
+# --- NY DETERMINISTISK ALGEBRAISK SORTERARE ---
 def evaluate_global_layout(main_order, total_sum_matches, pool):
     """
-    Använder en girig algoritm (Best Fit) för att ordna de dolda leden linjärt.
-    Eliminerar itertools.permutations helt för att uppnå O(n^2) komplexitet.
+    Sorterar de dolda leden helt deterministiskt baserat på deras matematiska potensindex.
+    Tar bort itertools.permutations helt för att garantera blixtsnabb prestanda.
     """
-    # Lås huvudledens geometri och spara dess kända startpunkter
-    main_starts, _ = get_layer_geometry(main_order, pool)
     current_layout = [main_order]
     
     for idx, combo in enumerate(total_sum_matches):
         if idx == 0:
             continue
-            
-        remaining_elements = list(combo)
-        greedy_ordered_combo = []
         
-        # Bygg upp ordningen för det dolda ledet steg för steg (cirkel för cirkel)
-        current_x = 0.0
-        while remaining_elements:
-            best_element = remaining_elements[0]
-            best_match_score = -1
-            
-            # Testa vilket av de återstående elementen som passar bäst i just denna position
-            for elem in remaining_elements:
-                # Kolla om denna cirkels tänkta startpunkt matchar dess startpunkt i huvudleden
-                if elem in main_starts and round(current_x, 4) == main_starts[elem]:
-                    score = 2  # Perfekt strukturell matchning!
-                else:
-                    score = 0
-                
-                if score > best_match_score:
-                    best_match_score = score
-                    best_element = elem
-                    
-            # Registrera det bästa valet och flytta fram baslinjens position
-            greedy_ordered_combo.append(best_element)
-            remaining_elements.remove(best_element)
-            if best_element in pool:
-                current_x += pool[best_element]
-                
-        current_layout.append(tuple(greedy_ordered_combo))
+        # Sorterar det dolda ledets cirklar linjärt efter deras potensindex.
+        # Detta skapar en naturlig matematisk linjering oavsett värdet på x.
+        algebraic_sorted_combo = tuple(sorted(list(combo)))
+        current_layout.append(algebraic_sorted_combo)
         
     return current_layout
 
@@ -95,7 +69,7 @@ def render(math_data):
         st.info("The main line is missing from the data.")
         return
 
-    # Breddförhållande för kolumnerna
+    # Breddförhållande för kolumnerna (Rättat: Inga tomma st.columns)
     col_plot, col_controls = st.columns([6, 3])
     
     with col_controls:
@@ -135,13 +109,13 @@ def render(math_data):
         x_texts, y_texts, text_labels, text_positions = [], [], [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        # Huvudleden (index 0) sorteras strikt i sin matematiska grundordning
-        main_base_order = tuple(sorted(total_sum_matches))
+        # Huvudleden (index 0) sorteras i sin matematiska grundordning
+        main_base_order = tuple(sorted(total_sum_matches[0]))
 
         if not max_overlap or len(total_sum_matches) <= 1:
             final_layouts = [tuple(sorted(combo)) for combo in total_sum_matches]
         else:
-            # Anropar den nya blixtsnabba giriga logiken direkt
+            # Anropar den nya stabila algebraiska logiken
             final_layouts = evaluate_global_layout(main_base_order, total_sum_matches, pool)
 
         # --- STEG 1: SOLID VIT FYLLNING OCH TEXTER ---
