@@ -39,26 +39,43 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
-# --- MATEMATISK INDEX-MAPPAD OVERLAP-ALGORITM ---
-# --- OPTIMAL INDEX-MAPPAD & STORLEKSKALIBRERAD OVERLAP ---
-# --- NY ALGEBRAISK OBRUTEN OVERLAP-ALGORITM ---
+# --- ÅTERSTÄLLD FUNGERANDE OVERLAP-LOGIK (LUCKFYLLNING) ---
 def evaluate_global_layout(main_order, sorted_matches, pool):
     """
-    Sorterar de dolda leden i en obruten, naturlig matematisk sekvens 
-    baserat på deras exponenter. Förhindrar att kombinationer slits sönder.
+    Återställer den logik där ersättare fyller huvudledens hål linjärt.
+    Detta tillåter x^9 att lägga sig i hål 0, vilket ger rätt geometrisk förskjutning.
     """
     current_layout = []
+    main_set = set(main_order)
     
     for combo in sorted_matches:
-        # Sorterar hela kombinationen strikt efter exponenternas värde (0, 1, 2, 3...)
-        # Detta gör att x^2 och x^3 aldrig separeras från x^9 på ett ad-hoc sätt,
-        # utan alla potenser bildar en naturlig, kontinuerlig kedja på baslinjen.
-        natural_algebraic_order = tuple(sorted(list(combo)))
-        current_layout.append(natural_algebraic_order)
+        combo_set = set(combo)
+        
+        # 1. Identifiera gemensamma element och de nya dolda ersättarna
+        shared_elements = main_set.intersection(combo_set)
+        # Sorteras i sin naturliga algebraiska ordning innan de fyller hålen
+        replacements = sorted(list(combo_set - main_set))
+        
+        aligned_combo = []
+        rep_idx = 0
+        
+        # 2. Gå igenom huvudledens fasta ordning och fyll hålen linjärt
+        for elem in main_order:
+            if elem in shared_elements:
+                aligned_combo.append(elem)
+            else:
+                if rep_idx < len(replacements):
+                    aligned_combo.append(replacements[rep_idx])
+                    rep_idx += 1
+                    
+        # Om det finns extra ersättare kvar, lägg dem i slutet
+        while rep_idx < len(replacements):
+            aligned_combo.append(replacements[rep_idx])
+            rep_idx += 1
+            
+        current_layout.append(tuple(aligned_combo))
         
     return current_layout
-
-
 
 
 # --------------------------------------------------
@@ -77,7 +94,7 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # Breddförhållande för kolumnerna
+    # Breddförhållande för kolumnerna (Fixat med rättStreamlit-syntax)
     col_plot, col_controls = st.columns([6, 3])
     
     with col_controls:
@@ -122,7 +139,7 @@ def render(math_data):
         else:
             final_layouts = evaluate_global_layout(main_line, sorted_matches, pool)
 
-        # --- STEG 1: SOLID VIT FYLLNING OCH TEXTER ---
+        # --- STEG 1: TRANSPARENT VIT FYLLNING OCH TEXTER ---
         if selected_idx >= 0 and selected_idx < len(final_layouts):
             chosen_combo = final_layouts[selected_idx]
             _, chosen_centers = get_layer_geometry(chosen_combo, pool)
@@ -134,7 +151,7 @@ def render(math_data):
                 
                 fig.add_trace(go.Scatter(
                     x=cx, y=cy, mode="none", fill="toself",
-                    fillcolor="rgba(0, 0, 0, 0.2)",
+                    fillcolor="rgba(0, 0, 0, 0.3)", # Behåller din önskade transparens (30%)
                     hoverinfo="skip", showlegend=False
                 ))
                 
