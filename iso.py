@@ -98,7 +98,7 @@ def render(math_data):
     lengths2_raw = math_data["lengths2_numeric"]
 
     # --- DIAGRAMSPECIFIKA KONTROLLER ---
-    col_plot, col_controls = st.columns()
+    col_plot, col_controls = st.columns([7, 1])
     
     with col_controls:
         st.text(" ")
