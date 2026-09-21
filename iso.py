@@ -78,16 +78,14 @@ def generate_positions(nodes, lengths, directions):
 
 def calculate_bounds(pos1, pos2):
     all_pos = list(pos1.values()) + list(pos2.values())
-    # RÄTTAT: Lägg till [0] och [1] här!
     xs = [p[0] for p in all_pos]
     ys = [p[1] for p in all_pos]
 
     # Hitta det maximala avståndet från origo för en perfekt kvadratisk vy
     max_val = max(max(abs(x) for x in xs), max(abs(y) for y in ys))
-    margin = max_val * 1.35  
+    margin = max_val * 1.35  # Väl tilltagen marginal för att rymma texterna på utsidan
     
     return -margin, margin, -margin, margin
-
 
 
 # --------------------------------------------------
@@ -100,7 +98,7 @@ def render(math_data):
     lengths2_raw = math_data["lengths2_numeric"]
 
     # --- DIAGRAMSPECIFIKA KONTROLLER ---
-    col_plot, col_controls = st.columns([7, 2])
+    col_plot, col_controls = st.columns()
     
     with col_controls:
         st.text(" ")
@@ -125,7 +123,6 @@ def render(math_data):
         if not valid_strides:
             st.caption("No alternative perspectives available for this n.")
         else:
-            # Skapa en lista med alternativ för användaren (Kliv 1 är alltid standard/None)
             perspective_options = ["Standard"] + [f"Perspective {k}" for k in valid_strides]
             
             chosen_perspective = st.radio(
@@ -137,14 +134,11 @@ def render(math_data):
             )
             
             if chosen_perspective != "Standard":
-                # Hämta ut det valda kliv-numret ur textsträngen
                 selected_stride = int(chosen_perspective.split()[-1])
 
     # --- APPLICERA MODULO-PERSPEKTIVET PÅ MATEMATIKEN ---
-    # Vi bygger den exakta permutations-ordningen baserat på klock-matematiken (modulo n)
     permutation_indices = []
-    current_idx = 0  # Vi börjar på index 0 (motsvarar 1 i din 1-baserade lista)
-    
+    current_idx = 0
     for _ in range(n):
         permutation_indices.append(current_idx)
         current_idx = (current_idx + selected_stride) % n
@@ -243,6 +237,7 @@ def render(math_data):
                 hull = ConvexHull(points)
                 hull_edges = set()
                 for simplex in hull.simplices:
+                    # RÄTTAT: Lagt till [0] och [1] för korrekt array-indexering
                     node_a = node_list[simplex[0]]
                     node_b = node_list[simplex[1]]
                     hull_edges.add(tuple(sorted([node_a, node_b])))
@@ -289,4 +284,9 @@ def render(math_data):
                     N = np.array([-T[1], T[0]])
                     if np.dot(midpoint, N) < 0:
                         N = -N
+                    
+                    anno_pos = midpoint + N * 0.5
+                    
+                    # Hitta det ursprungliga potens-indexet för märkningen
+                    original_dim_label = permutation_indices[dim_k]
                     
