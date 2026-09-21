@@ -154,7 +154,7 @@ def render(math_data):
                 
                 fig.add_trace(go.Scatter(
                     x=cx, y=cy, mode="none", fill="toself",
-                    fillcolor="rgba(0, 0, 0, 1.0)",
+                    fillcolor="rgba(0, 0, 0, 0.2)",
                     hoverinfo="skip", showlegend=False
                 ))
                 
