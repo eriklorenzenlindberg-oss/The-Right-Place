@@ -1,8 +1,8 @@
 import streamlit as st
 import calculations as calc
 import iso
-# TILLFÄLLIGT BORTKOMMENTERADE IMPORTER (Slås på sen när vi fixar deras filer):
-# import semicircles
+import semicircles # <--- Aktiverad igen!
+# TILLFÄLLIGT BORTKOMMENTERADE IMPORTER:
 # import rectangles
 # import pyramid
 import sympy as sp
@@ -89,23 +89,27 @@ with placeholder_v:
 
 
 # --------------------------------------------------
-# TABS
+# TABS (Nu med båda de städade flikarna aktiva)
 # --------------------------------------------------
-tab_iso, = st.tabs(
+tab_iso, tab_circles = st.tabs(
     [
         "n-face",
+        "1-faces",
     ],
     key="main_navigation_tabs"
 )
 
 
 # --------------------------------------------------
-# ISOLERADE RENDER-FUNKTIONER (Helt renodlade!)
+# ISOLERADE RENDER-FUNKTIONER
 # --------------------------------------------------
 
 def render_tab_iso(math_data):
-    # Alla reglage och layout sköts nu helt internt av iso.py!
     iso.render(math_data)
+
+
+def render_tab_circles(math_data):
+    semicircles.render(math_data)
 
 
 # --------------------------------------------------
@@ -114,3 +118,6 @@ def render_tab_iso(math_data):
 
 with tab_iso:
     render_tab_iso(math_data)
+
+with tab_circles:
+    render_tab_circles(math_data)
