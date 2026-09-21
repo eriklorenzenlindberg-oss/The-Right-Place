@@ -134,8 +134,7 @@ def render(math_data):
         x_texts, y_texts, text_labels, text_positions = [], [], [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        # Huvudleden (index 0) i sin fasta grundordning
-        main_base_order = tuple(sorted(total_sum_matches[0]))
+        main_base_order = tuple(sorted(total_sum_matches))
 
         if not max_overlap or len(total_sum_matches) <= 1:
             final_layouts = [tuple(sorted(combo)) for combo in total_sum_matches]
