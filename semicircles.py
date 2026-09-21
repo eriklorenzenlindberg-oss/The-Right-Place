@@ -41,43 +41,23 @@ def get_layer_geometry(combo, pool):
 
 # --- MATEMATISK INDEX-MAPPAD OVERLAP-ALGORITM ---
 # --- OPTIMAL INDEX-MAPPAD & STORLEKSKALIBRERAD OVERLAP ---
+# --- NY ALGEBRAISK OBRUTEN OVERLAP-ALGORITM ---
 def evaluate_global_layout(main_order, sorted_matches, pool):
     """
-    Ordnar alla komplexa kombinationer genom att placera dolda element i 
-    huvudledens luckor, men sorterar dem lokalt efter deras geometriska storlek.
+    Sorterar de dolda leden i en obruten, naturlig matematisk sekvens 
+    baserat på deras exponenter. Förhindrar att kombinationer slits sönder.
     """
     current_layout = []
-    main_set = set(main_order)
     
     for combo in sorted_matches:
-        combo_set = set(combo)
-        
-        # 1. Hitta gemensamma element och de nya dolda ersättarna
-        shared_elements = main_set.intersection(combo_set)
-        
-        # 2. Sortera de dolda ersättarna lokalt efter deras sanna fysiska storlek (diameter)
-        # Detta gör att sammansatta block (som 4,6) internt lägger sig i rätt geometrisk ordning
-        replacements = sorted(list(combo_set - main_set), key=lambda k: pool.get(k, 0.0))
-        
-        aligned_combo = []
-        rep_idx = 0
-        
-        # 3. Mappa in i huvudledens struktur
-        for elem in main_order:
-            if elem in shared_elements:
-                aligned_combo.append(elem)
-            else:
-                if rep_idx < len(replacements):
-                    aligned_combo.append(replacements[rep_idx])
-                    rep_idx += 1
-                    
-        while rep_idx < len(replacements):
-            aligned_combo.append(replacements[rep_idx])
-            rep_idx += 1
-            
-        current_layout.append(tuple(aligned_combo))
+        # Sorterar hela kombinationen strikt efter exponenternas värde (0, 1, 2, 3...)
+        # Detta gör att x^2 och x^3 aldrig separeras från x^9 på ett ad-hoc sätt,
+        # utan alla potenser bildar en naturlig, kontinuerlig kedja på baslinjen.
+        natural_algebraic_order = tuple(sorted(list(combo)))
+        current_layout.append(natural_algebraic_order)
         
     return current_layout
+
 
 
 
