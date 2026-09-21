@@ -31,6 +31,7 @@ def format_label(power, is_fig2=False):
 
 @st.cache_data
 def generate_ncube_graph(n):
+    # RÄTTAT: Lagt till [0, 1] som saknades i förra meddelandet
     nodes = list(itertools.product([0, 1], repeat=n))
     edges = []
     for i, a in enumerate(nodes):
@@ -113,7 +114,7 @@ def render(math_data):
         linewidth = st.slider("Line width", 0.1, 1.0, 0.3, 0.1, key="iso_linewidth")     
 
     # --- PARAMETER FÖR MARGINAL OVANTILL ---
-    top_margin_px = 5  # <--- Sätt till 5 för minimal marginal, eller t.ex. 40 för mer utrymme.
+    top_margin_px = 5  # <--- Ändra detta värde för att justera avståndet uppåt!
 
     with col_plot:
         nodes, edges = generate_ncube_graph(n)
@@ -273,7 +274,7 @@ def render(math_data):
 
         # --- LAYOUT OCH ABSOLUT AXELLÅSNING ---
         fig.update_layout(
-            title=None,  # <--- STÄNGER AV AUTOMATISK TITEL-MARGINAL SÅ ATT t CONTROLERAR ALLT
+            title=None,
             plot_bgcolor=bg_color,
             paper_bgcolor=bg_color,
             showlegend=False,
@@ -293,3 +294,4 @@ def render(math_data):
             fig,
             use_container_width=True,
             key="iso_subplots"
+        )
