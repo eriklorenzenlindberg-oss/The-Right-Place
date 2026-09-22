@@ -40,35 +40,40 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
-# --- EXAKT ENSTAKA MATCHNINGS-ALGORITM ---
-def evaluate_single_layout(combo_keys, previous_layouts, pool):
+# --- MATEMATISK MATCHNINGS-ALGORITM (ÖVERFÖRD FRÅN DIN MATPLOTLIB-KOD) ---
+def evaluate_global_layout(sorted_matches, pool):
     """
-    Hittar den bästa permutationen för en specifik kombination 
-    baserat på tidigare sparade och optimerade lager.
+    Matchar cirklarnas mittpunkter (x_center) horisontellt på samma sätt som 
+    Matplotlib-koden gjorde vertikalt. Körs supersnabbt per enskilt lager.
     """
-    best_score = -1000
-    best_layout = tuple(sorted(list(combo_keys)))
+    optimized_layouts = []
     
-    for perm in itertools.permutations(combo_keys):
-        _, current_centers = get_layer_geometry(perm, pool)
-        score = 0
+    for idx, combo_keys in enumerate(sorted_matches):
+        best_score = -1000
+        best_layout = tuple(sorted(list(combo_keys)))
         
-        for k, x_center, _ in current_centers:
-            for prev_layout in previous_layouts:
-                _, prev_centers = get_layer_geometry(prev_layout, pool)
-                for pk, px_center, _ in prev_centers:
-                    if pk == k and abs(px_center - x_center) < 1e-4:
-                        score += 1
-                        
-        if score > best_score:
-            best_score = score
-            best_layout = perm
+        for perm in itertools.permutations(combo_keys):
+            _, current_centers = get_layer_geometry(perm, pool)
+            score = 0
             
-    return best_layout
+            for k, x_center, _ in current_centers:
+                for prev_layout in optimized_layouts:
+                    _, prev_centers = get_layer_geometry(prev_layout, pool)
+                    for pk, px_center, _ in prev_centers:
+                        if pk == k and abs(px_center - x_center) < 1e-4:
+                            score += 1
+                            
+            if score > best_score:
+                best_score = score
+                best_layout = perm
+                
+        optimized_layouts.append(best_layout)
+        
+    return optimized_layouts
 
 
 # --------------------------------------------------
-# RENDER (Självständig modul med synkroniserade menyer)
+# RENDER (Självständig modul med tjocka markeringslinjer)
 # --------------------------------------------------
 
 def render(math_data):
@@ -91,24 +96,28 @@ def render(math_data):
     sorted_matches = [main_line] + hidden_lines
 
     # --- BERÄKNA LAYOUTS FÖR BÅDA LÄGEN STABILT ---
-    # Vi bygger listan med de optimerade ordningarna
     overlap_layouts = []
     for combo in sorted_matches:
-        best_perm = evaluate_single_layout(combo, overlap_layouts, pool)
+        best_perm = evaluate_single_layout(combo, overlap_layouts, pool) if 'evaluate_single_layout' in globals() else evaluate_global_layout([combo], pool)[0]
         overlap_layouts.append(best_perm)
 
+    # Vi säkrar att vi har en ren uppsättning färdiga layouter
+    if "circles_overlap" in st.session_state and st.session_state["circles_overlap"]:
+        final_layouts = overlap_layouts
+    else:
+        final_layouts = sorted_matches
+
     # Breddförhållande för kolumnerna
-    col_plot, col_controls = st.columns([7, 3])
+    col_plot, col_controls = st.columns([6, 3])
     
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=False, key="circles_overlap")
         
-        # Bestäm vilket koordinatset vi ska använda för märkningen och ritningen
-        final_layouts = overlap_layouts if max_overlap else sorted_matches
+        # Bestäm text-layout dynamiskt baserat på valt läge
+        current_display_layouts = overlap_layouts if max_overlap else sorted_matches
         
-        # Skapa etiketterna baserat på den ordning de faktiskt kommer att ritas i!
         combo_labels = []
-        for combo in final_layouts:
+        for combo in current_display_layouts:
             label = " + ".join(get_math_label(k) for k in combo)
             combo_labels.append(label)
             
@@ -118,7 +127,7 @@ def render(math_data):
             "Select combination to highlight:",
             options=combo_options,
             index=0,
-            key=f"circles_highlight_{n}_{max_overlap}" # Nollställer radion snyggt vid klick
+            key=f"circles_highlight_{n}_{max_overlap}"
         )
         
         selected_idx = combo_options.index(selected_option) - 1
@@ -132,7 +141,7 @@ def render(math_data):
         x_texts, y_texts, text_labels, text_positions = [], [], [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        # --- STEG 1: HIGHLIGHT (FILL) OCH TEXTER ---
+        # --- STEG 1: MARKERING (TJOCKA KONTURLINJER & 100% TRANSPARENT FYLLNING) ---
         if selected_idx >= 0 and selected_idx < len(final_layouts):
             chosen_combo = final_layouts[selected_idx]
             _, chosen_centers = get_layer_geometry(chosen_combo, pool)
@@ -142,9 +151,17 @@ def render(math_data):
                 cx = x_center + radius * np.cos(theta_upper)
                 cy = 0.0 + radius * np.sin(theta_upper)
                 
+                # 1. Sparad osynlig fyllning (100% transparent alpha = 0.0)
                 fig.add_trace(go.Scatter(
                     x=cx, y=cy, mode="none", fill="toself",
-                    fillcolor="rgba(0, 0, 0, 0.3)",
+                    fillcolor="rgba(0, 0, 0, 0.0)", # <--- SPARAD SOM HELT TRANSPARENT
+                    hoverinfo="skip", showlegend=False
+                ))
+                
+                # 2. NYTT: Rita konturen separat med en tjockare, tydlig linje (width=1.5)
+                fig.add_trace(go.Scatter(
+                    x=cx, y=cy, mode="lines",
+                    line=dict(color=line_color, width=1.5), # <--- TJOCK MARKERINGSLINJE
                     hoverinfo="skip", showlegend=False
                 ))
                 
@@ -153,7 +170,7 @@ def render(math_data):
                 text_labels.append(get_math_label(k))
                 text_positions.append("middle center")
 
-        # --- STEG 2: RITA ALLA LINJER (MED UNIK FILTERING) ---
+        # --- STEG 2: RITA ALLA BAKGRUNDSLINJER (MED UNIK FILTERING) ---
         all_radii = []
         drawn_circles = set()
 
@@ -179,6 +196,7 @@ def render(math_data):
         x_lines.extend([0.0, target_value, None])
         y_lines.extend([0.0, 0.0, None])
 
+        # Standardbakgrunden ritas med tunn linjebredd (width=0.3)
         fig.add_trace(go.Scatter(
             x=x_lines, y=y_lines, mode="lines", 
             line=dict(color=line_color, width=0.3), 
@@ -189,7 +207,7 @@ def render(math_data):
             fig.add_trace(go.Scatter(
                 x=x_texts, y=y_texts, text=text_labels, mode="text",
                 textposition=text_positions, 
-                textfont=dict(color=bg_color, size=11), 
+                textfont=dict(color=line_color, size=11), # Ändrat textfärg till svart då fyllningen är borta
                 hoverinfo="skip", showlegend=False
             ))
 
