@@ -40,7 +40,7 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
-# --- MATEMATISK MATCHNINGS-ALGORITM (ÖVERFÖRD FRÅN DIN MATPLOTLIB-KOD) ---
+# --- MATEMATISK MATCHNINGS-ALGORITM (DIN BEPRÖVADE FRÅN MATPLOTLIB) ---
 def evaluate_global_layout(sorted_matches, pool):
     """
     Matchar cirklarnas mittpunkter (x_center) horisontellt på samma sätt som 
@@ -73,7 +73,7 @@ def evaluate_global_layout(sorted_matches, pool):
 
 
 # --------------------------------------------------
-# RENDER (Avskalad vy utan annotationer och None)
+# RENDER (Minimalistisk, ren och synkroniserad)
 # --------------------------------------------------
 
 def render(math_data):
@@ -95,16 +95,9 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # --- BERÄKNA LAYOUTS FÖR BÅDA LÄGEN STABILT ---
-    overlap_layouts = []
-    for combo in sorted_matches:
-        best_perm = evaluate_single_layout(combo, overlap_layouts, pool) if 'evaluate_single_layout' in globals() else evaluate_global_layout([combo], pool)
-        overlap_layouts.append(best_perm)
-
-    if "circles_overlap" in st.session_state and st.session_state["circles_overlap"]:
-        final_layouts = overlap_layouts
-    else:
-        final_layouts = sorted_matches
+    # --- BERÄKNA MATCHADE ORDNINGAR KORREKT ---
+    # RÄTTNING: Vi skickar hela listan till matchningen på en gång, precis som förut!
+    overlap_layouts = evaluate_global_layout(sorted_matches, pool)
 
     # Breddförhållande för kolumnerna
     col_plot, col_controls = st.columns([6, 3])
@@ -112,12 +105,12 @@ def render(math_data):
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=False, key="circles_overlap")
         
-        # Bestäm text-layout dynamiskt baserat på valt läge
-        current_display_layouts = overlap_layouts if max_overlap else sorted_matches
+        # Bestäm vilket set av layouter som ska ritas och visas i texten
+        final_layouts = overlap_layouts if max_overlap else sorted_matches
         
-        # RÄTTNING: Skapar menyalternativen direkt utan "None"
+        # Skapa etiketterna baserat på den ordning de faktiskt kommer att ritas i
         combo_labels = []
-        for combo in current_display_layouts:
+        for combo in final_layouts:
             label = " + ".join(get_math_label(k) for k in combo)
             combo_labels.append(label)
             
@@ -126,7 +119,7 @@ def render(math_data):
         selected_option = st.radio(
             "Select combination to highlight:",
             options=combo_options,
-            index=0, # Index 0 är nu ALLTID den sanna huvudleden som standard!
+            index=0, # Alltid huvudleden tänd vid start
             key=f"circles_highlight_{n}_{max_overlap}"
         )
         
