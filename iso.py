@@ -281,7 +281,7 @@ def render(math_data):
             yaxis2=dict(visible=False, range=[ymin, ymax])
         )
 
-        fig.update_yaxes(anchor="top")
+        fig.update_xaxes(matches='x')
 
         st.plotly_chart(
             fig,
