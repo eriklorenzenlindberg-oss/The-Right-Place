@@ -30,11 +30,11 @@ with st.expander("..."):
         
         Generalizations of the “root rectangles”:
         
-        2=x^2
+        2=x^n
         
-        3=x^2
+        3=x^n
         
-        4=x^2
+        4=x^n
         
         ...
         """
