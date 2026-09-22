@@ -40,7 +40,7 @@ with st.expander("..."):
         """
     )
 
-st.text("") # Lägger till lite luft innan resten av gränssnittet startar
+
 
 
 # --------------------------------------------------
