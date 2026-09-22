@@ -96,7 +96,7 @@ def render(math_data):
     lengths2 = math_data["lengths2_numeric"]
 
     # --- PANEL-LAYOUT FÖR DIAGRAM OCH REGLAGE ---
-    col_plot, col_controls = st.columns([8, 2])
+    col_plot, col_controls = st.columns([9, 1])
     
     with col_controls:
         st.text(" ")
