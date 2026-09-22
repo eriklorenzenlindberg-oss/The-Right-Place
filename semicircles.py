@@ -40,40 +40,35 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
-# --- MATEMATISK MATCHNINGS-ALGORITM (ÖVERFÖRD FRÅN DIN MATPLOTLIB-KOD) ---
-def evaluate_global_layout(sorted_matches, pool):
+# --- EXAKT ENSTAKA MATCHNINGS-ALGORITM ---
+def evaluate_single_layout(combo_keys, previous_layouts, pool):
     """
-    Matchar cirklarnas mittpunkter (x_center) horisontellt på samma sätt som 
-    Matplotlib-koden gjorde vertikalt. Körs supersnabbt per enskilt lager.
+    Hittar den bästa permutationen för en specifik kombination 
+    baserat på tidigare sparade och optimerade lager.
     """
-    optimized_layouts = []
+    best_score = -1000
+    best_layout = tuple(sorted(list(combo_keys)))
     
-    for idx, combo_keys in enumerate(sorted_matches):
-        best_score = -1000
-        best_layout = tuple(sorted(list(combo_keys)))
+    for perm in itertools.permutations(combo_keys):
+        _, current_centers = get_layer_geometry(perm, pool)
+        score = 0
         
-        for perm in itertools.permutations(combo_keys):
-            _, current_centers = get_layer_geometry(perm, pool)
-            score = 0
+        for k, x_center, _ in current_centers:
+            for prev_layout in previous_layouts:
+                _, prev_centers = get_layer_geometry(prev_layout, pool)
+                for pk, px_center, _ in prev_centers:
+                    if pk == k and abs(px_center - x_center) < 1e-4:
+                        score += 1
+                        
+        if score > best_score:
+            best_score = score
+            best_layout = perm
             
-            for k, x_center, _ in current_centers:
-                for prev_layout in optimized_layouts:
-                    _, prev_centers = get_layer_geometry(prev_layout, pool)
-                    for pk, px_center, _ in prev_centers:
-                        if pk == k and abs(px_center - x_center) < 1e-4:
-                            score += 1
-                            
-            if score > best_score:
-                best_score = score
-                best_layout = perm
-                
-        optimized_layouts.append(best_layout)
-        
-    return optimized_layouts
+    return best_layout
 
 
 # --------------------------------------------------
-# RENDER (Självständig modul med synkroniserad text)
+# RENDER (Självständig modul med synkroniserade menyer)
 # --------------------------------------------------
 
 def render(math_data):
@@ -95,29 +90,23 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # --- BERÄKNA GEOMETRI-ORDNINGEN FÖRST ---
-    # Vi behöver köra reglagen och matchningen först för att veta ordningen i texten
-    max_overlap = False
-    if len(sorted_matches) > 1:
-        # En tillfällig checkbox-avläsning som inte ritar ut något i gränssnittet än
-        # (Vi använder Streamlits inbyggda session_state-kontroll)
-        max_overlap = st.sidebar.checkbox("Circles Overlap (Internal)", value=False, key="circles_overlap_hidden", label_visibility="collapsed") if "circles_overlap" in st.session_state and st.session_state["circles_overlap"] else False
-
-    # Det här bestämmer den slutgiltiga ordningen (antingen matchad eller standardsorterad)
-    if "circles_overlap" in st.session_state and st.session_state["circles_overlap"]:
-        final_layouts = evaluate_global_layout(sorted_matches, pool)
-    else:
-        final_layouts = sorted_matches
+    # --- BERÄKNA LAYOUTS FÖR BÅDA LÄGEN STABILT ---
+    # Vi bygger listan med de optimerade ordningarna
+    overlap_layouts = []
+    for combo in sorted_matches:
+        best_perm = evaluate_single_layout(combo, overlap_layouts, pool)
+        overlap_layouts.append(best_perm)
 
     # Breddförhållande för kolumnerna
-    col_plot, col_controls = st.columns([6, 3])
+    col_plot, col_controls = st.columns([7, 3])
     
     with col_controls:
-        # Den riktiga, synliga checkboxen
-        max_overlap = st.checkbox("Overlap", value=max_overlap, key="circles_overlap")
+        max_overlap = st.checkbox("Overlap", value=False, key="circles_overlap")
         
-        # RÄTTNING: Skapa texterna baserat på 'final_layouts' i stället för 'sorted_matches'
-        # Vi tar bort sorted() för att behålla den exakta ordningsföljden från ritningen!
+        # Bestäm vilket koordinatset vi ska använda för märkningen och ritningen
+        final_layouts = overlap_layouts if max_overlap else sorted_matches
+        
+        # Skapa etiketterna baserat på den ordning de faktiskt kommer att ritas i!
         combo_labels = []
         for combo in final_layouts:
             label = " + ".join(get_math_label(k) for k in combo)
@@ -129,7 +118,7 @@ def render(math_data):
             "Select combination to highlight:",
             options=combo_options,
             index=0,
-            key=f"circles_highlight_{n}"
+            key=f"circles_highlight_{n}_{max_overlap}" # Nollställer radion snyggt vid klick
         )
         
         selected_idx = combo_options.index(selected_option) - 1
@@ -186,7 +175,7 @@ def render(math_data):
                     x_lines.extend(list(cx) + [None])
                     y_lines.extend(list(cy) + [None])
 
-        # Central horisontell stam
+        # Central horisontell baslinje
         x_lines.extend([0.0, target_value, None])
         y_lines.extend([0.0, 0.0, None])
 
