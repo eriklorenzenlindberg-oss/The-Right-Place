@@ -1,3 +1,4 @@
+import itertools
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
@@ -39,43 +40,41 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
-# --- ÅTERSTÄLLD FUNGERANDE OVERLAP-LOGIK (LUCKFYLLNING) ---
-def evaluate_global_layout(main_order, sorted_matches, pool):
+# --- MATEMATISK MATCHNINGS-ALGORITM (ÖVERFÖRD FRÅN DIN MATPLOTLIB-KOD) ---
+def evaluate_global_layout(sorted_matches, pool):
     """
-    Återställer den logik där ersättare fyller huvudledens hål linjärt.
-    Detta tillåter x^9 att lägga sig i hål 0, vilket ger rätt geometrisk förskjutning.
+    Matchar cirklarnas mittpunkter (x_center) horisontellt på samma sätt som 
+    Matplotlib-koden gjorde vertikalt. Körs supersnabbt per enskilt lager.
     """
-    current_layout = []
-    main_set = set(main_order)
+    optimized_layouts = []
     
-    for combo in sorted_matches:
-        combo_set = set(combo)
+    for idx, combo_keys in enumerate(sorted_matches):
+        best_score = -1000
+        best_layout = tuple(sorted(list(combo_keys))) # Standardfall om inget matchar
+        is_main = (idx == 0)
         
-        # 1. Identifiera gemensamma element och de nya dolda ersättarna
-        shared_elements = main_set.intersection(combo_set)
-        # Sorteras i sin naturliga algebraiska ordning innan de fyller hålen
-        replacements = sorted(list(combo_set - main_set))
-        
-        aligned_combo = []
-        rep_idx = 0
-        
-        # 2. Gå igenom huvudledens fasta ordning och fyll hålen linjärt
-        for elem in main_order:
-            if elem in shared_elements:
-                aligned_combo.append(elem)
-            else:
-                if rep_idx < len(replacements):
-                    aligned_combo.append(replacements[rep_idx])
-                    rep_idx += 1
-                    
-        # Om det finns extra ersättare kvar, lägg dem i slutet
-        while rep_idx < len(replacements):
-            aligned_combo.append(replacements[rep_idx])
-            rep_idx += 1
+        # Vi testar alla permutationer för JUST denna kombination
+        for perm in itertools.permutations(combo_keys):
+            # Beräkna geometrin (inklusive x-mittpunkter) för denna specifika ordning
+            _, current_centers = get_layer_geometry(perm, pool)
+            score = 0
             
-        current_layout.append(tuple(aligned_combo))
+            # Jämför varje cirkels mittpunkt mot de tidigare sparade och optimerade lagren
+            for k, x_center, _ in current_centers:
+                for prev_layout in optimized_layouts:
+                    _, prev_centers = get_layer_geometry(prev_layout, pool)
+                    for pk, px_center, _ in prev_centers:
+                        # Om samma cirkel-potens hamnar på exakt samma mittpunkt, ge poäng!
+                        if pk == k and abs(px_center - x_center) < 1e-4:
+                            score += 1
+                            
+            if score > best_score:
+                best_score = score
+                best_layout = perm
+                
+        optimized_layouts.append(best_layout)
         
-    return current_layout
+    return optimized_layouts
 
 
 # --------------------------------------------------
@@ -94,8 +93,8 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # Breddförhållande för kolumnerna (Fixat med rättStreamlit-syntax)
-    col_plot, col_controls = st.columns([6, 3])
+    # Breddförhållande för kolumnerna (Löst Streamlit-syntax-krav)
+    col_plot, col_controls = st.columns([7, 3])
     
     with col_controls:
         max_overlap = False
@@ -134,10 +133,11 @@ def render(math_data):
         x_texts, y_texts, text_labels, text_positions = [], [], [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
+        # Kör den nya exakta mittpunktsmatchningen om Overlap är ibockat
         if not max_overlap or len(sorted_matches) <= 1:
             final_layouts = sorted_matches
         else:
-            final_layouts = evaluate_global_layout(main_line, sorted_matches, pool)
+            final_layouts = evaluate_global_layout(sorted_matches, pool)
 
         # --- STEG 1: TRANSPARENT VIT FYLLNING OCH TEXTER ---
         if selected_idx >= 0 and selected_idx < len(final_layouts):
@@ -146,17 +146,18 @@ def render(math_data):
             
             for k, x_center, diameter in chosen_centers:
                 radius = diameter / 2.0
-                cx = x_center + radius * np.cos(theta_upper)
+                cx = (x_center - radius) + radius * np.cos(theta_upper)
                 cy = 0.0 + radius * np.sin(theta_upper)
                 
                 fig.add_trace(go.Scatter(
                     x=cx, y=cy, mode="none", fill="toself",
-                    fillcolor="rgba(0, 0, 0, 0.3)", # Behåller din önskade transparens (30%)
+                    fillcolor="rgba(0, 0, 0, 0.3)",
                     hoverinfo="skip", showlegend=False
                 ))
                 
+                # Lägg till texten i mitten av den liggande halvcirkeln
                 x_texts.append(x_center)
-                y_texts.append(radius * 0.5)
+                y_texts.append(radius * 0.4)
                 text_labels.append(get_math_label(k))
                 text_positions.append("middle center")
 
@@ -168,13 +169,13 @@ def render(math_data):
             for k, x_center, diameter in final_centers:
                 radius = diameter / 2.0
                 all_radii.append(radius)
-                cx = x_center + radius * np.cos(theta_upper)
+                cx = (x_center - radius) + radius * np.cos(theta_upper)
                 cy = 0.0 + radius * np.sin(theta_upper)
                 
                 x_lines.extend(list(cx) + [None])
                 y_lines.extend(list(cy) + [None])
 
-        # Central horisontell stam
+        # Central horisontell stam (liggande linje)
         x_lines.extend([0.0, target_value, None])
         y_lines.extend([0.0, 0.0, None])
 
