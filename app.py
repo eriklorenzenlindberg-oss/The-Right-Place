@@ -20,10 +20,17 @@ st.markdown(
 with st.expander("..."):
     st.markdown(
         """
-        Lorem ipsum Lorem ipsum Lorem ipsum
-        Lorem ipsum Lorem ipsum Lorem ipsum
-        Lorem ipsum Lorem ipsum Lorem ipsum
-        Lorem ipsum Lorem ipsum Lorem ipsum
+        Generalizations of the golden ratio:
+        1+x=x^n
+        1+x^(n-1)
+        1+x^(n/2)
+        
+        Generalizations of the “root rectangles”:
+        2=x^2
+        3=x^2
+        4=x^2
+        
+        ...
         """
     )
 
