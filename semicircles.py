@@ -93,8 +93,8 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # Breddförhållande för kolumnerna (Löst Streamlit-syntax-krav)
-    col_plot, col_controls = st.columns([7, 3])
+    # Breddförhållande för kolumnerna
+    col_plot, col_controls = st.columns([6, 3])
     
     with col_controls:
         max_overlap = False
@@ -146,7 +146,8 @@ def render(math_data):
             
             for k, x_center, diameter in chosen_centers:
                 radius = diameter / 2.0
-                cx = (x_center - radius) + radius * np.cos(theta_upper)
+                # RÄTTAT: Utgå direkt från x_center utan den dubbla radieförskjutningen
+                cx = x_center + radius * np.cos(theta_upper)
                 cy = 0.0 + radius * np.sin(theta_upper)
                 
                 fig.add_trace(go.Scatter(
@@ -155,7 +156,6 @@ def render(math_data):
                     hoverinfo="skip", showlegend=False
                 ))
                 
-                # Lägg till texten i mitten av den liggande halvcirkeln
                 x_texts.append(x_center)
                 y_texts.append(radius * 0.4)
                 text_labels.append(get_math_label(k))
@@ -169,7 +169,8 @@ def render(math_data):
             for k, x_center, diameter in final_centers:
                 radius = diameter / 2.0
                 all_radii.append(radius)
-                cx = (x_center - radius) + radius * np.cos(theta_upper)
+                # RÄTTAT: Samma sak här för alla linjer
+                cx = x_center + radius * np.cos(theta_upper)
                 cy = 0.0 + radius * np.sin(theta_upper)
                 
                 x_lines.extend(list(cx) + [None])
