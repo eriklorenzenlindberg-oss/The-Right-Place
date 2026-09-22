@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 # --------------------------------------------------
-# TEXTFORMATERING FÖR MATEMATISKA TEXTER
+# TEXTFORMATERING FÖR RADIOMENYN
 # --------------------------------------------------
 
 def get_math_label(power):
@@ -73,7 +73,7 @@ def evaluate_global_layout(sorted_matches, pool):
 
 
 # --------------------------------------------------
-# RENDER (Självständig modul med tjocka markeringslinjer)
+# RENDER (Avskalad vy utan annotationer och None)
 # --------------------------------------------------
 
 def render(math_data):
@@ -98,10 +98,9 @@ def render(math_data):
     # --- BERÄKNA LAYOUTS FÖR BÅDA LÄGEN STABILT ---
     overlap_layouts = []
     for combo in sorted_matches:
-        best_perm = evaluate_single_layout(combo, overlap_layouts, pool) if 'evaluate_single_layout' in globals() else evaluate_global_layout([combo], pool)[0]
+        best_perm = evaluate_single_layout(combo, overlap_layouts, pool) if 'evaluate_single_layout' in globals() else evaluate_global_layout([combo], pool)
         overlap_layouts.append(best_perm)
 
-    # Vi säkrar att vi har en ren uppsättning färdiga layouter
     if "circles_overlap" in st.session_state and st.session_state["circles_overlap"]:
         final_layouts = overlap_layouts
     else:
@@ -116,21 +115,22 @@ def render(math_data):
         # Bestäm text-layout dynamiskt baserat på valt läge
         current_display_layouts = overlap_layouts if max_overlap else sorted_matches
         
+        # RÄTTNING: Skapar menyalternativen direkt utan "None"
         combo_labels = []
         for combo in current_display_layouts:
             label = " + ".join(get_math_label(k) for k in combo)
             combo_labels.append(label)
             
-        combo_options = ["None"] + combo_labels
+        combo_options = combo_labels
         
         selected_option = st.radio(
             "Select combination to highlight:",
             options=combo_options,
-            index=0,
+            index=0, # Index 0 är nu ALLTID den sanna huvudleden som standard!
             key=f"circles_highlight_{n}_{max_overlap}"
         )
         
-        selected_idx = combo_options.index(selected_option) - 1
+        selected_idx = combo_options.index(selected_option)
 
     with col_plot:
         line_color = "#000000"
@@ -138,10 +138,9 @@ def render(math_data):
 
         fig = go.Figure()
         x_lines, y_lines = [], []
-        x_texts, y_texts, text_labels, text_positions = [], [], [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        # --- STEG 1: MARKERING (TJOCKA KONTURLINJER & 100% TRANSPARENT FYLLNING) ---
+        # --- STEG 1: MARKERING (ENBART TJOCKA KONTURLINJER, INGEN TEXT) ---
         if selected_idx >= 0 and selected_idx < len(final_layouts):
             chosen_combo = final_layouts[selected_idx]
             _, chosen_centers = get_layer_geometry(chosen_combo, pool)
@@ -151,24 +150,19 @@ def render(math_data):
                 cx = x_center + radius * np.cos(theta_upper)
                 cy = 0.0 + radius * np.sin(theta_upper)
                 
-                # 1. Sparad osynlig fyllning (100% transparent alpha = 0.0)
+                # Osynlig fyllning sparad i bakgrunden för strukturen
                 fig.add_trace(go.Scatter(
                     x=cx, y=cy, mode="none", fill="toself",
-                    fillcolor="rgba(0, 0, 0, 0.0)", # <--- SPARAD SOM HELT TRANSPARENT
+                    fillcolor="rgba(0, 0, 0, 0.0)",
                     hoverinfo="skip", showlegend=False
                 ))
                 
-                # 2. NYTT: Rita konturen separat med en tjockare, tydlig linje (width=1.5)
+                # Rita den tjocka markerade konturlinjen
                 fig.add_trace(go.Scatter(
                     x=cx, y=cy, mode="lines",
-                    line=dict(color=line_color, width=1.5), # <--- TJOCK MARKERINGSLINJE
+                    line=dict(color=line_color, width=1.5),
                     hoverinfo="skip", showlegend=False
                 ))
-                
-                x_texts.append(x_center)
-                y_texts.append(radius * 0.4)
-                text_labels.append(get_math_label(k))
-                text_positions.append("middle center")
 
         # --- STEG 2: RITA ALLA BAKGRUNDSLINJER (MED UNIK FILTERING) ---
         all_radii = []
@@ -196,20 +190,12 @@ def render(math_data):
         x_lines.extend([0.0, target_value, None])
         y_lines.extend([0.0, 0.0, None])
 
-        # Standardbakgrunden ritas med tunn linjebredd (width=0.3)
+        # Standardbakgrunden med tunn linjebredd
         fig.add_trace(go.Scatter(
             x=x_lines, y=y_lines, mode="lines", 
             line=dict(color=line_color, width=0.3), 
             hoverinfo="skip", showlegend=False
         ))
-        
-        if x_texts:
-            fig.add_trace(go.Scatter(
-                x=x_texts, y=y_texts, text=text_labels, mode="text",
-                textposition=text_positions, 
-                textfont=dict(color=line_color, size=11), # Ändrat textfärg till svart då fyllningen är borta
-                hoverinfo="skip", showlegend=False
-            ))
 
         # --- DYNAMISK GLOBAL CENTRERING INUTI RAMEN ---
         max_actual_height = max(all_radii) if all_radii else (target_value * 0.5)
