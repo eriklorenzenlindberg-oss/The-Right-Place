@@ -153,7 +153,7 @@ def render(math_data):
                 # Rita den tjocka markerade konturlinjen
                 fig.add_trace(go.Scatter(
                     x=cx, y=cy, mode="lines",
-                    line=dict(color=line_color, width=1.3),
+                    line=dict(color=line_color, width=1.4),
                     hoverinfo="skip", showlegend=False
                 ))
 
@@ -186,7 +186,7 @@ def render(math_data):
         # Standardbakgrunden med tunn linjebredd
         fig.add_trace(go.Scatter(
             x=x_lines, y=y_lines, mode="lines", 
-            line=dict(color=line_color, width=0.1), 
+            line=dict(color=line_color, width=0.2), 
             hoverinfo="skip", showlegend=False
         ))
 
