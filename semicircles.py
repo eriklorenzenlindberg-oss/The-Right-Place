@@ -73,7 +73,7 @@ def evaluate_global_layout(sorted_matches, pool):
 
 
 # --------------------------------------------------
-# RENDER (Självständig modul med linjerensning)
+# RENDER (Självständig modul med synkroniserad text)
 # --------------------------------------------------
 
 def render(math_data):
@@ -82,22 +82,44 @@ def render(math_data):
         st.info("The main line is missing from the data.")
         return
 
+    n = math_data["n"]
+    pool = math_data["circle_pool"]
+    
+    target_value = sum(pool[m] for m in range(n) if m in pool)
+    if target_value == 0:
+        target_value = 1.0
+
     # --- DIAGRAMSPECIFIK STRUKTURERING AV DATAN ---
     unique_combos = set(tuple(sorted(list(combo))) for combo in raw_matches)
     main_line = max(unique_combos, key=len)
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
+    # --- BERÄKNA GEOMETRI-ORDNINGEN FÖRST ---
+    # Vi behöver köra reglagen och matchningen först för att veta ordningen i texten
+    max_overlap = False
+    if len(sorted_matches) > 1:
+        # En tillfällig checkbox-avläsning som inte ritar ut något i gränssnittet än
+        # (Vi använder Streamlits inbyggda session_state-kontroll)
+        max_overlap = st.sidebar.checkbox("Circles Overlap (Internal)", value=False, key="circles_overlap_hidden", label_visibility="collapsed") if "circles_overlap" in st.session_state and st.session_state["circles_overlap"] else False
+
+    # Det här bestämmer den slutgiltiga ordningen (antingen matchad eller standardsorterad)
+    if "circles_overlap" in st.session_state and st.session_state["circles_overlap"]:
+        final_layouts = evaluate_global_layout(sorted_matches, pool)
+    else:
+        final_layouts = sorted_matches
+
     # Breddförhållande för kolumnerna
     col_plot, col_controls = st.columns([6, 3])
     
     with col_controls:
-        max_overlap = False
-        if len(sorted_matches) > 1:
-            max_overlap = st.checkbox("Overlap", value=False, key="circles_overlap")
+        # Den riktiga, synliga checkboxen
+        max_overlap = st.checkbox("Overlap", value=max_overlap, key="circles_overlap")
         
+        # RÄTTNING: Skapa texterna baserat på 'final_layouts' i stället för 'sorted_matches'
+        # Vi tar bort sorted() för att behålla den exakta ordningsföljden från ritningen!
         combo_labels = []
-        for combo in sorted_matches:
+        for combo in final_layouts:
             label = " + ".join(get_math_label(k) for k in combo)
             combo_labels.append(label)
             
@@ -107,19 +129,12 @@ def render(math_data):
             "Select combination to highlight:",
             options=combo_options,
             index=0,
-            key=f"circles_highlight_{math_data['n']}"
+            key=f"circles_highlight_{n}"
         )
         
         selected_idx = combo_options.index(selected_option) - 1
 
     with col_plot:
-        n = math_data["n"]
-        pool = math_data["circle_pool"]
-        
-        target_value = sum(pool[m] for m in range(n) if m in pool)
-        if target_value == 0:
-            target_value = 1.0
-            
         line_color = "#000000"
         bg_color = "#FFFFFF"
 
@@ -127,11 +142,6 @@ def render(math_data):
         x_lines, y_lines = [], []
         x_texts, y_texts, text_labels, text_positions = [], [], [], []
         theta_upper = np.linspace(0, np.pi, 40)
-
-        if not max_overlap or len(sorted_matches) <= 1:
-            final_layouts = sorted_matches
-        else:
-            final_layouts = evaluate_global_layout(sorted_matches, pool)
 
         # --- STEG 1: HIGHLIGHT (FILL) OCH TEXTER ---
         if selected_idx >= 0 and selected_idx < len(final_layouts):
@@ -156,7 +166,7 @@ def render(math_data):
 
         # --- STEG 2: RITA ALLA LINJER (MED UNIK FILTERING) ---
         all_radii = []
-        drawn_circles = set()  # <--- UNIKT MINNE FÖR ATT FÖRHINDRA DUBBLA LINJER
+        drawn_circles = set()
 
         for combo in final_layouts:
             _, final_centers = get_layer_geometry(combo, pool)
@@ -165,10 +175,8 @@ def render(math_data):
                 radius = diameter / 2.0
                 all_radii.append(radius)
                 
-                # Skapa ett unikt matematiskt ID för denna specifika cirkel
                 circle_id = (k, round(x_center, 4))
                 
-                # Rita BARA om denna cirkel inte har ritats i ett tidigare lager
                 if circle_id not in drawn_circles:
                     drawn_circles.add(circle_id)
                     
@@ -178,7 +186,7 @@ def render(math_data):
                     x_lines.extend(list(cx) + [None])
                     y_lines.extend(list(cy) + [None])
 
-        # Central horisontell stam (liggande baslinje)
+        # Central horisontell stam
         x_lines.extend([0.0, target_value, None])
         y_lines.extend([0.0, 0.0, None])
 
