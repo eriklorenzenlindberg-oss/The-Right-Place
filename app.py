@@ -9,6 +9,27 @@ import sympy as sp
 
 st.subheader("The Right Place")
 
+# --- INGRESS (Syns alltid) ---
+st.markdown(
+    """
+    Visualizing generalizations of the golden ratios and self-similarity in n-dimensional space
+    """
+)
+
+# --- BRÖDTEXT (Utfällbar "Läs mer") ---
+with st.expander("Läs mer"):
+    st.markdown(
+        """
+        Lorem ipsum Lorem ipsum Lorem ipsum
+        Lorem ipsum Lorem ipsum Lorem ipsum
+        Lorem ipsum Lorem ipsum Lorem ipsum
+        Lorem ipsum Lorem ipsum Lorem ipsum
+        """
+    )
+
+st.text("") # Lägger till lite luft innan resten av gränssnittet startar
+
+
 # --------------------------------------------------
 # 1. BYGG GRÄNSSNITTET MED STREAMLITS INBYGGDA INSTÄLLNINGAR
 # --------------------------------------------------
