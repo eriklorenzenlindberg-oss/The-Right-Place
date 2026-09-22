@@ -186,7 +186,7 @@ def render(math_data):
         # Standardbakgrunden med tunn linjebredd
         fig.add_trace(go.Scatter(
             x=x_lines, y=y_lines, mode="lines", 
-            line=dict(color=line_color, width=0.3), 
+            line=dict(color=line_color, width=0.1), 
             hoverinfo="skip", showlegend=False
         ))
 
