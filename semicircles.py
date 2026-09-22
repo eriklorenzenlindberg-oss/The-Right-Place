@@ -50,21 +50,16 @@ def evaluate_global_layout(sorted_matches, pool):
     
     for idx, combo_keys in enumerate(sorted_matches):
         best_score = -1000
-        best_layout = tuple(sorted(list(combo_keys))) # Standardfall om inget matchar
-        is_main = (idx == 0)
+        best_layout = tuple(sorted(list(combo_keys)))
         
-        # Vi testar alla permutationer för JUST denna kombination
         for perm in itertools.permutations(combo_keys):
-            # Beräkna geometrin (inklusive x-mittpunkter) för denna specifika ordning
             _, current_centers = get_layer_geometry(perm, pool)
             score = 0
             
-            # Jämför varje cirkels mittpunkt mot de tidigare sparade och optimerade lagren
             for k, x_center, _ in current_centers:
                 for prev_layout in optimized_layouts:
                     _, prev_centers = get_layer_geometry(prev_layout, pool)
                     for pk, px_center, _ in prev_centers:
-                        # Om samma cirkel-potens hamnar på exakt samma mittpunkt, ge poäng!
                         if pk == k and abs(px_center - x_center) < 1e-4:
                             score += 1
                             
@@ -78,7 +73,7 @@ def evaluate_global_layout(sorted_matches, pool):
 
 
 # --------------------------------------------------
-# RENDER (Självständig modul med diagramspecifik sortering)
+# RENDER (Självständig modul med linjerensning)
 # --------------------------------------------------
 
 def render(math_data):
@@ -94,7 +89,7 @@ def render(math_data):
     sorted_matches = [main_line] + hidden_lines
 
     # Breddförhållande för kolumnerna
-    col_plot, col_controls = st.columns([6, 3])
+    col_plot, col_controls = st.columns()
     
     with col_controls:
         max_overlap = False
@@ -133,20 +128,18 @@ def render(math_data):
         x_texts, y_texts, text_labels, text_positions = [], [], [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        # Kör den nya exakta mittpunktsmatchningen om Overlap är ibockat
         if not max_overlap or len(sorted_matches) <= 1:
             final_layouts = sorted_matches
         else:
             final_layouts = evaluate_global_layout(sorted_matches, pool)
 
-        # --- STEG 1: TRANSPARENT VIT FYLLNING OCH TEXTER ---
+        # --- STEG 1: HIGHLIGHT (FILL) OCH TEXTER ---
         if selected_idx >= 0 and selected_idx < len(final_layouts):
             chosen_combo = final_layouts[selected_idx]
             _, chosen_centers = get_layer_geometry(chosen_combo, pool)
             
             for k, x_center, diameter in chosen_centers:
                 radius = diameter / 2.0
-                # RÄTTAT: Utgå direkt från x_center utan den dubbla radieförskjutningen
                 cx = x_center + radius * np.cos(theta_upper)
                 cy = 0.0 + radius * np.sin(theta_upper)
                 
@@ -161,22 +154,31 @@ def render(math_data):
                 text_labels.append(get_math_label(k))
                 text_positions.append("middle center")
 
-        # --- STEG 2: RITA ALLA LINJER ---
+        # --- STEG 2: RITA ALLA LINJER (MED UNIK FILTERING) ---
         all_radii = []
+        drawn_circles = set()  # <--- UNIKT MINNE FÖR ATT FÖRHINDRA DUBBLA LINJER
+
         for combo in final_layouts:
             _, final_centers = get_layer_geometry(combo, pool)
             
             for k, x_center, diameter in final_centers:
                 radius = diameter / 2.0
                 all_radii.append(radius)
-                # RÄTTAT: Samma sak här för alla linjer
-                cx = x_center + radius * np.cos(theta_upper)
-                cy = 0.0 + radius * np.sin(theta_upper)
                 
-                x_lines.extend(list(cx) + [None])
-                y_lines.extend(list(cy) + [None])
+                # Skapa ett unikt matematiskt ID för denna specifika cirkel
+                circle_id = (k, round(x_center, 4))
+                
+                # Rita BARA om denna cirkel inte har ritats i ett tidigare lager
+                if circle_id not in drawn_circles:
+                    drawn_circles.add(circle_id)
+                    
+                    cx = x_center + radius * np.cos(theta_upper)
+                    cy = 0.0 + radius * np.sin(theta_upper)
+                    
+                    x_lines.extend(list(cx) + [None])
+                    y_lines.extend(list(cy) + [None])
 
-        # Central horisontell stam (liggande linje)
+        # Central horisontell stam (liggande baslinje)
         x_lines.extend([0.0, target_value, None])
         y_lines.extend([0.0, 0.0, None])
 
