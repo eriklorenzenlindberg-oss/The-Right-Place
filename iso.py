@@ -271,7 +271,7 @@ def render(math_data):
             plot_bgcolor=bg_color,
             paper_bgcolor=bg_color,
             showlegend=False,
-            margin=dict(l=10, r=10, t=2, b=10),
+            margin=dict(l=10, r=10, t=10, b=10),
             dragmode=False,
             
             xaxis=dict(visible=False, range=[xmin, xmax], scaleanchor="y", scaleratio=1),
