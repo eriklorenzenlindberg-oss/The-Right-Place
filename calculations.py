@@ -46,59 +46,6 @@ def find_numeric_root(expr, x_sym):
 
 
 # --------------------------------------------------
-# UNIVERSELL VEKTORRUMS- OCH DELMÄNGDSSÖKARE
-# --------------------------------------------------
-def find_math_structures_logical(n, x_sym, x_numeric, minimal_poly):
-    if minimal_poly is None:
-        pool = {m: float(x_numeric**m) for m in range(n)}
-        return pool, [tuple(range(n))]
-
-    # 1. Bygg grundpoolen för alla potenser inuti hela n-dimensionen
-    pool = {m: float((x_sym**m).subs(x_sym, x_numeric)) for m in range(n)}
-    
-    # För att hitta dolda högre relationer skannar vi upp till x**50 numeriskt
-    # och expanderar vår pool med giltiga, sanna reella längder
-    for k in range(n, 50):
-        pool[k] = float((x_sym**k).subs(x_sym, x_numeric))
-
-    # Beräkna målsumman (längden på din huvudled) med extrem flyttalsprecision
-    target_sum = sum(pool[m] for m in range(n))
-    
-    # 2. Hitta alla unika delmängder (kombinationer) i poolen vars summa matchar målsumman
-    # Vi samlar alla sanna kombinationer som bygger upp exakt samma baslinje-längd
-    total_sum_matches = []
-    total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid facit (index 0)
-
-    # Vi skapar en lista av alla tillgängliga potenser i poolen för sökningen
-    all_keys = sorted(list(pool.keys()))
-    
-    # Vi söker igenom giltiga kombinationer deterministiskt.
-    # För att inte krascha minnet vid höga n testar vi kombinationer via en kontrollerad bredden-först sökning
-    def find_combos(current_combo, current_sum, start_idx):
-        # Om vi har matchat målsumman (inom en strikt matematisk tolerans) sparar vi kombinationen
-        if abs(current_sum - target_sum) < 1e-5:
-            combo_tuple = tuple(sorted(current_combo))
-            if combo_tuple not in total_sum_matches:
-                total_sum_matches.append(combo_tuple)
-            return
-
-        if current_sum > target_sum + 1e-5 or len(current_combo) > n + 5:
-            return
-
-        for i in range(start_idx, len(all_keys)):
-            key = all_keys[i]
-            # Förhindra dubbletter inuti samma lager
-            if key in current_combo:
-                continue
-            find_combos(current_combo + [key], current_sum + pool[key], i + 1)
-
-    # Starta den universella kombinatoriska sökningen
-    find_combos([], 0.0, 0)
-
-    return pool, total_sum_matches
-
-
-# --------------------------------------------------
 # HUVUDDATA-FUNKTION (HÄMTAS AV APP.PY)
 # --------------------------------------------------
 @st.cache_data
@@ -114,6 +61,9 @@ def get_math_data(n, eq_input, add_value_str):
     has_fraction_exponent = "n/2" in eq_input or "n / 2" in eq_input
     use_substitution = is_equation and has_fraction_exponent and (n % 2 != 0)
 
+    # Förbered grundpoolen för cirklar (x**0 upp till x**n)
+    circle_pool = {}
+
     if use_substitution:
         y_sym = sp.Symbol("y")
         eq_input_substituted = eq_input.replace("x**(n/2)", "y**n").replace("x**(n / 2)", "y**n").replace("x", "y**2")
@@ -127,22 +77,10 @@ def get_math_data(n, eq_input, add_value_str):
         y_numeric = find_numeric_root(minimal_poly, y_sym)
         x_numeric = y_numeric ** 2
         
-        circle_pool_y, total_sum_matches_y = find_math_structures_logical(
-            n * 2, y_sym, y_numeric, minimal_poly
-        )
-        
-        circle_pool = {m: float((x_sym**m).subs(x_sym, x_numeric)) for m in range(n)}
-        total_sum_matches = [tuple(range(n))]
-        
-        for combo in total_sum_matches_y:
-            if all(k % 2 == 0 for k in combo):
-                translated_combo = tuple(k // 2 for k in combo)
-                if translated_combo != tuple(range(n)) and translated_combo not in total_sum_matches:
-                    total_sum_matches.append(translated_combo)
-                
-        for k, v in circle_pool_y.items():
+        # Bygg poolen för sökningen baserat på y-substitutionen (upp till x**50 numeriskt)
+        for k in range(50):
             if k % 2 == 0:
-                circle_pool[k // 2] = v
+                circle_pool[k // 2] = float((y_sym**k).subs(y_sym, y_numeric))
                 
     else:
         if is_equation:
@@ -160,9 +98,9 @@ def get_math_data(n, eq_input, add_value_str):
                 x_numeric = 1.2
             minimal_poly = None
 
-        circle_pool, total_sum_matches = find_math_structures_logical(
-            n, x_sym, x_numeric, minimal_poly
-        )
+        # Bygg standardpoolen upp till x**50 numeriskt
+        for k in range(50):
+            circle_pool[k] = float(x_numeric**k)
 
     try:
         add_expr = sp.sympify(add_value_str)
@@ -193,7 +131,7 @@ def get_math_data(n, eq_input, add_value_str):
     lengths2_symbolic = lengths1_symbolic.copy()
     lengths2_numeric = lengths1_numeric.copy()
     
-    # Ändrar enbart index 0 utan att skriva över liststrukturen
+    # Här korrigerar vi tilldelningen så att listan blir korrekt
     lengths2_symbolic[0] = 1 + add_expr_evaluated  
     lengths2_numeric[0] = 1.0 + add_value_numeric   
 
@@ -213,6 +151,5 @@ def get_math_data(n, eq_input, add_value_str):
         "v_symbolic": add_expr_evaluated,
         "v_numeric": add_value_numeric,
         "v_simplified": simplified_v_expr,
-        "circle_pool": circle_pool,
-        "total_sum_matches": total_sum_matches
+        "circle_pool": circle_pool
     }
