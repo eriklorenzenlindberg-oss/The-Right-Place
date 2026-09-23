@@ -73,17 +73,57 @@ def evaluate_global_layout(sorted_matches, pool):
 
 
 # --------------------------------------------------
+# DIN URSPRUNGLIGA SÖKLOGIK (FLYTTAD HIT)
+# --------------------------------------------------
+def find_math_structures_logical(n, pool, minimal_poly):
+    """
+    Denna logik flyttades från calculations.py eftersom den 
+    enbart behövs här för halvcirkel-diagrammet.
+    """
+    if minimal_poly is None:
+        return [tuple(range(n))]
+
+    target_sum = sum(pool[m] for m in range(n) if m in pool)
+    total_sum_matches = []
+    total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid facit (index 0)
+
+    all_keys = sorted(list(pool.keys()))
+    
+    def find_combos(current_combo, current_sum, start_idx):
+        if abs(current_sum - target_sum) < 1e-5:
+            combo_tuple = tuple(sorted(current_combo))
+            if combo_tuple not in total_sum_matches:
+                total_sum_matches.append(combo_tuple)
+            return
+
+        if current_sum > target_sum + 1e-5 or len(current_combo) > n + 5:
+            return
+
+        for i in range(start_idx, len(all_keys)):
+            key = all_keys[i]
+            if key in current_combo:
+                continue
+            find_combos(current_combo + [key], current_sum + pool[key], i + 1)
+
+    find_combos([], 0.0, 0)
+    return total_sum_matches
+
+
+# --------------------------------------------------
 # RENDER (Minimalistisk, ren och synkroniserad)
 # --------------------------------------------------
 
 def render(math_data):
-    raw_matches = math_data.get("total_sum_matches", [])
+    n = math_data["n"]
+    pool = math_data["circle_pool"]
+    minimal_poly = math_data["minimal_poly"]
+    
+    # KÖR SÖKNINGEN HÄR LOKALT ISTÄLLET
+    raw_matches = find_math_structures_logical(n, pool, minimal_poly)
+
     if not raw_matches or len(raw_matches) == 0:
         st.info("The main line is missing from the data.")
         return
-
-    n = math_data["n"]
-    pool = math_data["circle_pool"]
     
     target_value = sum(pool[m] for m in range(n) if m in pool)
     if target_value == 0:
@@ -96,7 +136,6 @@ def render(math_data):
     sorted_matches = [main_line] + hidden_lines
 
     # --- BERÄKNA MATCHADE ORDNINGAR KORREKT ---
-    # RÄTTNING: Vi skickar hela listan till matchningen på en gång, precis som förut!
     overlap_layouts = evaluate_global_layout(sorted_matches, pool)
 
     # Breddförhållande för kolumnerna
