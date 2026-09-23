@@ -71,38 +71,44 @@ def evaluate_global_layout(sorted_matches, pool):
 
 
 # --------------------------------------------------
-# 100 % EXAKT SYMBOLISK SÖKMOTOR (INGA FLYTTAL)
+# 100 % EXAKT SYMBOLISK SÖKMOTOR (UTAN FLYTTAL - ROBUST)
 # --------------------------------------------------
 def find_math_structures_logical(n, minimal_poly):
     """
     Helt exakt algebraisk sökning. 
-    Arbetar ENBART med symboler och exakta heltal. Inga flyttal, inga toleranser.
+    Arbetar ENBART med symboler och exakta heltal via .coeff(). Inga flyttal.
     """
     x = sp.Symbol("x")
     
-    # Om det inte finns någon ekvation, finns bara huvudleden
     if minimal_poly is None:
         return [tuple(range(n))]
         
-    # Skapa den exakta symboliska huvudleden: 1 + x + x^2 + ... + x^(n-1)
+    P_x = sp.expand(minimal_poly)
     huvudled = sp.expand(sum(x**i for i in range(n)))
     
-    # Vi sätter en övre exakt potensgräns baserad på n
-    MAX_POWER = n + 10
+    # Bestäm dynamiskt max-potens baserat på n
+    MAX_POWER = max(15, n + 5)
     
-    # Skapa de exakta reglerna baserat på ditt minimala polynom: P(x) * x^k
+    # Generera de exakta algebraiska reglerna: P(x) * x^k
     regler = []
     for k in range(MAX_POWER):
-        regel = sp.expand(minimal_poly * x**k)
-        regler.append(regel)
+        regel = sp.expand(P_x * x**k)
+        
+        # Säkerställ att regeln inte har dolda potenser långt utanför sökfönstret
+        giltig_regel = True
+        for p in range(MAX_POWER + 1, MAX_POWER + 10):
+            if regel.coeff(x, p) != 0:
+                giltig_regel = False
+                break
+        if giltig_regel:
+            regler.append(regel)
 
     giltiga_kombinationer = set()
     besökta_uttryck = set()
     
-    # Kön håller det aktuella symboliska uttrycket
+    # Kön håller de exakta symboliska uttrycken
     kö = deque([huvudled])
     besökta_uttryck.add(huvudled)
-    
     giltiga_kombinationer.add(tuple(range(n)))
     
     while kö:
@@ -114,30 +120,34 @@ def find_math_structures_logical(n, minimal_poly):
                 
                 if nytt_uttryck in besökta_uttryck:
                     continue
-                    
-                termer_dict = nytt_uttryck.as_coefficients_dict()
                 
-                # REGLER FÖR EN GILTIG GEOMETRISK KOMBINATION:
-                # 1. Inga negativa koefficienter överhuvudtaget
-                if any(koeff <= 0 for koeff in termer_dict.values()):
+                # Extrahera alla koefficienter helt exakt via SymPys .coeff()
+                koeffs = {}
+                har_negativ = False
+                for p in range(MAX_POWER + 1):
+                    c = nytt_uttryck.coeff(x, p)
+                    if c != 0:
+                        if c < 0:
+                            har_negativ = True
+                            break
+                        koeffs[p] = int(c)
+                
+                # Dubbelkolla att inga potenser skjutit utanför vårt fönster
+                for p in range(MAX_POWER + 1, MAX_POWER + 10):
+                    if nytt_uttryck.coeff(x, p) != 0:
+                        har_negativ = True
+                        break
+                        
+                if har_negativ or not koeffs:
                     continue
-                    
-                # 2. Inga potenser får skjuta över vår maxgräns
-                for term in termer_dict.keys():
-                    p = term.exp if isinstance(term, sp.Pow) else (1 if term == x else 0)
-                    if p > MAX_POWER:
-                        continue
                 
-                # Om alla koefficienter är exakt 1 -> Hittat en perfekt algebraisk ersättning!
-                if all(koeff == 1 for koeff in termer_dict.values()):
-                    potenser = []
-                    for term in termer_dict.keys():
-                        p = term.exp if isinstance(term, sp.Pow) else (1 if term == x else 0)
-                        potenser.append(p)
-                    giltiga_kombinationer.add(tuple(sorted(potenser)))
+                # Om alla koefficienter är exakt 1 -> Giltig geometrisk kombination!
+                if all(c == 1 for c in koeffs.values()):
+                    potenser = tuple(sorted(list(koeffs.keys())))
+                    giltiga_kombinationer.add(potenser)
                 
                 # Tillåt tillfälliga överlapp (max koefficient 2) för att låta trädet växa
-                if max(termer_dict.values()) <= 2:
+                if max(koeffs.values()) <= 2:
                     if len(besökta_uttryck) < 2000:  # Minnesskydd
                         besökta_uttryck.add(nytt_uttryck)
                         kö.append(nytt_uttryck)
@@ -154,7 +164,7 @@ def render(math_data):
     pool = math_data["circle_pool"]
     minimal_poly = math_data["minimal_poly"]
     
-    # KÖR DEN EXAKTA SÖKNINGEN UTAN ATT SKICKA MED POOL
+    # Kör den exakta sökningen helt symboliskt
     raw_matches = find_math_structures_logical(n, minimal_poly)
 
     if not raw_matches or len(raw_matches) == 0:
@@ -228,7 +238,7 @@ def render(math_data):
                     hoverinfo="skip", showlegend=False
                 ))
 
-        # --- STEG 2: RITA ALLA BAKGRUNDSLINJER VIA APX-POOLEN ---
+        # --- STEG 2: RITA ALLA BAKGRUNDSLINJER ---
         all_radii = []
         drawn_circles = set()
 
@@ -271,8 +281,3 @@ def render(math_data):
             total_x_span = required_y_space * 2.0
             extra_x_margin = (total_x_span - target_value) / 2.0
             x_min = -extra_x_margin
-            x_max = target_value + extra_x_margin
-        else:
-            x_min = -base_x_margin
-            x_max = target_value + base_x_margin
-
