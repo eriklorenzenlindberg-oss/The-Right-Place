@@ -75,53 +75,84 @@ def evaluate_global_layout(sorted_matches, pool):
 # --------------------------------------------------
 # DIN URSPRUNGLIGA SÖKLOGIK (FLYTTAD HIT)
 # --------------------------------------------------
+from collections import deque
+
 def find_math_structures_logical(n, pool, minimal_poly):
-    # Hämta det sanna numeriska värdet på x (x^1)
-    x_numeric = pool.get(1, 1.2)
+    """
+    Helt exakt symbolisk sökning. Använder inga flyttal eller toleranser.
+    Den utgår från huvudleden och transformerar den med det minimala polynomet.
+    """
+    x = sp.Symbol("x")
     
-    # Beräkna målet (summan av huvudleden från 0 till n-1)
-    target_sum = sum(pool[m] for m in range(n) if m in pool)
+    # Om vi inte har en ekvation (minimal_poly är None), finns bara huvudleden
+    if minimal_poly is None:
+        return [tuple(range(n))]
+        
+    # Säkerställ att minimal_poly är ett expanderat polynom i x
+    P_x = sp.expand(minimal_poly)
     
-    # DIN LOGIK: Bygg en pool som stannar så fort en potens blir större än målsumman
-    extended_pool = {}
-    k = 0
-    while True:
-        val = float(x_numeric**k)
-        if val > target_sum + 1e-5: # Stoppa direkt när potensen är för stor!
-            break
-        extended_pool[k] = val
-        k += 1
-        if k > 100: # Säkerhetsspärr
-            break
-
-    all_keys = sorted(list(extended_pool.keys()))
-    total_sum_matches = []
-    total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid index 0
+    # Skapa den exakta symboliska huvudleden: 1 + x + x^2 + ... + x^(n-1)
+    huvudled = sp.expand(sum(x**i for i in range(n)))
     
-    # Enkel, blixtsnabb sökning över de få giltiga potenserna
-    def find_combos(current_combo, current_sum, start_idx):
-        if abs(current_sum - target_sum) < 1e-5:
-            combo_tuple = tuple(sorted(current_combo))
-            if combo_tuple not in total_sum_matches:
-                total_sum_matches.append(combo_tuple)
-            return
+    # Bestäm hur höga potenser vi tillåter i sökträdet.
+    # För att hålla det geometriskt rimligt sätter vi en gräns (t.ex. max potens 15 eller 20)
+    MAX_POWER = max(15, n + 5)
+    
+    # Skapa de exakta reglerna: P(x) * x^k
+    regler = []
+    for k in range(MAX_POWER):
+        regel = sp.expand(P_x * x**k)
+        # Kontrollera att regeln inte skjuter långt över vår maxgräns
+        termer = regel.as_coefficients_dict()
+        if max(t.exp if t != 1 and t != x else (1 if t == x else 0) for t in termer.keys()) <= MAX_POWER:
+            regler.append(regel)
 
-        if current_sum > target_sum + 1e-5:
-            return
-
-        for i in range(start_idx, len(all_keys)):
-            key = all_keys[i]
-            if key in current_combo:
-                continue
+    giltiga_kombinationer = set()
+    besökta_uttryck = set()
+    
+    # Kön håller (aktuellt_exakt_uttryck, nästa_regel_index)
+    kö = deque([(huvudled, 0)])
+    besökta_uttryck.add(huvudled)
+    
+    # Huvudleden är alltid den första sanna kombinationen
+    giltiga_kombinationer.add(tuple(range(n)))
+    
+    while kö:
+        aktuellt, start_idx = kö.popleft()
+        
+        for i in range(start_idx, len(regler)):
+            for tecken in [1, -1]:
+                # Skapa ett nytt uttryck genom att lägga till/dra ifrån en exakt regel
+                nytt_uttryck = sp.expand(aktuellt + tecken * regler[i])
                 
-            # Optimering: Om detta steg kliver över gränsen, hoppa över
-            if current_sum + extended_pool[key] > target_sum + 1e-5:
-                continue
+                if nytt_uttryck in besökta_uttryck:
+                    continue
+                    
+                termer = nytt_uttryck.as_coefficients_dict()
                 
-            find_combos(current_combo + [key], current_sum + extended_pool[key], i + 1)
-
-    find_combos([], 0.0, 0)
-    return total_sum_matches
+                # Om uttrycket blev 0 eller innehåller negativa potenser, hoppa över
+                if not termer or any((t.exp if t != 1 and t != x else (1 if t == x else 0)) < 0 for t in termer.keys()):
+                    continue
+                
+                # Kontrollera koefficienterna helt exakt och symboliskt
+                # Vi tillåter inte negativa koefficienter (inga minustecken i en färdig eller halvfärdig kombination)
+                if all(koeff > 0 for koeff in termer.values()):
+                    
+                    # Om alla koefficienter är exakt 1 har vi hittat en sann geometrisk kombination!
+                    if list(termer.values()).count(1) == len(termer):
+                        potenser = []
+                        for t in termer.keys():
+                            p = t.exp if t != 1 and t != x else (1 if t == x else 0)
+                            potenser.append(p)
+                        giltiga_kombinationer.add(tuple(sorted(potenser)))
+                    
+                    # Om uttrycket har högre koefficienter (t.ex. en tvåa), sparar vi det i kön
+                    # eftersom en framtida regel kan eliminera tvåan. Men vi sätter en gräns (max koeff 2)
+                    if max(termer.values()) <= 2:
+                        besökta_uttryck.add(nytt_uttryck)
+                        kö.append((nytt_uttryck, i + 1))
+                        
+    return sorted(list(giltiga_kombinationer), key=lambda c: (len(c), c))
 
 
 
