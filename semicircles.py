@@ -83,11 +83,14 @@ def find_math_structures_logical(n, pool, minimal_poly):
     if minimal_poly is None:
         return [tuple(range(n))]
 
+    # Beräkna målet (summan av huvudleden från 0 till n-1)
     target_sum = sum(pool[m] for m in range(n) if m in pool)
+    
     total_sum_matches = []
     total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid facit (index 0)
 
-    all_keys = sorted(list(pool.keys()))
+    # DIN REGEL: Filtrera all_keys så datorn ALDRIG letar bland potenser som är större än målsumman
+    all_keys = sorted([k for k, v in pool.items() if v <= target_sum + 1e-5])
     
     def find_combos(current_combo, current_sum, start_idx):
         if abs(current_sum - target_sum) < 1e-5:
@@ -103,6 +106,11 @@ def find_math_structures_logical(n, pool, minimal_poly):
             key = all_keys[i]
             if key in current_combo:
                 continue
+            
+            # Snabb-optimering: Om detta steg kliver över gränsen direkt, hoppa över resten av loopen
+            if current_sum + pool[key] > target_sum + 1e-5:
+                continue
+                
             find_combos(current_combo + [key], current_sum + pool[key], i + 1)
 
     find_combos([], 0.0, 0)
