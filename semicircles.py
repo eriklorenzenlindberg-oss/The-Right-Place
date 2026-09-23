@@ -2,36 +2,22 @@ import itertools
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
-
-# --------------------------------------------------
-# TEXTFORMATERING FÖR RADIOMENYN
-# --------------------------------------------------
+import sympy as sp
+from collections import deque
 
 def get_math_label(power):
     if power == 0: return "1"
     if power == 1: return "x"
-    if isinstance(power, float) and not power.is_integer():
-        return f"x**{power}"
-
     power_int = int(power)
     superscripts = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}
-    try:
-        return f"x{''.join(superscripts.get(c, c) for c in str(power_int))}"
-    except Exception:
-        return f"x^{power_int}"
-
-
-# --------------------------------------------------
-# GEOMETRI OCH STRUKTURLOGIK
-# --------------------------------------------------
+    return f"x{''.join(superscripts.get(c, c) for c in str(power_int))}"
 
 def get_layer_geometry(combo, pool):
     starts = {}
     centers = []
     current_x = 0.0
     for k in combo:
-        if k not in pool:
-            continue
+        if k not in pool: continue
         diameter = pool[k]
         radius = diameter / 2.0
         starts[k] = round(current_x, 4)
@@ -39,205 +25,161 @@ def get_layer_geometry(combo, pool):
         current_x += diameter
     return starts, centers
 
-
-# --- MATEMATISK MATCHNINGS-ALGORITM (DIN BEPRÖVADE FRÅN MATPLOTLIB) ---
 def evaluate_global_layout(sorted_matches, pool):
-    """
-    Matchar cirklarnas mittpunkter (x_center) horisontellt på samma sätt som 
-    Matplotlib-koden gjorde vertikalt. Körs supersnabbt per enskilt lager.
-    """
     optimized_layouts = []
-
     for idx, combo_keys in enumerate(sorted_matches):
         best_score = -1000
         best_layout = tuple(sorted(list(combo_keys)))
-
         for perm in itertools.permutations(combo_keys):
             _, current_centers = get_layer_geometry(perm, pool)
             score = 0
-
             for k, x_center, _ in current_centers:
                 for prev_layout in optimized_layouts:
                     _, prev_centers = get_layer_geometry(prev_layout, pool)
                     for pk, px_center, _ in prev_centers:
                         if pk == k and abs(px_center - x_center) < 1e-4:
                             score += 1
-
             if score > best_score:
                 best_score = score
                 best_layout = perm
-
         optimized_layouts.append(best_layout)
-
     return optimized_layouts
 
-
-# --------------------------------------------------
-# DIN URSPRUNGLIGA SÖKLOGIK (MED DIN MATEMATISKA AVGRÄNSNING)
-# --------------------------------------------------
-def find_math_structures_logical(n, pool, minimal_poly):
-    """
-    Denna logik flyttades från calculations.py eftersom den 
-    enbart behövs här för halvcirkel-diagrammet.
-    """
+def find_math_structures_logical(n, minimal_poly):
+    """ Exakt vektorsökning utan flyttal """
+    x = sp.Symbol("x")
     if minimal_poly is None:
         return [tuple(range(n))]
-
-    # Beräkna målet (summan av huvudleden från 0 till n-1)
-    target_sum = sum(pool[m] for m in range(n) if m in pool)
+        
+    P_x = sp.expand(minimal_poly)
+    MAX_POWER = max(15, n + 5)
+    VECTOR_SIZE = MAX_POWER + 1
     
-    total_sum_matches = []
-    total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid facit (index 0)
-
-    # DIN REGEL: Filtrera all_keys så datorn ALDRIG letar bland potenser som är större än målsumman
-    all_keys = sorted([k for k, v in pool.items() if v <= target_sum + 1e-5])
-    
-    def find_combos(current_combo, current_sum, start_idx):
-        if abs(current_sum - target_sum) < 1e-5:
-            combo_tuple = tuple(sorted(current_combo))
-            if combo_tuple not in total_sum_matches:
-                total_sum_matches.append(combo_tuple)
-            return
-
-        if current_sum > target_sum + 1e-5 or len(current_combo) > n + 5:
-            return
-
-        for i in range(start_idx, len(all_keys)):
-            key = all_keys[i]
-            if key in current_combo:
-                continue
+    huvudled_vektor = [0] * VECTOR_SIZE
+    for i in range(n):
+        if i < VECTOR_SIZE:
+            huvudled_vektor[i] = 1
             
-            # Snabb-optimering: Om detta steg kliver över gränsen direkt, hoppa över resten av loopen
-            if current_sum + pool[key] > target_sum + 1e-5:
-                continue
+    regler_vektorer = []
+    for k in range(VECTOR_SIZE):
+        regel = sp.expand(P_x * x**k)
+        vektor = [0] * VECTOR_SIZE
+        giltig = True
+        
+        for p in range(VECTOR_SIZE):
+            c = regel.coeff(x, p)
+            if c != 0:
+                vektor[p] = int(c)
                 
-            find_combos(current_combo + [key], current_sum + pool[key], i + 1)
+        for p in range(VECTOR_SIZE, VECTOR_SIZE + 10):
+            if regel.coeff(x, p) != 0:
+                giltig = False
+                break
+        if giltig and any(v != 0 for v in vektor):
+            regler_vektorer.append(vektor)
 
-    find_combos([], 0.0, 0)
-    return total_sum_matches
-
-
-# --------------------------------------------------
-# RENDER (Minimalistisk, ren och synkroniserad)
-# --------------------------------------------------
+    giltiga_kombinationer = set()
+    besökta = set()
+    
+    start_tuple = tuple(huvudled_vektor)
+    kö = deque([start_tuple])
+    besökta.add(start_tuple)
+    giltiga_kombinationer.add(tuple(range(n)))
+    
+    while kö:
+        aktuell = kö.popleft()
+        for reg_vek in regler_vektorer:
+            for tecken in [1, -1]:
+                ny_vektor = [a + tecken * b for a, b in zip(aktuell, reg_vek)]
+                if any(v < 0 for v in ny_vektor):
+                    continue
+                    
+                ny_tuple = tuple(ny_vektor)
+                if ny_tuple in besökta:
+                    continue
+                    
+                potenser = [idx for idx, v in enumerate(ny_vektor) if v == 1]
+                if sum(ny_vektor) == len(potenser) and len(potenser) > 0:
+                    giltiga_kombinationer.add(tuple(sorted(potenser)))
+                    
+                if max(ny_vektor) <= 2:
+                    if len(besökta) < 3000:
+                        besökta.add(ny_tuple)
+                        kö.append(ny_tuple)
+                        
+    return sorted(list(giltiga_kombinationer), key=lambda c: (len(c), c))
 
 def render(math_data):
     n = math_data["n"]
     pool = math_data["circle_pool"]
     minimal_poly = math_data["minimal_poly"]
     
-    # KÖR SÖKNINGEN HÄR LOKALT ISTÄLLET
-    raw_matches = find_math_structures_logical(n, pool, minimal_poly)
+    raw_matches = find_math_structures_logical(n, minimal_poly)
 
     if not raw_matches or len(raw_matches) == 0:
         st.info("The main line is missing from the data.")
         return
 
     target_value = sum(pool[m] for m in range(n) if m in pool)
-    if target_value == 0:
-        target_value = 1.0
+    if target_value == 0: target_value = 1.0
 
-    # --- DIAGRAMSPECIFIK STRUKTURERING AV DATAN ---
     unique_combos = set(tuple(sorted(list(combo))) for combo in raw_matches)
     main_line = max(unique_combos, key=len)
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # --- BERÄKNA MATCHADE ORDNINGAR KORREKT ---
     overlap_layouts = evaluate_global_layout(sorted_matches, pool)
 
-    # Breddförhållande för kolumnerna
     col_plot, col_controls = st.columns([6, 3])
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=False, key="circles_overlap")
-
-        # Bestäm vilket set av layouter som ska ritas och visas i texten
         final_layouts = overlap_layouts if max_overlap else sorted_matches
 
-        # Skapa etiketterna baserat på den ordning de faktiskt kommer att ritas i
-        combo_labels = []
-        for combo in final_layouts:
-            label = " + ".join(get_math_label(k) for k in combo)
-            combo_labels.append(label)
-
-        combo_options = combo_labels
-
+        combo_labels = [" + ".join(get_math_label(k) for k in combo) for combo in final_layouts]
         selected_option = st.radio(
             "Select combination to highlight:",
-            options=combo_options,
-            index=0, # Alltid huvudleden tänd vid start
+            options=combo_labels,
+            index=0,
             key=f"circles_highlight_{n}_{max_overlap}"
         )
-
-        selected_idx = combo_options.index(selected_option)
+        selected_idx = combo_labels.index(selected_option)
 
     with col_plot:
-        line_color = "#000000"
-        bg_color = "#FFFFFF"
-
+        line_color, bg_color = "#000000", "#FFFFFF"
         fig = go.Figure()
         x_lines, y_lines = [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        # --- STEG 1: MARKERING (ENBART TJOCKA KONTURLINJER, INGEN TEXT) ---
-        if selected_idx >= 0 and selected_idx < len(final_layouts):
+        if 0 <= selected_idx < len(final_layouts):
             chosen_combo = final_layouts[selected_idx]
             _, chosen_centers = get_layer_geometry(chosen_combo, pool)
-
             for k, x_center, diameter in chosen_centers:
                 radius = diameter / 2.0
                 cx = x_center + radius * np.cos(theta_upper)
-                cy = 0.0 + radius * np.sin(theta_upper)
+                cy = radius * np.sin(theta_upper)
+                fig.add_trace(go.Scatter(x=cx, y=cy, mode="none", fill="toself", fillcolor="rgba(0,0,0,0)", hoverinfo="skip", showlegend=False))
+                fig.add_trace(go.Scatter(x=cx, y=cy, mode="lines", line=dict(color=line_color, width=1.4), hoverinfo="skip", showlegend=False))
 
-                # Osynlig fyllning sparad i bakgrunden för strukturen
-                fig.add_trace(go.Scatter(
-                    x=cx, y=cy, mode="none", fill="toself",
-                    fillcolor="rgba(0, 0, 0, 0.0)",
-                    hoverinfo="skip", showlegend=False
-                ))
-
-                # Rita den tjocka markerade konturlinjen
-                fig.add_trace(go.Scatter(
-                    x=cx, y=cy, mode="lines",
-                    line=dict(color=line_color, width=1.4),
-                    hoverinfo="skip", showlegend=False
-                ))
-
-        # --- STEG 2: RITA ALLA BAKGRUNDSLINJER (MED UNIK FILTERING) ---
-        all_radii = []
-        drawn_circles = set()
-
+        all_radii, drawn_circles = [], set()
         for combo in final_layouts:
             _, final_centers = get_layer_geometry(combo, pool)
-
             for k, x_center, diameter in final_centers:
                 radius = diameter / 2.0
                 all_radii.append(radius)
-
                 circle_id = (k, round(x_center, 4))
-
                 if circle_id not in drawn_circles:
                     drawn_circles.add(circle_id)
-
                     cx = x_center + radius * np.cos(theta_upper)
-                    cy = 0.0 + radius * np.sin(theta_upper)
-
+                    cy = radius * np.sin(theta_upper)
                     x_lines.extend(list(cx) + [None])
                     y_lines.extend(list(cy) + [None])
 
-        # Central horisontell baslinje
         x_lines.extend([0.0, target_value, None])
         y_lines.extend([0.0, 0.0, None])
 
-        # Standardbakgrunden med tunn linjebredd
-        fig.add_trace(go.Scatter(
-            x=x_lines, y=y_lines, mode="lines", 
-            line=dict(color=line_color, width=0.2), 
-            hoverinfo="skip", showlegend=False
-        ))
+        fig.add_trace(go.Scatter(x=x_lines, y=y_lines, mode="lines", line=dict(color=line_color, width=0.2), hoverinfo="skip", showlegend=False))
 
-        # --- DYNAMISK GLOBAL CENTRERING INUTI RAMEN ---
         max_actual_height = max(all_radii) if all_radii else (target_value * 0.5)
         base_x_margin = target_value * 0.05
         total_graph_width = target_value + (2 * base_x_margin)
@@ -246,29 +188,19 @@ def render(math_data):
         if max_actual_height > (required_y_space * 0.85):
             required_y_space = max_actual_height / 0.80
             total_x_span = required_y_space * 2.0
-            extra_x_margin = (total_x_span - target_value) / 2.0
-            x_min = -extra_x_margin
-            x_max = target_value + extra_x_margin
+            x_min = -(total_x_span - target_value) / 2.0
+            x_max = target_value + (total_x_span - target_value) / 2.0
         else:
-            x_min = -base_x_margin
-            x_max = target_value + base_x_margin
+            x_min, x_max = -base_x_margin, target_value + base_x_margin
 
         y_center_point = max_actual_height / 2.0
         y_min = y_center_point - (required_y_space / 2.0)
         y_max = y_center_point + (required_y_space / 2.0)
 
-        # --- LAYOUT OCH ABSOLUT AXELLÅSNING ---
         fig.update_layout(
             plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
-            margin=dict(l=10, r=10, t=10, b=10),
-            height=400, 
-            dragmode=False,
+            margin=dict(l=10, r=10, t=10, b=10), height=400, dragmode=False,
             xaxis=dict(visible=False, range=[x_min, x_max]),
             yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
         )
-
-        st.plotly_chart(
-            fig, 
-            use_container_width=True, 
-            key="semicircles_plot_clean"
-        )
+        st.plotly_chart(fig, use_container_width=True, key="semicircles_plot_clean")
