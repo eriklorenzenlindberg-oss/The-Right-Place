@@ -2,6 +2,8 @@ import itertools
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
+import sympy as sp
+from collections import deque
 
 # --------------------------------------------------
 # TEXTFORMATERING FÖR RADIOMENYN
@@ -22,7 +24,7 @@ def get_math_label(power):
 
 
 # --------------------------------------------------
-# GEOMETRI OCH STRUKTURLOGIK
+# GEOMETRI OCH STRUKTURLOGIK (Enbart för renderingen)
 # --------------------------------------------------
 
 def get_layer_geometry(combo, pool):
@@ -40,12 +42,8 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
-# --- MATEMATISK MATCHNINGS-ALGORITM (DIN BEPRÖVADE FRÅN MATPLOTLIB) ---
+# --- MATEMATISK MATCHNINGS-ALGORITM (HÅLLS SEPARAT FRÅN SÖKNINGEN) ---
 def evaluate_global_layout(sorted_matches, pool):
-    """
-    Matchar cirklarnas mittpunkter (x_center) horisontellt på samma sätt som 
-    Matplotlib-koden gjorde vertikalt. Körs supersnabbt per enskilt lager.
-    """
     optimized_layouts = []
 
     for idx, combo_keys in enumerate(sorted_matches):
@@ -73,30 +71,26 @@ def evaluate_global_layout(sorted_matches, pool):
 
 
 # --------------------------------------------------
-# DIN URSPRUNGLIGA SÖKLOGIK (FLYTTAD HIT)
+# 100 % EXAKT SYMBOLISK SÖKMOTOR (INGA FLYTTAL)
 # --------------------------------------------------
-import sympy as sp
-from collections import deque
-
-def find_math_structures_logical_EXAKT(n, minimal_poly):
+def find_math_structures_logical(n, minimal_poly):
     """
     Helt exakt algebraisk sökning. 
     Arbetar ENBART med symboler och exakta heltal. Inga flyttal, inga toleranser.
     """
     x = sp.Symbol("x")
     
-    # Om det inte finns någon ekvation (minimal_poly är None), finns bara huvudleden
+    # Om det inte finns någon ekvation, finns bara huvudleden
     if minimal_poly is None:
         return [tuple(range(n))]
         
     # Skapa den exakta symboliska huvudleden: 1 + x + x^2 + ... + x^(n-1)
     huvudled = sp.expand(sum(x**i for i in range(n)))
     
-    # Vi sätter en övre exakt potensgräns baserad på n (t.ex. n + 10)
+    # Vi sätter en övre exakt potensgräns baserad på n
     MAX_POWER = n + 10
     
     # Skapa de exakta reglerna baserat på ditt minimala polynom: P(x) * x^k
-    # Exempel: (x^3 - x - 1) * x^k
     regler = []
     for k in range(MAX_POWER):
         regel = sp.expand(minimal_poly * x**k)
@@ -105,17 +99,15 @@ def find_math_structures_logical_EXAKT(n, minimal_poly):
     giltiga_kombinationer = set()
     besökta_uttryck = set()
     
-    # Kön håller (aktuellt_exakt_symboliskt_uttryck, nästa_regel_index)
-    kö = deque([(huvudled, 0)])
+    # Kön håller det aktuella symboliska uttrycket
+    kö = deque([huvudled])
     besökta_uttryck.add(huvudled)
     
-    # Huvudleden är alltid den första sanna kombinationen
     giltiga_kombinationer.add(tuple(range(n)))
     
     while kö:
-        aktuellt = kö.popleft()[0]
+        aktuellt = kö.popleft()
         
-        # Vi letar efter nya uttryck genom att kombinera våra exakta regler
         for i, regel in enumerate(regler):
             for tecken in [1, -1]:
                 nytt_uttryck = sp.expand(aktuellt + tecken * regel)
@@ -123,11 +115,10 @@ def find_math_structures_logical_EXAKT(n, minimal_poly):
                 if nytt_uttryck in besökta_uttryck:
                     continue
                     
-                # Hämta ut termerna exakt från SymPy
                 termer_dict = nytt_uttryck.as_coefficients_dict()
                 
                 # REGLER FÖR EN GILTIG GEOMETRISK KOMBINATION:
-                # 1. Inga negativa koefficienter (inga minustecken i polynomet)
+                # 1. Inga negativa koefficienter överhuvudtaget
                 if any(koeff <= 0 for koeff in termer_dict.values()):
                     continue
                     
@@ -137,8 +128,7 @@ def find_math_structures_logical_EXAKT(n, minimal_poly):
                     if p > MAX_POWER:
                         continue
                 
-                # Om uttrycket bara består av rena ettor (koefficient == 1) 
-                # då har vi hittat en perfekt, exakt algebraisk ersättning!
+                # Om alla koefficienter är exakt 1 -> Hittat en perfekt algebraisk ersättning!
                 if all(koeff == 1 for koeff in termer_dict.values()):
                     potenser = []
                     for term in termer_dict.keys():
@@ -146,17 +136,13 @@ def find_math_structures_logical_EXAKT(n, minimal_poly):
                         potenser.append(p)
                     giltiga_kombinationer.add(tuple(sorted(potenser)))
                 
-                # Vi tillåter trädet att växa genom tillfälliga överlapp (t.ex. en tvåa),
-                # men vi sätter en spärr så att koefficienterna inte drar iväg
+                # Tillåt tillfälliga överlapp (max koefficient 2) för att låta trädet växa
                 if max(termer_dict.values()) <= 2:
-                    besökta_uttryck.add(nytt_uttryck)
-                    # Vi skickar inte med i+1 här, utan låter den testa alla regler i nästa led
-                    # för att inte missa kedje-substitutioner (som i 1+x^4=x^5)
-                    if len(besökta_uttryck) < 2000:  # Säkerhetsspärr för minnet
-                        kö.append((nytt_uttryck, 0))
+                    if len(besökta_uttryck) < 2000:  # Minnesskydd
+                        besökta_uttryck.add(nytt_uttryck)
+                        kö.append(nytt_uttryck)
                         
     return sorted(list(giltiga_kombinationer), key=lambda c: (len(c), c))
-
 
 
 # --------------------------------------------------
@@ -164,20 +150,16 @@ def find_math_structures_logical_EXAKT(n, minimal_poly):
 # --------------------------------------------------
 
 def render(math_data):
-    raw_matches = math_data.get("total_sum_matches", [])
     n = math_data["n"]
     pool = math_data["circle_pool"]
     minimal_poly = math_data["minimal_poly"]
     
-    # KÖR SÖKNINGEN HÄR LOKALT ISTÄLLET
-    raw_matches = find_math_structures_logical(n, pool, minimal_poly)
+    # KÖR DEN EXAKTA SÖKNINGEN UTAN ATT SKICKA MED POOL
+    raw_matches = find_math_structures_logical(n, minimal_poly)
 
     if not raw_matches or len(raw_matches) == 0:
         st.info("The main line is missing from the data.")
         return
-
-    n = math_data["n"]
-    pool = math_data["circle_pool"]
 
     target_value = sum(pool[m] for m in range(n) if m in pool)
     if target_value == 0:
@@ -190,7 +172,6 @@ def render(math_data):
     sorted_matches = [main_line] + hidden_lines
 
     # --- BERÄKNA MATCHADE ORDNINGAR KORREKT ---
-    # RÄTTNING: Vi skickar hela listan till matchningen på en gång, precis som förut!
     overlap_layouts = evaluate_global_layout(sorted_matches, pool)
 
     # Breddförhållande för kolumnerna
@@ -199,10 +180,8 @@ def render(math_data):
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=False, key="circles_overlap")
 
-        # Bestäm vilket set av layouter som ska ritas och visas i texten
         final_layouts = overlap_layouts if max_overlap else sorted_matches
 
-        # Skapa etiketterna baserat på den ordning de faktiskt kommer att ritas i
         combo_labels = []
         for combo in final_layouts:
             label = " + ".join(get_math_label(k) for k in combo)
@@ -213,7 +192,7 @@ def render(math_data):
         selected_option = st.radio(
             "Select combination to highlight:",
             options=combo_options,
-            index=0, # Alltid huvudleden tänd vid start
+            index=0,
             key=f"circles_highlight_{n}_{max_overlap}"
         )
 
@@ -227,7 +206,7 @@ def render(math_data):
         x_lines, y_lines = [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        # --- STEG 1: MARKERING (ENBART TJOCKA KONTURLINJER, INGEN TEXT) ---
+        # --- STEG 1: MARKERING (ENBART TJOCKA KONTURLINJER) ---
         if selected_idx >= 0 and selected_idx < len(final_layouts):
             chosen_combo = final_layouts[selected_idx]
             _, chosen_centers = get_layer_geometry(chosen_combo, pool)
@@ -237,21 +216,19 @@ def render(math_data):
                 cx = x_center + radius * np.cos(theta_upper)
                 cy = 0.0 + radius * np.sin(theta_upper)
 
-                # Osynlig fyllning sparad i bakgrunden för strukturen
                 fig.add_trace(go.Scatter(
                     x=cx, y=cy, mode="none", fill="toself",
                     fillcolor="rgba(0, 0, 0, 0.0)",
                     hoverinfo="skip", showlegend=False
                 ))
 
-                # Rita den tjocka markerade konturlinjen
                 fig.add_trace(go.Scatter(
                     x=cx, y=cy, mode="lines",
                     line=dict(color=line_color, width=1.4),
                     hoverinfo="skip", showlegend=False
                 ))
 
-        # --- STEG 2: RITA ALLA BAKGRUNDSLINJER (MED UNIK FILTERING) ---
+        # --- STEG 2: RITA ALLA BAKGRUNDSLINJER VIA APX-POOLEN ---
         all_radii = []
         drawn_circles = set()
 
@@ -277,7 +254,6 @@ def render(math_data):
         x_lines.extend([0.0, target_value, None])
         y_lines.extend([0.0, 0.0, None])
 
-        # Standardbakgrunden med tunn linjebredd
         fig.add_trace(go.Scatter(
             x=x_lines, y=y_lines, mode="lines", 
             line=dict(color=line_color, width=0.2), 
@@ -300,22 +276,3 @@ def render(math_data):
             x_min = -base_x_margin
             x_max = target_value + base_x_margin
 
-        y_center_point = max_actual_height / 2.0
-        y_min = y_center_point - (required_y_space / 2.0)
-        y_max = y_center_point + (required_y_space / 2.0)
-
-        # --- LAYOUT OCH ABSOLUT AXELLÅSNING ---
-        fig.update_layout(
-            plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
-            margin=dict(l=10, r=10, t=10, b=10),
-            height=400, 
-            dragmode=False,
-            xaxis=dict(visible=False, range=[x_min, x_max]),
-            yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
-        )
-
-        st.plotly_chart(
-            fig, 
-            use_container_width=True, 
-            key="semicircles_plot_clean"
-        )
