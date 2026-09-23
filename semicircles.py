@@ -95,6 +95,9 @@ def _get_exact_power(term, x_sym):
 # --------------------------------------------------
 # EXAKT ALGEBRAISK SÖKMOTOR (UTAN FLYTTAL)
 # --------------------------------------------------
+# --------------------------------------------------
+# EXAKT ALGEBRAISK SÖKMOTOR (KORRIGERAD OCH ROBUST)
+# --------------------------------------------------
 def find_math_structures_logical(n, minimal_poly):
     x = sp.Symbol("x")
     
@@ -111,12 +114,11 @@ def find_math_structures_logical(n, minimal_poly):
     regler = []
     for k in range(MAX_POWER):
         regel = sp.expand(P_x * x**k)
-        dict_termer = regel.as_coefficients_dict()
         
-        # Kontrollera att regeln inte skjuter över max-potensen
+        # Kontrollera helt exakt att regeln inte har potenser över MAX_POWER
         giltig_regel = True
-        for t in dict_termer.keys():
-            if _get_exact_power(t, x) > MAX_POWER:
+        for p in range(MAX_POWER + 1, MAX_POWER + 10):
+            if regel.coeff(x, p) != 0:
                 giltig_regel = False
                 break
         if giltig_regel:
@@ -138,25 +140,34 @@ def find_math_structures_logical(n, minimal_poly):
                 
                 if nytt_uttryck in besökta_uttryck:
                     continue
-                    
-                dict_termer = nytt_uttryck.as_coefficients_dict()
                 
-                if not dict_termer:
+                # Extrahera alla koefficienter exakt via .coeff() för att undvika SymPy-buggar
+                koeffs = {}
+                har_negativ = False
+                for p in range(MAX_POWER + 1):
+                    c = nytt_uttryck.coeff(x, p)
+                    if c != 0:
+                        if c < 0:
+                            har_negativ = True
+                            break
+                        koeffs[p] = int(c)
+                
+                # Kontrollera om det finns dolda potenser utanför vårt sökfönster
+                for p in range(MAX_POWER + 1, MAX_POWER + 10):
+                    if nytt_uttryck.coeff(x, p) != 0:
+                        har_negativ = True
+                        break
+                        
+                if har_negativ or not koeffs:
                     continue
-                    
-                # Kontrollera symboliska koefficienter: inga minustecken tillåtna!
-                if any(koeff <= 0 for koeff in dict_termer.values()):
-                    continue
                 
-                # Om alla koefficienter är exakt 1 -> Giltig kombination!
-                if all(koeff == 1 for koeff in dict_termer.values()):
-                    potenser = []
-                    for t in dict_termer.keys():
-                        potenser.append(_get_exact_power(t, x))
-                    giltiga_kombinationer.add(tuple(sorted(potenser)))
+                # Om alla sparade koefficienter är exakt 1 -> Sann kombination!
+                if all(c == 1 for c in koeffs.values()):
+                    potenser = tuple(sorted(list(koeffs.keys())))
+                    giltiga_kombinationer.add(potenser)
                 
-                # Tillåt trädet att växa genom tillfälliga tvåor (koeff <= 2)
-                if max(dict_termer.values()) <= 2:
+                # Låt trädet växa om max-koefficienten är 2 (tillfälliga överlapp)
+                if max(koeffs.values()) <= 2:
                     besökta_uttryck.add(nytt_uttryck)
                     kö.append((nytt_uttryck, i + 1))
                         
