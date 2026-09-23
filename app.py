@@ -41,8 +41,6 @@ with st.expander("..."):
     )
 
 
-
-
 # --------------------------------------------------
 # 1. BYGG GRÄNSSNITTET MED STREAMLITS INBYGGDA INSTÄLLNINGAR
 # --------------------------------------------------
@@ -93,6 +91,17 @@ st.sidebar.text("")
 
 
 # --------------------------------------------------
+# NYTT: NAVIGERING I SIDOFÄLTET (Ersätter st.tabs)
+# --------------------------------------------------
+st.sidebar.markdown("---")  # En linje för att separera inställningar och navigering
+valt_diagram = st.sidebar.radio(
+    "Select visualization:",
+    options=["n-face", "1-faces"],
+    key="main_navigation_radio"
+)
+
+
+# --------------------------------------------------
 # 2. KÖR BERÄKNINGARNA (Grundmatematiken)
 # --------------------------------------------------
 math_data = calc.get_math_data(
@@ -123,35 +132,11 @@ with placeholder_v:
 
 
 # --------------------------------------------------
-# TABS (Nu med båda de städade flikarna aktiva)
-# --------------------------------------------------
-tab_iso, tab_circles = st.tabs(
-    [
-        "n-face",
-        "1-faces",
-    ],
-    key="main_navigation_tabs"
-)
-
-
-# --------------------------------------------------
-# ISOLERADE RENDER-FUNKTIONER
+# ÄKTA LAZY LOADING (Kör bara det diagram som faktiskt visas)
 # --------------------------------------------------
 
-def render_tab_iso(math_data):
+if valt_diagram == "n-face":
     iso.render(math_data)
 
-
-def render_tab_circles(math_data):
+elif valt_diagram == "1-faces":
     semicircles.render(math_data)
-
-
-# --------------------------------------------------
-# ÄKTA LAZY LOADING
-# --------------------------------------------------
-
-with tab_iso:
-    render_tab_iso(math_data)
-
-with tab_circles:
-    render_tab_circles(math_data)
