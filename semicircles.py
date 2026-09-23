@@ -83,32 +83,12 @@ def find_math_structures_logical(n, pool, minimal_poly):
     if minimal_poly is None:
         return [tuple(range(n))]
 
-    # Hämta det sanna numeriska värdet på x (x^1)
-    x_numeric = pool.get(1, 1.2)
-    
-    # Beräkna målet (summan av huvudleden från 0 till n-1)
     target_sum = sum(pool[m] for m in range(n) if m in pool)
     total_sum_matches = []
     total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid facit (index 0)
-    
-    # DIN LOGIK: Bygg en pool som stannar så fort en potens blir större än målsumman
-    extended_pool = {}
-    k = 0
-    while True:
-        val = float(x_numeric**k)
-        if val > target_sum + 1e-5: # Stoppa direkt när potensen är för stor!
-            break
-        extended_pool[k] = val
-        k += 1
-        if k > 100: # Säkerhetsspärr
-            break
 
     all_keys = sorted(list(pool.keys()))
-    all_keys = sorted(list(extended_pool.keys()))
-    total_sum_matches = []
-    total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid index 0
-
-    # Enkel, blixtsnabb sökning över de få giltiga potenserna
+    
     def find_combos(current_combo, current_sum, start_idx):
         if abs(current_sum - target_sum) < 1e-5:
             combo_tuple = tuple(sorted(current_combo))
@@ -117,7 +97,6 @@ def find_math_structures_logical(n, pool, minimal_poly):
             return
 
         if current_sum > target_sum + 1e-5 or len(current_combo) > n + 5:
-        if current_sum > target_sum + 1e-5:
             return
 
         for i in range(start_idx, len(all_keys)):
@@ -125,16 +104,9 @@ def find_math_structures_logical(n, pool, minimal_poly):
             if key in current_combo:
                 continue
             find_combos(current_combo + [key], current_sum + pool[key], i + 1)
-                
-            # Optimering: Om detta steg kliver över gränsen, hoppa över
-            if current_sum + extended_pool[key] > target_sum + 1e-5:
-                continue
-                
-            find_combos(current_combo + [key], current_sum + extended_pool[key], i + 1)
 
     find_combos([], 0.0, 0)
     return total_sum_matches
-
 
 
 # --------------------------------------------------
@@ -142,16 +114,20 @@ def find_math_structures_logical(n, pool, minimal_poly):
 # --------------------------------------------------
 
 def render(math_data):
+    raw_matches = math_data.get("total_sum_matches", [])
     n = math_data["n"]
     pool = math_data["circle_pool"]
     minimal_poly = math_data["minimal_poly"]
-
+    
     # KÖR SÖKNINGEN HÄR LOKALT ISTÄLLET
     raw_matches = find_math_structures_logical(n, pool, minimal_poly)
 
     if not raw_matches or len(raw_matches) == 0:
         st.info("The main line is missing from the data.")
         return
+
+    n = math_data["n"]
+    pool = math_data["circle_pool"]
 
     target_value = sum(pool[m] for m in range(n) if m in pool)
     if target_value == 0:
@@ -164,6 +140,7 @@ def render(math_data):
     sorted_matches = [main_line] + hidden_lines
 
     # --- BERÄKNA MATCHADE ORDNINGAR KORREKT ---
+    # RÄTTNING: Vi skickar hela listan till matchningen på en gång, precis som förut!
     overlap_layouts = evaluate_global_layout(sorted_matches, pool)
 
     # Breddförhållande för kolumnerna
