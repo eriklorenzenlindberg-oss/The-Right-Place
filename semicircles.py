@@ -76,19 +76,29 @@ def evaluate_global_layout(sorted_matches, pool):
 # DIN URSPRUNGLIGA SÖKLOGIK (FLYTTAD HIT)
 # --------------------------------------------------
 def find_math_structures_logical(n, pool, minimal_poly):
-    """
-    Denna logik flyttades från calculations.py eftersom den 
-    enbart behövs här för halvcirkel-diagrammet.
-    """
-    if minimal_poly is None:
-        return [tuple(range(n))]
-
-    target_sum = sum(pool[m] for m in range(n) if m in pool)
-    total_sum_matches = []
-    total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid facit (index 0)
-
-    all_keys = sorted(list(pool.keys()))
+    # Hämta det sanna numeriska värdet på x (x^1)
+    x_numeric = pool.get(1, 1.2)
     
+    # Beräkna målet (summan av huvudleden från 0 till n-1)
+    target_sum = sum(pool[m] for m in range(n) if m in pool)
+    
+    # DIN LOGIK: Bygg en pool som stannar så fort en potens blir större än målsumman
+    extended_pool = {}
+    k = 0
+    while True:
+        val = float(x_numeric**k)
+        if val > target_sum + 1e-5: # Stoppa direkt när potensen är för stor!
+            break
+        extended_pool[k] = val
+        k += 1
+        if k > 100: # Säkerhetsspärr
+            break
+
+    all_keys = sorted(list(extended_pool.keys()))
+    total_sum_matches = []
+    total_sum_matches.append(tuple(range(n))) # Huvudleden är alltid index 0
+    
+    # Enkel, blixtsnabb sökning över de få giltiga potenserna
     def find_combos(current_combo, current_sum, start_idx):
         if abs(current_sum - target_sum) < 1e-5:
             combo_tuple = tuple(sorted(current_combo))
@@ -96,17 +106,23 @@ def find_math_structures_logical(n, pool, minimal_poly):
                 total_sum_matches.append(combo_tuple)
             return
 
-        if current_sum > target_sum + 1e-5 or len(current_combo) > n + 5:
+        if current_sum > target_sum + 1e-5:
             return
 
         for i in range(start_idx, len(all_keys)):
             key = all_keys[i]
             if key in current_combo:
                 continue
-            find_combos(current_combo + [key], current_sum + pool[key], i + 1)
+                
+            # Optimering: Om detta steg kliver över gränsen, hoppa över
+            if current_sum + extended_pool[key] > target_sum + 1e-5:
+                continue
+                
+            find_combos(current_combo + [key], current_sum + extended_pool[key], i + 1)
 
     find_combos([], 0.0, 0)
     return total_sum_matches
+
 
 
 # --------------------------------------------------
