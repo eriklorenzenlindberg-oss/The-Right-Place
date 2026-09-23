@@ -98,6 +98,11 @@ def get_math_data(n, eq_input, add_value_str):
         except Exception:
             pass
 
+        # Lägg till dessa rader precis innan return för att generera listorna som iso.py kräver:
+    lengths1_numeric = [float(x_numeric**k) for k in range(n)]
+    lengths2_numeric = lengths1_numeric.copy()
+    lengths2_numeric[0] = 1.0 + add_value_numeric   
+
     return {
         "n": n,
         "x_numeric": x_numeric,
@@ -105,5 +110,8 @@ def get_math_data(n, eq_input, add_value_str):
         "is_equation": is_equation,
         "minimal_poly": minimal_poly,  
         "v_simplified": simplified_v_expr,
-        "circle_pool": circle_pool
+        "circle_pool": circle_pool,
+        "lengths1_numeric": lengths1_numeric,  # FIX: Lägg till denna för iso.py
+        "lengths2_numeric": lengths2_numeric   # FIX: Lägg till denna för iso.py
     }
+
