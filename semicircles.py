@@ -42,7 +42,7 @@ def get_layer_geometry(combo, pool):
     return starts, centers
 
 
-# --- MATEMATISK MATCHNINGS-ALGORITM (HÅLLS SEPARAT FRÅN SÖKNINGEN) ---
+# --- MATEMATISK MATCHNINGS-ALGORITM ---
 def evaluate_global_layout(sorted_matches, pool):
     optimized_layouts = []
 
@@ -71,86 +71,94 @@ def evaluate_global_layout(sorted_matches, pool):
 
 
 # --------------------------------------------------
-# 100 % EXAKT SYMBOLISK SÖKMOTOR (UTAN FLYTTAL - ROBUST)
+# 100 % EXAKT VEKTORBASERAD SÖKMOTOR (INGA FLYTTAL)
 # --------------------------------------------------
 def find_math_structures_logical(n, minimal_poly):
     """
-    Helt exakt algebraisk sökning. 
-    Arbetar ENBART med symboler och exakta heltal via .coeff(). Inga flyttal.
+    Helt exakt algebraisk sökning via heltalsvektorer.
+    Arbetar ENBART med exakta heltal och hoppar över SymPys ordboksbuggar.
     """
     x = sp.Symbol("x")
-    
     if minimal_poly is None:
         return [tuple(range(n))]
         
     P_x = sp.expand(minimal_poly)
-    huvudled = sp.expand(sum(x**i for i in range(n)))
     
     # Bestäm dynamiskt max-potens baserat på n
-    MAX_POWER = max(15, n + 5)
+    MAX_POWER = max(15, n + 6)
+    VECTOR_SIZE = MAX_POWER + 1
     
-    # Generera de exakta algebraiska reglerna: P(x) * x^k
-    regler = []
-    for k in range(MAX_POWER):
+    # 1. Gör om huvudleden till en exakt heltalsvektor (1 för de första n potenserna)
+    huvudled_vektor = [0] * VECTOR_SIZE
+    for i in range(n):
+        if i < VECTOR_SIZE:
+            huvudled_vektor[i] = 1
+            
+    # 2. Översätt de symboliska reglerna (P(x) * x^k) till exakta heltalsvektorer
+    regler_vektorer = []
+    for k in range(VECTOR_SIZE):
         regel = sp.expand(P_x * x**k)
+        vektor = [0] * VECTOR_SIZE
+        giltig = True
         
-        # Säkerställ att regeln inte har dolda potenser långt utanför sökfönstret
-        giltig_regel = True
-        for p in range(MAX_POWER + 1, MAX_POWER + 10):
+        # Läs av koefficienterna helt exakt
+        for p in range(VECTOR_SIZE):
+            c = regel.coeff(x, p)
+            if c != 0:
+                try:
+                    vektor[p] = int(c)
+                except TypeError:
+                    pass
+                    
+        # Kontrollera om regeln spillde över utanför vår vektorstorlek
+        for p in range(VECTOR_SIZE, VECTOR_SIZE + 10):
             if regel.coeff(x, p) != 0:
-                giltig_regel = False
+                giltig = False
                 break
-        if giltig_regel:
-            regler.append(regel)
+                
+        if giltig and any(v != 0 for v in vektor):
+            regler_vektorer.append(vektor)
 
     giltiga_kombinationer = set()
-    besökta_uttryck = set()
+    besökta_vektorer = set()
     
-    # Kön håller de exakta symboliska uttrycken
-    kö = deque([huvudled])
-    besökta_uttryck.add(huvudled)
+    # Kön håller vektorer som tuples (så att de kan hashas i set)
+    start_tuple = tuple(huvudled_vektor)
+    kö = deque([start_tuple])
+    besökta_vektorer.add(start_tuple)
+    
+    # Lägg till huvudledens index
     giltiga_kombinationer.add(tuple(range(n)))
     
     while kö:
-        aktuellt = kö.popleft()
+        aktuell_vektor = kö.popleft()
         
-        for i, regel in enumerate(regler):
+        for reg_vek in regler_vektorer:
             for tecken in [1, -1]:
-                nytt_uttryck = sp.expand(aktuellt + tecken * regel)
+                # Skapa ny heltalskombination via exakt vektoraddition
+                ny_vektor = [a + tecken * b for a, b in zip(aktuell_vektor, reg_vek)]
                 
-                if nytt_uttryck in besökta_uttryck:
+                # Snabb-kontroll: Inga negativa koefficienter tillåtna i geometrin
+                if any(v < 0 for v in ny_vektor):
+                    continue
+                    
+                ny_tuple = tuple(ny_vektor)
+                if ny_tuple in besökta_vektorer:
                     continue
                 
-                # Extrahera alla koefficienter helt exakt via SymPys .coeff()
-                koeffs = {}
-                har_negativ = False
-                for p in range(MAX_POWER + 1):
-                    c = nytt_uttryck.coeff(x, p)
-                    if c != 0:
-                        if c < 0:
-                            har_negativ = True
-                            break
-                        koeffs[p] = int(c)
+                # Kontrollera om vi har hittat en vinnare (bara ettor och nollor)
+                # Vi plockar ut de index (potenser) där koefficienten är exakt 1
+                potenser = [idx for idx, v in enumerate(ny_vektor) if v == 1]
                 
-                # Dubbelkolla att inga potenser skjutit utanför vårt fönster
-                for p in range(MAX_POWER + 1, MAX_POWER + 10):
-                    if nytt_uttryck.coeff(x, p) != 0:
-                        har_negativ = True
-                        break
-                        
-                if har_negativ or not koeffs:
-                    continue
+                # Om antalet ettor matchar alla nollställda element (dvs inga tvåor eller treor finns)
+                if sum(ny_vektor) == len(potenser) and len(potenser) > 0:
+                    giltiga_kombinationer.add(tuple(sorted(potenser)))
                 
-                # Om alla koefficienter är exakt 1 -> Giltig geometrisk kombination!
-                if all(c == 1 for c in koeffs.values()):
-                    potenser = tuple(sorted(list(koeffs.keys())))
-                    giltiga_kombinationer.add(potenser)
-                
-                # Tillåt tillfälliga överlapp (max koefficient 2) för att låta trädet växa
-                if max(koeffs.values()) <= 2:
-                    if len(besökta_uttryck) < 2000:  # Minnesskydd
-                        besökta_uttryck.add(nytt_uttryck)
-                        kö.append(nytt_uttryck)
+                # Låt trädet växa om max-koefficienten är 2 (tillfälliga överlapp)
+                if max(ny_vektor) <= 2:
+                    if len(besökta_vektorer) < 3000:  # Minnesskydd
+                        besökta_vektorer.add(ny_tuple)
+                        kö.append(ny_tuple)
                         
     return sorted(list(giltiga_kombinationer), key=lambda c: (len(c), c))
 
@@ -164,7 +172,7 @@ def render(math_data):
     pool = math_data["circle_pool"]
     minimal_poly = math_data["minimal_poly"]
     
-    # Kör den exakta sökningen helt symboliskt
+    # Kör den exakta vektorbaserade sökningen helt symboliskt utan flyttal
     raw_matches = find_math_structures_logical(n, minimal_poly)
 
     if not raw_matches or len(raw_matches) == 0:
@@ -273,11 +281,3 @@ def render(math_data):
         # --- DYNAMISK GLOBAL CENTRERING INUTI RAMEN ---
         max_actual_height = max(all_radii) if all_radii else (target_value * 0.5)
         base_x_margin = target_value * 0.05
-        total_graph_width = target_value + (2 * base_x_margin)
-        required_y_space = total_graph_width * 0.5
-
-        if max_actual_height > (required_y_space * 0.85):
-            required_y_space = max_actual_height / 0.80
-            total_x_span = required_y_space * 2.0
-            extra_x_margin = (total_x_span - target_value) / 2.0
-            x_min = -extra_x_margin
