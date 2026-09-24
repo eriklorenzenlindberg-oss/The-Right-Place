@@ -51,26 +51,37 @@ def get_math_data(n, eq_input, add_value_str):
             left_str, right_str = eq_input_substituted.split("=")
             expr_y = sp.expand(sp.sympify(left_str) - sp.sympify(right_str)).subs(n_sym, n)
             
-            # Hitta den relevanta reella roten för y exakt
+            # Hitta det ungefärliga numeriska värdet för y
             y_numeric_approx = find_numeric_root(expr_y, y_sym)
-            y_exact = sp.RootOf(expr_y, sp.N(y_numeric_approx))
             
-            # Eftersom x = y^2, är den exakta roten för x:
+            # Hitta alla exakta reella rötter för y och välj den som är närmast gissningen
+            try:
+                y_roots = sp.real_roots(expr_y)
+                y_exact = min(y_roots, key=lambda r: abs(float(r.evalf()) - y_numeric_approx))
+            except Exception:
+                y_exact = sp.Rational(3, 2) # Nödfallback om sökningen misslyckas
+                
             x_exact = y_exact ** 2
         else:
             # 2. Vanlig ekvation utan substitution
             left_str, right_str = eq_input.split("=")
             expr_x = sp.expand(sp.sympify(left_str) - sp.sympify(right_str)).subs(n_sym, n)
             
-            # Hitta den relevanta reella roten för x exakt
+            # Hitta det ungefärliga numeriska värdet för x
             x_numeric_approx = find_numeric_root(expr_x, x_sym)
-            x_exact = sp.RootOf(expr_x, sp.N(x_numeric_approx))
+            
+            # Hitta alla exakta reella rötter för x och välj den som är närmast gissningen
+            try:
+                x_roots = sp.real_roots(expr_x)
+                x_exact = min(x_roots, key=lambda r: abs(float(r.evalf()) - x_numeric_approx))
+            except Exception:
+                x_exact = sp.Rational(3, 2)
         
         # Beräkna det sanna, irreducibla minimalpolynomet utifrån den exakta roten!
         try:
             minimal_poly = sp.minpoly(x_exact, x_sym)
         except Exception:
-            # Fallback om minpoly misslyckas (t.ex. om det inte är ett algebraiskt tal)
+            # Fallback om minpoly misslyckas
             minimal_poly = sp.expand(expr_x) if not use_substitution else None
 
         # Sätt det slutgiltiga numeriska värdet baserat på den exakta roten
@@ -110,7 +121,7 @@ def get_math_data(n, eq_input, add_value_str):
 
     lengths1_numeric = [float(x_numeric**k) for k in range(n)]
     lengths2_numeric = lengths1_numeric.copy()
-    lengths2_numeric[0] = 1.0 + add_value_numeric   
+    lengths2_numeric = 1.0 + add_value_numeric   
 
     return {
         "n": n,
@@ -124,3 +135,4 @@ def get_math_data(n, eq_input, add_value_str):
         "lengths1_numeric": lengths1_numeric,  
         "lengths2_numeric": lengths2_numeric   
     }
+
