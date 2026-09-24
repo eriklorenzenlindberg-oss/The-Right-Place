@@ -9,7 +9,7 @@ def get_math_label(power):
     if power == 0: return "1"
     if power == 1: return "x"
     power_int = int(power)
-    superscripts = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}
+    superscripts = {'0':'⁰','1':'¹','2':'²','3':'³','4⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}
     return f"x{''.join(superscripts.get(c, c) for c in str(power_int))}"
 
 def get_layer_geometry_symbolic(combo, pool_symbolic):
@@ -39,7 +39,6 @@ def evaluate_global_layout(sorted_matches, pool_symbolic):
                 for prev_layout in optimized_layouts:
                     _, prev_centers = get_layer_geometry_symbolic(prev_layout, pool_symbolic)
                     for pk, px_center, _ in prev_centers:
-                        # Exakt symbolisk jämförelse: drar bort och förenklar till 0
                         if pk == k and sp.simplify(px_center - x_center) == 0:
                             score += 1
             if score > best_score:
@@ -133,7 +132,7 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # Exakt algebraisk matchning av layouten (Flyttalsfri!)
+    # Exakt algebraisk matchning av layouten (Körs flyttalsfritt)
     overlap_layouts = evaluate_global_layout(sorted_matches, pool_symbolic)
 
     col_plot, col_controls = st.columns([6, 3])
@@ -151,19 +150,28 @@ def render(math_data):
         )
         selected_idx = combo_labels.index(selected_option)
 
+    # PRESTANDABOOST: Förkonvertera ALLA symboliska centrum till flyttal EN GÅNG HÄR.
+    # Nu slipper Plotly-loopen att köra tunga SymPy .subs() och .evalf() hundratals gånger vid redraw!
+    numeric_layouts_geometry = []
+    for combo in final_layouts:
+        _, centers_sym = get_layer_geometry_symbolic(combo, pool_symbolic)
+        numeric_centers = []
+        for k, x_center_sym, diameter_sym in centers_sym:
+            x_center_num = float(x_center_sym.subs(x_sym, x_numeric).evalf())
+            diameter_num = float(diameter_sym.subs(x_sym, x_numeric).evalf())
+            numeric_centers.append((k, x_center_num, diameter_num, str(x_center_sym)))
+        numeric_layouts_geometry.append(numeric_centers)
+
     with col_plot:
         line_color, bg_color = "#000000", "#FFFFFF"
         fig = go.Figure()
         x_lines, y_lines = [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        # Rita den markerade kombinationen (Enbart linjer, ingen fyllning)
-        if 0 <= selected_idx < len(final_layouts):
-            chosen_combo = final_layouts[selected_idx]
-            _, chosen_centers_sym = get_layer_geometry_symbolic(chosen_combo, pool_symbolic)
-            for k, x_center_sym, diameter_sym in chosen_centers_sym:
-                x_center = float(x_center_sym.subs(x_sym, x_numeric).evalf())
-                diameter = float(diameter_sym.subs(x_sym, x_numeric).evalf())
+        # 1. Rita den markerade kombinationen (Blixtsnabb, läser från ren flyttalsmatris)
+        if 0 <= selected_idx < len(numeric_layouts_geometry):
+            chosen_centers = numeric_layouts_geometry[selected_idx]
+            for k, x_center, diameter, _ in chosen_centers:
                 radius = diameter / 2.0
                 cx = x_center + radius * np.cos(theta_upper)
                 cy = radius * np.sin(theta_upper)
@@ -176,17 +184,15 @@ def render(math_data):
                     showlegend=False
                 ))
 
+        # 2. Rita basstrukturen för alla kombinationer (Blixtsnabb)
         all_radii, drawn_circles = [], set()
-        for combo in final_layouts:
-            _, final_centers_sym = get_layer_geometry_symbolic(combo, pool_symbolic)
-            for k, x_center_sym, diameter_sym in final_centers_sym:
-                x_center = float(x_center_sym.subs(x_sym, x_numeric).evalf())
-                diameter = float(diameter_sym.subs(x_sym, x_numeric).evalf())
+        for chosen_centers in numeric_layouts_geometry:
+            for k, x_center, diameter, x_center_sym_str in chosen_centers:
                 radius = diameter / 2.0
                 all_radii.append(radius)
                 
-                # Unikt ID baseras på den exakta symboliska strängen
-                circle_id = (k, str(x_center_sym))
+                # Unikt ID baseras fortfarande på den symboliska strängen för exakthet
+                circle_id = (k, x_center_sym_str)
                 if circle_id not in drawn_circles:
                     drawn_circles.add(circle_id)
                     cx = x_center + radius * np.cos(theta_upper)
