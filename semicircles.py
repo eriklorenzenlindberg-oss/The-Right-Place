@@ -178,7 +178,7 @@ def render(math_data):
                 
                 cx = x_center + radius * np.cos(theta_upper)
                 cy = radius * np.sin(theta_upper)
-                fig.add_trace(go.Scatter(x=cx, y=cy, mode="none", fill="toself", fillcolor="rgba(0,0,0,0.05)", hoverinfo="skip", showlegend=False))
+                fig.add_trace(go.Scatter(x=cx, y=cy, mode="none", fill="toself", fillcolor="rgba(0,0,0,0.00)", hoverinfo="skip", showlegend=False))
                 fig.add_trace(go.Scatter(x=cx, y=cy, mode="lines", line=dict(color=line_color, width=1.4), hoverinfo="skip", showlegend=False))
 
         # Rita alla halvcirklar för basstrukturen
