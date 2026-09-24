@@ -12,32 +12,35 @@ def get_math_label(power):
     superscripts = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}
     return f"x{''.join(superscripts.get(c, c) for c in str(power_int))}"
 
-def get_layer_geometry(combo, pool):
+def get_layer_geometry_symbolic(combo, pool_symbolic):
+    """ Beräknar geometri och centrum med 100% symbolisk exakthet """
     starts = {}
     centers = []
-    current_x = 0.0
+    current_x = sp.Integer(0)
     for k in combo:
-        if k not in pool: continue
-        diameter = pool[k]
-        radius = diameter / 2.0
-        starts[k] = round(current_x, 4)
-        centers.append((k, round(current_x + radius, 4), diameter))
+        if k not in pool_symbolic: continue
+        diameter = pool_symbolic[k]
+        radius = diameter / 2
+        starts[k] = current_x
+        centers.append((k, current_x + radius, diameter))
         current_x += diameter
     return starts, centers
 
-def evaluate_global_layout(sorted_matches, pool):
+def evaluate_global_layout(sorted_matches, pool_symbolic):
+    """ Matchar layouter med exakt symbolisk algebra i stället för flyttal """
     optimized_layouts = []
     for idx, combo_keys in enumerate(sorted_matches):
         best_score = -1000
         best_layout = tuple(sorted(list(combo_keys)))
         for perm in itertools.permutations(combo_keys):
-            _, current_centers = get_layer_geometry(perm, pool)
+            _, current_centers = get_layer_geometry_symbolic(perm, pool_symbolic)
             score = 0
             for k, x_center, _ in current_centers:
                 for prev_layout in optimized_layouts:
-                    _, prev_centers = get_layer_geometry(prev_layout, pool)
+                    _, prev_centers = get_layer_geometry_symbolic(prev_layout, pool_symbolic)
                     for pk, px_center, _ in prev_centers:
-                        if pk == k and abs(px_center - x_center) < 1e-4:
+                        # Exakt symbolisk jämförelse: drar bort och förenklar till 0
+                        if pk == k and sp.simplify(px_center - x_center) == 0:
                             score += 1
             if score > best_score:
                 best_score = score
@@ -46,7 +49,7 @@ def evaluate_global_layout(sorted_matches, pool):
     return optimized_layouts
 
 def find_math_structures_logical(n, minimal_poly):
-    """ Exakt vektorsökning utan flyttal """
+    """ Exakt sökning utan flyttal - Din stabila originalstruktur """
     x = sp.Symbol("x")
     if minimal_poly is None:
         return [tuple(range(n))]
@@ -111,8 +114,10 @@ def find_math_structures_logical(n, minimal_poly):
 
 def render(math_data):
     n = math_data["n"]
-    pool = math_data["circle_pool"]
     minimal_poly = math_data["minimal_poly"]
+    pool_symbolic = math_data["circle_pool_symbolic"]
+    x_numeric = math_data["x_numeric"]
+    x_sym = sp.Symbol("x")
     
     raw_matches = find_math_structures_logical(n, minimal_poly)
 
@@ -120,7 +125,7 @@ def render(math_data):
         st.info("The main line is missing from the data.")
         return
 
-    target_value = sum(pool[m] for m in range(n) if m in pool)
+    target_value = sum(float(x_numeric**m) for m in range(n))
     if target_value == 0: target_value = 1.0
 
     unique_combos = set(tuple(sorted(list(combo))) for combo in raw_matches)
@@ -128,7 +133,8 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    overlap_layouts = evaluate_global_layout(sorted_matches, pool)
+    # Exakt algebraisk matchning av layouten (Flyttalsfri!)
+    overlap_layouts = evaluate_global_layout(sorted_matches, pool_symbolic)
 
     col_plot, col_controls = st.columns([6, 3])
 
@@ -153,21 +159,28 @@ def render(math_data):
 
         if 0 <= selected_idx < len(final_layouts):
             chosen_combo = final_layouts[selected_idx]
-            _, chosen_centers = get_layer_geometry(chosen_combo, pool)
-            for k, x_center, diameter in chosen_centers:
+            _, chosen_centers_sym = get_layer_geometry_symbolic(chosen_combo, pool_symbolic)
+            for k, x_center_sym, diameter_sym in chosen_centers_sym:
+                # Konvertera till flyttal i absolut sista steget för renderingen
+                x_center = float(x_center_sym.subs(x_sym, x_numeric).evalf())
+                diameter = float(diameter_sym.subs(x_sym, x_numeric).evalf())
                 radius = diameter / 2.0
                 cx = x_center + radius * np.cos(theta_upper)
                 cy = radius * np.sin(theta_upper)
-                fig.add_trace(go.Scatter(x=cx, y=cy, mode="none", fill="toself", fillcolor="rgba(0,0,0,0)", hoverinfo="skip", showlegend=False))
+                fig.add_trace(go.Scatter(x=cx, y=cy, mode="none", fill="toself", fillcolor="rgba(0,0,0,0.05)", hoverinfo="skip", showlegend=False))
                 fig.add_trace(go.Scatter(x=cx, y=cy, mode="lines", line=dict(color=line_color, width=1.4), hoverinfo="skip", showlegend=False))
 
         all_radii, drawn_circles = [], set()
         for combo in final_layouts:
-            _, final_centers = get_layer_geometry(combo, pool)
-            for k, x_center, diameter in final_centers:
+            _, final_centers_sym = get_layer_geometry_symbolic(combo, pool_symbolic)
+            for k, x_center_sym, diameter_sym in final_centers_sym:
+                x_center = float(x_center_sym.subs(x_sym, x_numeric).evalf())
+                diameter = float(diameter_sym.subs(x_sym, x_numeric).evalf())
                 radius = diameter / 2.0
                 all_radii.append(radius)
-                circle_id = (k, round(x_center, 4))
+                
+                # Unikt ID baseras på den exakta symboliska strängen
+                circle_id = (k, str(x_center_sym))
                 if circle_id not in drawn_circles:
                     drawn_circles.add(circle_id)
                     cx = x_center + radius * np.cos(theta_upper)
@@ -178,7 +191,7 @@ def render(math_data):
         x_lines.extend([0.0, target_value, None])
         y_lines.extend([0.0, 0.0, None])
 
-        fig.add_trace(go.Scatter(x=x_lines, y=y_lines, mode="lines", line=dict(color=line_color, width=0.2), hoverinfo="skip", showlegend=False))
+        fig.add_trace(go.Scatter(x=x_lines, y=y_lines, mode="lines", line=dict(color=line_color, width=0.4), hoverinfo="skip", showlegend=False))
 
         max_actual_height = max(all_radii) if all_radii else (target_value * 0.5)
         base_x_margin = target_value * 0.05
