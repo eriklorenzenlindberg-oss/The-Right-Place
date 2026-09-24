@@ -157,18 +157,24 @@ def render(math_data):
         x_lines, y_lines = [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
+        # Rita den markerade kombinationen (Enbart linjer, ingen fyllning)
         if 0 <= selected_idx < len(final_layouts):
             chosen_combo = final_layouts[selected_idx]
             _, chosen_centers_sym = get_layer_geometry_symbolic(chosen_combo, pool_symbolic)
             for k, x_center_sym, diameter_sym in chosen_centers_sym:
-                # Konvertera till flyttal i absolut sista steget för renderingen
                 x_center = float(x_center_sym.subs(x_sym, x_numeric).evalf())
                 diameter = float(diameter_sym.subs(x_sym, x_numeric).evalf())
                 radius = diameter / 2.0
                 cx = x_center + radius * np.cos(theta_upper)
                 cy = radius * np.sin(theta_upper)
-                fig.add_trace(go.Scatter(x=cx, y=cy, mode="none", fill="toself", fillcolor="rgba(0,0,0,0.05)", hoverinfo="skip", showlegend=False))
-                fig.add_trace(go.Scatter(x=cx, y=cy, mode="lines", line=dict(color=line_color, width=1.4), hoverinfo="skip", showlegend=False))
+                
+                fig.add_trace(go.Scatter(
+                    x=cx, y=cy, 
+                    mode="lines", 
+                    line=dict(color=line_color, width=2.5), 
+                    hoverinfo="skip", 
+                    showlegend=False
+                ))
 
         all_radii, drawn_circles = [], set()
         for combo in final_layouts:
