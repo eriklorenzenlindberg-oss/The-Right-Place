@@ -41,43 +41,54 @@ def get_math_data(n, eq_input, add_value_str):
     use_substitution = is_equation and has_fraction_exponent and (n % 2 != 0)
 
     circle_pool = {}
-    circle_pool_symbolic = {}  # NY: För exakta geometriska beräkningar
+    circle_pool_symbolic = {}
 
-    if use_substitution:
-        y_sym = sp.Symbol("y")
-        eq_input_substituted = eq_input.replace("x**(n/2)", "y**n").replace("x**(n / 2)", "y**n").replace("x", "y**2")
-        left_str, right_str = eq_input_substituted.split("=")
-        raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
-        expr_evaluated = raw_expr.subs(n_sym, n)
-        
-        y_numeric = find_numeric_root(sp.expand(expr_evaluated), y_sym)
-        x_numeric = y_numeric ** 2
-        
-        # EXAKT: Skapa polynom direkt från uttrycket istället för minpoly på flyttal
-        minimal_poly = sp.expand(expr_evaluated).subs(y_sym, sp.sqrt(x_sym))
+    if is_equation:
+        if use_substitution:
+            # 1. Hantera substitutionen helt i y
+            y_sym = sp.Symbol("y")
+            eq_input_substituted = eq_input.replace("x**(n/2)", "y**n").replace("x**(n / 2)", "y**n").replace("x", "y**2")
+            left_str, right_str = eq_input_substituted.split("=")
+            expr_y = sp.expand(sp.sympify(left_str) - sp.sympify(right_str)).subs(n_sym, n)
             
-    else:
-        if is_equation:
-            left_str, right_str = eq_input.split("=")
-            raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
-            expr_evaluated = raw_expr.subs(n_sym, n)
-            x_numeric = find_numeric_root(expr_evaluated, x_sym)
+            # Hitta den relevanta reella roten för y exakt
+            y_numeric_approx = find_numeric_root(expr_y, y_sym)
+            y_exact = sp.RootOf(expr_y, sp.N(y_numeric_approx))
             
-            # EXAKT: Vi använder det utvärderade uttrycket direkt som vårt exakta polynom
-            minimal_poly = sp.expand(expr_evaluated)
+            # Eftersom x = y^2, är den exakta roten för x:
+            x_exact = y_exact ** 2
         else:
-            try:
-                explicit_expr = sp.sympify(eq_input)
-                explicit_evaluated = explicit_expr.subs(n_sym, n)
-                x_numeric = float(explicit_evaluated.evalf())
-            except Exception:
-                x_numeric = 1.2
-            minimal_poly = None
+            # 2. Vanlig ekvation utan substitution
+            left_str, right_str = eq_input.split("=")
+            expr_x = sp.expand(sp.sympify(left_str) - sp.sympify(right_str)).subs(n_sym, n)
+            
+            # Hitta den relevanta reella roten för x exakt
+            x_numeric_approx = find_numeric_root(expr_x, x_sym)
+            x_exact = sp.RootOf(expr_x, sp.N(x_numeric_approx))
+        
+        # Beräkna det sanna, irreducibla minimalpolynomet utifrån den exakta roten!
+        try:
+            minimal_poly = sp.minpoly(x_exact, x_sym)
+        except Exception:
+            # Fallback om minpoly misslyckas (t.ex. om det inte är ett algebraiskt tal)
+            minimal_poly = sp.expand(expr_x) if not use_substitution else None
 
-    # Skapa både numeriska och symboliska pooler
+        # Sätt det slutgiltiga numeriska värdet baserat på den exakta roten
+        x_numeric = float(x_exact.evalf())
+    else:
+        # Explicit uttryck (t.ex. x = 1.2)
+        try:
+            explicit_expr = sp.sympify(eq_input)
+            explicit_evaluated = explicit_expr.subs(n_sym, n)
+            x_numeric = float(explicit_evaluated.evalf())
+        except Exception:
+            x_numeric = 1.2
+        minimal_poly = None
+
+    # Skapa pooler
     for k in range(40):
         circle_pool[k] = float(x_numeric**k)
-        circle_pool_symbolic[k] = x_sym**k  # NY: Helt exakt x^k
+        circle_pool_symbolic[k] = x_sym**k
 
     try:
         add_expr = sp.sympify(add_value_str)
@@ -90,7 +101,6 @@ def get_math_data(n, eq_input, add_value_str):
     except Exception:
         add_value_numeric = float(x_numeric)
 
-    # Exakt förenkling med polynomdivision (rem)
     simplified_v_expr = add_expr_evaluated
     if is_equation and minimal_poly is not None:
         try:
@@ -110,8 +120,7 @@ def get_math_data(n, eq_input, add_value_str):
         "minimal_poly": minimal_poly,  
         "v_simplified": simplified_v_expr,
         "circle_pool": circle_pool,
-        "circle_pool_symbolic": circle_pool_symbolic,  # NY: Skickas med till semicircles
+        "circle_pool_symbolic": circle_pool_symbolic,
         "lengths1_numeric": lengths1_numeric,  
         "lengths2_numeric": lengths2_numeric   
     }
-
