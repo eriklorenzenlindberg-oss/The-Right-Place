@@ -41,6 +41,7 @@ def get_math_data(n, eq_input, add_value_str):
     use_substitution = is_equation and has_fraction_exponent and (n % 2 != 0)
 
     circle_pool = {}
+    circle_pool_symbolic = {}  # NY: För exakta geometriska beräkningar
 
     if use_substitution:
         y_sym = sp.Symbol("y")
@@ -52,10 +53,8 @@ def get_math_data(n, eq_input, add_value_str):
         y_numeric = find_numeric_root(sp.expand(expr_evaluated), y_sym)
         x_numeric = y_numeric ** 2
         
-        try:
-            minimal_poly = sp.minpoly(x_numeric, x_sym, rdeg=5)
-        except Exception:
-            minimal_poly = sp.expand(expr_evaluated).subs(y_sym, sp.sqrt(x_sym))
+        # EXAKT: Skapa polynom direkt från uttrycket istället för minpoly på flyttal
+        minimal_poly = sp.expand(expr_evaluated).subs(y_sym, sp.sqrt(x_sym))
             
     else:
         if is_equation:
@@ -63,10 +62,9 @@ def get_math_data(n, eq_input, add_value_str):
             raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
             expr_evaluated = raw_expr.subs(n_sym, n)
             x_numeric = find_numeric_root(expr_evaluated, x_sym)
-            try:
-                minimal_poly = sp.minpoly(sp.nsimplify(x_numeric, tolerance=1e-5), x_sym, rdeg=5)
-            except Exception:
-                minimal_poly = sp.expand(expr_evaluated)
+            
+            # EXAKT: Vi använder det utvärderade uttrycket direkt som vårt exakta polynom
+            minimal_poly = sp.expand(expr_evaluated)
         else:
             try:
                 explicit_expr = sp.sympify(eq_input)
@@ -76,9 +74,10 @@ def get_math_data(n, eq_input, add_value_str):
                 x_numeric = 1.2
             minimal_poly = None
 
-    # Skapa numeriska värden enbart för ritningen (max 40 potenser räcker utmärkt)
+    # Skapa både numeriska och symboliska pooler
     for k in range(40):
         circle_pool[k] = float(x_numeric**k)
+        circle_pool_symbolic[k] = x_sym**k  # NY: Helt exakt x^k
 
     try:
         add_expr = sp.sympify(add_value_str)
@@ -91,6 +90,7 @@ def get_math_data(n, eq_input, add_value_str):
     except Exception:
         add_value_numeric = float(x_numeric)
 
+    # Exakt förenkling med polynomdivision (rem)
     simplified_v_expr = add_expr_evaluated
     if is_equation and minimal_poly is not None:
         try:
@@ -98,7 +98,6 @@ def get_math_data(n, eq_input, add_value_str):
         except Exception:
             pass
 
-        # Lägg till dessa rader precis innan return för att generera listorna som iso.py kräver:
     lengths1_numeric = [float(x_numeric**k) for k in range(n)]
     lengths2_numeric = lengths1_numeric.copy()
     lengths2_numeric[0] = 1.0 + add_value_numeric   
@@ -111,7 +110,8 @@ def get_math_data(n, eq_input, add_value_str):
         "minimal_poly": minimal_poly,  
         "v_simplified": simplified_v_expr,
         "circle_pool": circle_pool,
-        "lengths1_numeric": lengths1_numeric,  # FIX: Lägg till denna för iso.py
-        "lengths2_numeric": lengths2_numeric   # FIX: Lägg till denna för iso.py
+        "circle_pool_symbolic": circle_pool_symbolic,  # NY: Skickas med till semicircles
+        "lengths1_numeric": lengths1_numeric,  
+        "lengths2_numeric": lengths2_numeric   
     }
 
