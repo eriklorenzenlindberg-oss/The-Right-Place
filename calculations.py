@@ -41,65 +41,46 @@ def get_math_data(n, eq_input, add_value_str):
     use_substitution = is_equation and has_fraction_exponent and (n % 2 != 0)
 
     circle_pool = {}
-    circle_pool_symbolic = {}
+    circle_pool_symbolic = {}  # Hålls isolerad här
 
-    if is_equation:
-        if use_substitution:
-            # 1. Hantera substitutionen helt i y
-            y_sym = sp.Symbol("y")
-            eq_input_substituted = eq_input.replace("x**(n/2)", "y**n").replace("x**(n / 2)", "y**n").replace("x", "y**2")
-            left_str, right_str = eq_input_substituted.split("=")
-            expr_y = sp.expand(sp.sympify(left_str) - sp.sympify(right_str)).subs(n_sym, n)
-            
-            # Hitta det ungefärliga numeriska värdet för y
-            y_numeric_approx = find_numeric_root(expr_y, y_sym)
-            
-            # Hitta alla exakta reella rötter för y och välj den som är närmast gissningen
-            try:
-                y_roots = sp.real_roots(expr_y)
-                y_exact = min(y_roots, key=lambda r: abs(float(r.evalf()) - y_numeric_approx))
-            except Exception:
-                y_exact = sp.Rational(3, 2) # Nödfallback om sökningen misslyckas
-                
-            x_exact = y_exact ** 2
-        else:
-            # 2. Vanlig ekvation utan substitution
-            left_str, right_str = eq_input.split("=")
-            expr_x = sp.expand(sp.sympify(left_str) - sp.sympify(right_str)).subs(n_sym, n)
-            
-            # Hitta det ungefärliga numeriska värdet för x
-            x_numeric_approx = find_numeric_root(expr_x, x_sym)
-            
-            # Hitta alla exakta reella rötter för x och välj den som är närmast gissningen
-            try:
-                x_roots = sp.real_roots(expr_x)
-                x_exact = min(x_roots, key=lambda r: abs(float(r.evalf()) - x_numeric_approx))
-            except Exception:
-                x_exact = sp.Rational(3, 2)
+    if use_substitution:
+        y_sym = sp.Symbol("y")
+        eq_input_substituted = eq_input.replace("x**(n/2)", "y**n").replace("x**(n / 2)", "y**n").replace("x", "y**2")
+        left_str, right_str = eq_input_substituted.split("=")
+        raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
+        expr_evaluated = raw_expr.subs(n_sym, n)
         
-        # Beräkna det sanna, irreducibla minimalpolynomet utifrån den exakta roten!
+        y_numeric = find_numeric_root(sp.expand(expr_evaluated), y_sym)
+        x_numeric = y_numeric ** 2
+        
         try:
-            minimal_poly = sp.minpoly(x_exact, x_sym)
+            minimal_poly = sp.minpoly(x_numeric, x_sym, rdeg=5)
         except Exception:
-            # Fallback om minpoly misslyckas
-            minimal_poly = sp.expand(expr_x) if not use_substitution else None
-
-        # Sätt det slutgiltiga numeriska värdet baserat på den exakta roten
-        x_numeric = float(x_exact.evalf())
+            minimal_poly = sp.expand(expr_evaluated).subs(y_sym, sp.sqrt(x_sym))
+            
     else:
-        # Explicit uttryck (t.ex. x = 1.2)
-        try:
-            explicit_expr = sp.sympify(eq_input)
-            explicit_evaluated = explicit_expr.subs(n_sym, n)
-            x_numeric = float(explicit_evaluated.evalf())
-        except Exception:
-            x_numeric = 1.2
-        minimal_poly = None
+        if is_equation:
+            left_str, right_str = eq_input.split("=")
+            raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
+            expr_evaluated = raw_expr.subs(n_sym, n)
+            x_numeric = find_numeric_root(expr_evaluated, x_sym)
+            try:
+                minimal_poly = sp.minpoly(sp.nsimplify(x_numeric, tolerance=1e-5), x_sym, rdeg=5)
+            except Exception:
+                minimal_poly = sp.expand(expr_evaluated)
+        else:
+            try:
+                explicit_expr = sp.sympify(eq_input)
+                explicit_evaluated = explicit_expr.subs(n_sym, n)
+                x_numeric = float(explicit_evaluated.evalf())
+            except Exception:
+                x_numeric = 1.2
+            minimal_poly = None
 
-    # Skapa pooler
+    # Skapa numeriska värden enbart för ritningen
     for k in range(40):
         circle_pool[k] = float(x_numeric**k)
-        circle_pool_symbolic[k] = x_sym**k
+        circle_pool_symbolic[k] = x_sym**k  # Isolerad symbolisk pool
 
     try:
         add_expr = sp.sympify(add_value_str)
@@ -121,7 +102,7 @@ def get_math_data(n, eq_input, add_value_str):
 
     lengths1_numeric = [float(x_numeric**k) for k in range(n)]
     lengths2_numeric = lengths1_numeric.copy()
-    lengths2_numeric = 1.0 + add_value_numeric   
+    lengths2_numeric[0] = 1.0 + add_value_numeric   
 
     return {
         "n": n,
@@ -131,8 +112,7 @@ def get_math_data(n, eq_input, add_value_str):
         "minimal_poly": minimal_poly,  
         "v_simplified": simplified_v_expr,
         "circle_pool": circle_pool,
-        "circle_pool_symbolic": circle_pool_symbolic,
+        "circle_pool_symbolic": circle_pool_symbolic, # Skickas med utan att störa andra värden
         "lengths1_numeric": lengths1_numeric,  
         "lengths2_numeric": lengths2_numeric   
     }
-
