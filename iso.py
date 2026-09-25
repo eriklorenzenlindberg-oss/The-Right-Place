@@ -269,7 +269,7 @@ def render(math_data):
 
         # --- LAYOUT OCH ABSOLUT AXELLÅSNING ---
         fig.update_layout(
-            height=200,
+            height=250,
             plot_bgcolor=bg_color,
             paper_bgcolor=bg_color,
             showlegend=False,
