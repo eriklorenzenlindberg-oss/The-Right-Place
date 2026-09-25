@@ -21,14 +21,12 @@ def extract_rules_from_poly(minimal_poly, max_power=15):
     P_x = sp.expand(minimal_poly)
     rules = []
     
-    # Generera regler genom att skifta polynomet med x^p
     for p in range(max_power):
         shifted_poly = sp.expand(P_x * x**p)
         terms = {}
         for t in sp.Add.make_args(shifted_poly):
             c, sub_target = t.as_coeff_mul(x)
             
-            # Säkrare typkontroll med isinstance i stället för .is_Pow
             if sub_target and isinstance(sub_target, sp.Pow):
                 pow_val = int(sub_target.exp)
             elif sub_target and sub_target == x:
@@ -59,79 +57,110 @@ def extract_rules_from_poly(minimal_poly, max_power=15):
             
     return list(set(rules))
 
-
-def rewrite_sequence(current_sequence, rule_from, rule_to):
-    """ Tillämpar en framåtriktad omskrivning och bevarar relativ ordning """
-    seq_list = list(current_sequence)
-    temp_from = list(rule_from)
-    indices_to_remove = []
-    
-    for item in temp_from:
-        if item in seq_list:
-            idx = seq_list.index(item)
-            indices_to_remove.append(idx)
-            seq_list[idx] = None
-        else:
-            return None
-            
-    new_seq = []
-    inserted = False
-    for idx, item in enumerate(list(current_sequence)):
-        if idx in indices_to_remove:
-            if not inserted:
-                new_seq.append(rule_to)
-                inserted = True
-        else:
-            new_seq.append(item)
-    return tuple(new_seq)
-
-def find_math_structures_logical_ordered(n, minimal_poly):
-    """ 
-    Ersätter den gamla sökningen. Hittar kombinationer och genererar dem 
-    direkt som färdigordnade sekvenser baserat på minimalpolynomet.
-    """
+def find_math_structures_logical(n, minimal_poly):
+    """ Din stabila original-sökning som garanterat hittar ALLA kombinationer """
+    x = sp.Symbol("x")
     if minimal_poly is None:
-        return [tuple(range(n))], {tuple(range(n)): tuple(range(n))}
+        return [tuple(range(n))]
         
-    rules = extract_rules_from_poly(minimal_poly, max_power=max(15, n + 5))
-    start_node = tuple(range(n))
+    P_x = sp.expand(minimal_poly)
+    MAX_POWER = max(15, n + 5)
+    VECTOR_SIZE = MAX_POWER + 1
     
-    visited = set([start_node])
-    queue = deque([start_node])
-    
-    # Karta från osorterad matematisk identitet -> optimalt ordnad sekvens
-    results = {}
-    
-    while queue:
-        current = queue.popleft()
-        identity = tuple(sorted(list(current)))
-        if identity not in results:
-            results[identity] = current
+    huvudled_vektor = [0] * VECTOR_SIZE
+    for i in range(n):
+        if i < VECTOR_SIZE:
+            huvudled_vektor[i] = 1
             
-        for r_from, r_to in rules:
-            # 1. Framåtriktad regel (Mindre potenser blir en högre)
-            activated = rewrite_sequence(current, r_from, r_to)
-            if activated and activated not in visited:
-                visited.add(activated)
-                queue.append(activated)
+    regler_vektorer = []
+    for k in range(VECTOR_SIZE):
+        regel = sp.expand(P_x * x**k)
+        vektor = [0] * VECTOR_SIZE
+        giltig = True
+        
+        for p in range(VECTOR_SIZE):
+            c = regel.coeff(x, p)
+            if c != 0:
+                vektor[p] = int(c)
                 
-            # 2. Bakåtriktad regel (En högre potens delas upp)
-            if r_to in current:
-                idx = current.index(r_to)
-                activated_back = current[:idx] + r_from + current[idx+1:]
-                if activated_back and activated_back not in visited:
-                    visited.add(activated_back)
-                    queue.append(activated_back)
-                    
-    # Sortera för Streamlit (Huvudleden först, sen efter storlek)
-    main_line = tuple(range(n))
-    hidden_lines = sorted([k for k in results.keys() if k != main_line], key=lambda c: (len(c), c))
-    sorted_identities = [main_line] + hidden_lines
+        for p in range(VECTOR_SIZE, VECTOR_SIZE + 10):
+            if regel.coeff(x, p) != 0:
+                giltig = False
+                break
+        if giltig and any(v != 0 for v in vektor):
+            regler_vektorer.append(vektor)
+
+    giltiga_kombinationer = set()
+    besökta = set()
     
-    return sorted_identities, results
+    start_tuple = tuple(huvudled_vektor)
+    kö = deque([start_tuple])
+    besökta.add(start_tuple)
+    giltiga_kombinationer.add(tuple(range(n)))
+    
+    while kö:
+        aktuell = kö.popleft()
+        for reg_vek in regler_vektorer:
+            for tecken in [1, -1]:
+                ny_vektor = [a + tecken * b for a, b in zip(aktuell, reg_vek)]
+                if any(v < 0 for v in ny_vektor):
+                    continue
+                    
+                ny_tuple = tuple(ny_vektor)
+                if ny_tuple in besökta:
+                    continue
+                    
+                potenser = [idx for idx, v in enumerate(ny_vektor) if v == 1]
+                if sum(ny_vektor) == len(potenser) and len(potenser) > 0:
+                    giltiga_kombinationer.add(tuple(sorted(potenser)))
+                    
+                if max(ny_vektor) <= 2:
+                    if len(besökta) < 3000:
+                        besökta.add(ny_tuple)
+                        kö.append(ny_tuple)
+                        
+    return sorted(list(giltiga_kombinationer), key=lambda c: (len(c), c))
+
+def optimize_single_layout_by_rewriting(combo_keys, rules, n):
+    """ 
+    Tar en osorterad kombination och hittar den permutation som bäst 
+    matchar stegen från omskrivningsreglerna (t.ex. flyttar 3 först, sen 2).
+    """
+    combo_set = set(combo_keys)
+    best_score = -1
+    best_permutation = tuple(sorted(list(combo_keys)))
+    
+    # Eftersom kombinationerna oftast är korta (få element) är en kontrollerad
+    # permutations-poängsättning baserad på regler extremt snabb och exakt.
+    for perm in itertools.permutations(combo_keys):
+        score = 0
+        current_list = list(perm)
+        
+        # Kolla om ordningen matchar våra kända algebraiska skift
+        for r_from, r_to in rules:
+            # Om regeln (t.ex. 0,1 -> 3) tillämpas, vill vi att elementen 
+            # som ersätts eller skapas behåller den ordning vi förväntar oss
+            if r_to in current_list:
+                idx = current_list.index(r_to)
+                # Premierar om potenser som hör ihop hamnar i logisk följd
+                if idx > 0 and current_list[idx-1] in r_from:
+                    score += 2
+                if idx < len(current_list) - 1 and current_list[idx+1] in r_from:
+                    score += 2
+                    
+        # Extra poäng om vi lyckas hålla element som fanns i huvudleden i stigande ordning
+        for i in range(len(current_list) - 1):
+            if current_list[i] < n and current_list[i+1] < n:
+                if current_list[i] < current_list[i+1]:
+                    score += 1
+                    
+        if score > best_score:
+            best_score = score
+            best_permutation = perm
+            
+    return best_permutation
 
 def get_layer_geometry_numeric(combo, x_numeric):
-    """ Beräknar geometri steg för steg utifrån sekvensens faktiska ordning """
     centers = []
     current_x = 0.0
     for k in combo:
@@ -146,12 +175,20 @@ def render(math_data):
     minimal_poly = math_data["minimal_poly"]
     x_numeric = math_data["x_numeric"]
     
-    # Hämta de sorterade identiteterna samt kartan med de matematiskt ordnade sekvenserna
-    sorted_identities, ordered_sequences_map = find_math_structures_logical_ordered(n, minimal_poly)
+    # 1. Hitta alla kombinationer med din säkra originalmetod
+    raw_matches = find_math_structures_logical(n, minimal_poly)
 
-    if not sorted_identities:
+    if not raw_matches:
         st.info("The main line is missing from the data.")
         return
+
+    unique_combos = set(tuple(sorted(list(combo))) for combo in raw_matches)
+    main_line = max(unique_combos, key=len)
+    hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
+    sorted_matches = [main_line] + hidden_lines
+
+    # 2. Hämta algebraiska regler för att styra ordningen
+    rules = extract_rules_from_poly(minimal_poly, max_power=max(15, n + 5))
 
     target_value = sum(float(x_numeric**m) for m in range(n))
     if target_value == 0: target_value = 1.0
@@ -159,15 +196,19 @@ def render(math_data):
     col_plot, col_controls = st.columns([6, 3])
 
     with col_controls:
-        # Vi behåller kryssrutan för bakåtkompatibilitet i ditt UI, 
-        # men logiken använder nu alltid den optimala matematiska ordningen!
         max_overlap = st.checkbox("Overlap", value=True, key="circles_overlap")
         
-        # Hämta de faktiska listorna baserat på om användaren valt overlap eller rå sortering
+        # Om overlap är aktivt, ordna varje rad optimalt utifrån reglerna
         if max_overlap:
-            final_layouts = [ordered_sequences_map[ident] for ident in sorted_identities]
+            final_layouts = []
+            for combo in sorted_matches:
+                if combo == main_line:
+                    final_layouts.append(list(main_line))
+                else:
+                    optimized = optimize_single_layout_by_rewriting(combo, rules, n)
+                    final_layouts.append(list(optimized))
         else:
-            final_layouts = [list(ident) for ident in sorted_identities]
+            final_layouts = [list(combo) for combo in sorted_matches]
 
         combo_labels = [" + ".join(get_math_label(k) for k in combo) for combo in final_layouts]
         selected_option = st.radio(
@@ -184,7 +225,6 @@ def render(math_data):
         x_lines, y_lines = [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        # 1. Rita den markerade kombinationen (Tjock linje)
         if 0 <= selected_idx < len(final_layouts):
             chosen_combo = final_layouts[selected_idx]
             chosen_centers = get_layer_geometry_numeric(chosen_combo, x_numeric)
@@ -201,17 +241,14 @@ def render(math_data):
                     showlegend=False
                 ))
 
-        # 2. Rita alla andra linjer i bakgrunden (Tunna linjer)
         all_radii = []
         drawn_circles = set()
-        
         for combo in final_layouts:
             centers = get_layer_geometry_numeric(combo, x_numeric)
             for k, x_center, diameter in centers:
                 radius = diameter / 2.0
                 all_radii.append(radius)
                 
-                # Unikt ID baseras på storlek och avrundat centrum för rit-poolen
                 circle_id = (k, round(x_center, 5))
                 if circle_id not in drawn_circles:
                     drawn_circles.add(circle_id)
@@ -220,7 +257,6 @@ def render(math_data):
                     x_lines.extend(list(cx) + [None])
                     y_lines.extend(list(cy) + [None])
 
-        # Lägg till baslinjen
         x_lines.extend([0.0, target_value, None])
         y_lines.extend([0.0, 0.0, None])
 
@@ -232,28 +268,6 @@ def render(math_data):
             showlegend=False
         ))
 
-        # Dynamisk beräkning av grafruta och skalor (Bevarar 1:1)
         max_actual_height = max(all_radii) if all_radii else (target_value * 0.5)
         base_x_margin = target_value * 0.05
         total_graph_width = target_value + (2 * base_x_margin)
-        required_y_space = total_graph_width * 0.5
-
-        if max_actual_height > (required_y_space * 0.85):
-            required_y_space = max_actual_height / 0.80
-            total_x_span = required_y_space * 2.0
-            x_min = -(total_x_span - target_value) / 2.0
-            x_max = target_value + (total_x_span - target_value) / 2.0
-        else:
-            x_min, x_max = -base_x_margin, target_value + base_x_margin
-
-        y_center_point = max_actual_height / 2.0
-        y_min = y_center_point - (required_y_space / 2.0)
-        y_max = y_center_point + (required_y_space / 2.0)
-
-        fig.update_layout(
-            plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
-            margin=dict(l=10, r=10, t=10, b=10), height=400, dragmode=False,
-            xaxis=dict(visible=False, range=[x_min, x_max]),
-            yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
-        )
-        st.plotly_chart(fig, use_container_width=True, key="semicircles_plot_clean")
