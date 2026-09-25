@@ -27,7 +27,9 @@ def extract_rules_from_poly(minimal_poly, max_power=15):
         terms = {}
         for t in sp.Add.make_args(shifted_poly):
             c, sub_target = t.as_coeff_mul(x)
-            if sub_target and sub_target.is_Pow:
+            
+            # Säkrare typkontroll med isinstance i stället för .is_Pow
+            if sub_target and isinstance(sub_target, sp.Pow):
                 pow_val = int(sub_target.exp)
             elif sub_target and sub_target == x:
                 pow_val = 1
@@ -56,6 +58,7 @@ def extract_rules_from_poly(minimal_poly, max_power=15):
             rules.append((tuple(sorted(from_pows)), highest_pow))
             
     return list(set(rules))
+
 
 def rewrite_sequence(current_sequence, rule_from, rule_to):
     """ Tillämpar en framåtriktad omskrivning och bevarar relativ ordning """
