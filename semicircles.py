@@ -12,53 +12,19 @@ def get_math_label(power):
     superscripts = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}
     return f"x{''.join(superscripts.get(c, c) for c in str(power_int))}"
 
-def extract_rules_from_poly(minimal_poly, max_power=15):
-    """ Skapar exakta omskrivningsregler utifrån minimalpolynomet """
-    if minimal_poly is None:
-        return []
-        
-    x = sp.Symbol("x")
-    P_x = sp.expand(minimal_poly)
-    rules = []
-    
-    for p in range(max_power):
-        shifted_poly = sp.expand(P_x * x**p)
-        terms = {}
-        for t in sp.Add.make_args(shifted_poly):
-            c, sub_target = t.as_coeff_mul(x)
-            
-            if sub_target and isinstance(sub_target, sp.Pow):
-                pow_val = int(sub_target.exp)
-            elif sub_target and sub_target == x:
-                pow_val = 1
-            else:
-                pow_val = 0
-            terms[pow_val] = int(c)
-            
-        if not terms:
-            continue
-            
-        highest_pow = max(terms.keys())
-        highest_coeff = terms[highest_pow]
-        from_pows = []
-        valid_rule = True
-        
-        for pow_val, coeff in terms.items():
-            if pow_val == highest_pow:
-                continue
-            if (coeff > 0 and highest_coeff > 0) or (coeff < 0 and highest_coeff < 0):
-                valid_rule = False
-                break
-            for _ in range(abs(coeff)):
-                from_pows.append(pow_val)
-                
-        if valid_rule and from_pows:
-            rules.append((tuple(sorted(from_pows)), highest_pow))
-            
-    return list(set(rules))
+def get_layer_geometry_numeric(combo, x_numeric):
+    """ Beräknar geometri och centrum baserat på flyttalsvärden """
+    centers = []
+    current_x = 0.0
+    for k in combo:
+        diameter = float(x_numeric**k)
+        radius = diameter / 2.0
+        centers.append((k, current_x + radius, diameter))
+        current_x += diameter
+    return centers
 
 def find_math_structures_logical(n, minimal_poly):
-    """ Din stabila original-sökning som garanterat hittar ALLA kombinationer """
+    """ Din stabila originalstruktur för sökning (100% intakt) """
     x = sp.Symbol("x")
     if minimal_poly is None:
         return [tuple(range(n))]
@@ -121,94 +87,74 @@ def find_math_structures_logical(n, minimal_poly):
                         
     return sorted(list(giltiga_kombinationer), key=lambda c: (len(c), c))
 
-def optimize_single_layout_by_rewriting(combo_keys, rules, n):
+def evaluate_global_layout_numeric(sorted_matches, x_numeric):
     """ 
-    Tar en osorterad kombination och hittar den permutation som bäst 
-    matchar stegen från omskrivningsreglerna (t.ex. flyttar 3 först, sen 2).
+    En stabil, numerisk ersättare till den gamla layout-loopen.
+    Matchar permutationer mot en global databas av existerande centrum.
     """
-    combo_set = set(combo_keys)
-    best_score = -1
-    best_permutation = tuple(sorted(list(combo_keys)))
+    optimized_layouts = []
+    global_drawn_centers = set() # Sparar par av (potens, avrundat_centrum)
     
-    # Eftersom kombinationerna oftast är korta (få element) är en kontrollerad
-    # permutations-poängsättning baserad på regler extremt snabb och exakt.
-    for perm in itertools.permutations(combo_keys):
-        score = 0
-        current_list = list(perm)
-        
-        # Kolla om ordningen matchar våra kända algebraiska skift
-        for r_from, r_to in rules:
-            # Om regeln (t.ex. 0,1 -> 3) tillämpas, vill vi att elementen 
-            # som ersätts eller skapas behåller den ordning vi förväntar oss
-            if r_to in current_list:
-                idx = current_list.index(r_to)
-                # Premierar om potenser som hör ihop hamnar i logisk följd
-                if idx > 0 and current_list[idx-1] in r_from:
-                    score += 2
-                if idx < len(current_list) - 1 and current_list[idx+1] in r_from:
-                    score += 2
-                    
-        # Extra poäng om vi lyckas hålla element som fanns i huvudleden i stigande ordning
-        for i in range(len(current_list) - 1):
-            if current_list[i] < n and current_list[i+1] < n:
-                if current_list[i] < current_list[i+1]:
-                    score += 1
-                    
-        if score > best_score:
-            best_score = score
-            best_permutation = perm
+    for idx, combo_keys in enumerate(sorted_matches):
+        if idx == 0:
+            # Huvudleden sätter baslinjen
+            optimized_layouts.append(combo_keys)
+            centers = get_layer_geometry_numeric(combo_keys, x_numeric)
+            for k, x_center, _ in centers:
+                global_drawn_centers.add((k, round(x_center, 5)))
+            continue
             
-    return best_permutation
-
-def get_layer_geometry_numeric(combo, x_numeric):
-    centers = []
-    current_x = 0.0
-    for k in combo:
-        diameter = float(x_numeric**k)
-        radius = diameter / 2.0
-        centers.append((k, current_x + radius, diameter))
-        current_x += diameter
-    return centers
+        best_score = -1
+        best_layout = tuple(sorted(list(combo_keys)))
+        
+        # Testa permutationer för att hitta var vi återanvänder flest cirklar
+        for perm in itertools.permutations(combo_keys):
+            centers = get_layer_geometry_numeric(perm, x_numeric)
+            score = 0
+            for k, x_center, _ in centers:
+                if (k, round(x_center, 5)) in global_drawn_centers:
+                    score += 5  # Hög poäng för perfekt överlappning av exakt samma cirkel
+            
+            if score > best_score:
+                best_score = score
+                best_layout = perm
+                
+        optimized_layouts.append(best_layout)
+        # Uppdatera den globala poolen med cirklarna från den valda layouten
+        final_centers = get_layer_geometry_numeric(best_layout, x_numeric)
+        for k, x_center, _ in final_centers:
+            global_drawn_centers.add((k, round(x_center, 5)))
+            
+    return optimized_layouts
 
 def render(math_data):
     n = math_data["n"]
     minimal_poly = math_data["minimal_poly"]
     x_numeric = math_data["x_numeric"]
     
-    # 1. Hitta alla kombinationer med din säkra originalmetod
     raw_matches = find_math_structures_logical(n, minimal_poly)
 
-    if not raw_matches:
+    if not raw_matches or len(raw_matches) == 0:
         st.info("The main line is missing from the data.")
         return
+
+    target_value = sum(float(x_numeric**m) for m in range(n))
+    if target_value == 0: target_value = 1.0
 
     unique_combos = set(tuple(sorted(list(combo))) for combo in raw_matches)
     main_line = max(unique_combos, key=len)
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # 2. Hämta algebraiska regler för att styra ordningen
-    rules = extract_rules_from_poly(minimal_poly, max_power=max(15, n + 5))
-
-    target_value = sum(float(x_numeric**m) for m in range(n))
-    if target_value == 0: target_value = 1.0
-
     col_plot, col_controls = st.columns([6, 3])
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key="circles_overlap")
         
-        # Om overlap är aktivt, ordna varje rad optimalt utifrån reglerna
         if max_overlap:
-            final_layouts = []
-            for combo in sorted_matches:
-                if combo == main_line:
-                    final_layouts.append(list(main_line))
-                else:
-                    optimized = optimize_single_layout_by_rewriting(combo, rules, n)
-                    final_layouts.append(list(optimized))
+            final_layouts = evaluate_global_layout_numeric(sorted_matches, x_numeric)
         else:
-            final_layouts = [list(combo) for combo in sorted_matches]
+            final_layouts = sorted_matches
 
         combo_labels = [" + ".join(get_math_label(k) for k in combo) for combo in final_layouts]
         selected_option = st.radio(
@@ -225,6 +171,7 @@ def render(math_data):
         x_lines, y_lines = [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
+        # Rita den markerade kombinationen (Tjock linje)
         if 0 <= selected_idx < len(final_layouts):
             chosen_combo = final_layouts[selected_idx]
             chosen_centers = get_layer_geometry_numeric(chosen_combo, x_numeric)
@@ -241,6 +188,7 @@ def render(math_data):
                     showlegend=False
                 ))
 
+        # Rita alla unika cirklar i bakgrunden (Tunna linjer)
         all_radii = []
         drawn_circles = set()
         for combo in final_layouts:
@@ -268,6 +216,28 @@ def render(math_data):
             showlegend=False
         ))
 
+        # Geometrisk skalning 1:1
         max_actual_height = max(all_radii) if all_radii else (target_value * 0.5)
         base_x_margin = target_value * 0.05
         total_graph_width = target_value + (2 * base_x_margin)
+        required_y_space = total_graph_width * 0.5
+
+        if max_actual_height > (required_y_space * 0.85):
+            required_y_space = max_actual_height / 0.80
+            total_x_span = required_y_space * 2.0
+            x_min = -(total_x_span - target_value) / 2.0
+            x_max = target_value + (total_x_span - target_value) / 2.0
+        else:
+            x_min, x_max = -base_x_margin, target_value + base_x_margin
+
+        y_center_point = max_actual_height / 2.0
+        y_min = y_center_point - (required_y_space / 2.0)
+        y_max = y_center_point + (required_y_space / 2.0)
+
+        fig.update_layout(
+            plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
+            margin=dict(l=10, r=10, t=10, b=10), height=400, dragmode=False,
+            xaxis=dict(visible=False, range=[x_min, x_max]),
+            yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
+        )
+        st.plotly_chart(fig, use_container_width=True, key="semicircles_plot_clean")
