@@ -23,16 +23,26 @@ def get_layer_geometry_numeric(combo, x_numeric):
         current_x += diameter
     return centers
 
-def find_math_structures_logical(n, minimal_poly):
-    """ Din stabila originalstruktur för sökning (100% intakt) """
+def find_math_structures_logical(n, minimal_poly, x_numeric):
+    """ Sökning som dynamiskt sätter gränsen baserat på summan av huvudleden """
     x = sp.Symbol("x")
     if minimal_poly is None:
         return [tuple(range(n))]
         
-    P_x = sp.expand(minimal_poly)
-    MAX_POWER = max(15, n + 5)
+    # Beräkna max tillåten potens baserat på din regel: x^k <= summan av huvudleden
+    target_value = sum(float(x_numeric**m) for m in range(n))
+    
+    # Vi loopar uppåt tills x^k passerar target_value för att hitta den exakta matematiska gränsen
+    max_k = n
+    while float(x_numeric**max_k) <= target_value:
+        max_k += 1
+    
+    # Vi lägger till en liten marginal (t.ex. +2) för säkerhets skull vid avrundningar, 
+    # men sätter ett golv på minst n+5 så små ekvationer inte stryps för tidigt.
+    MAX_POWER = max(max_k + 2, n + 5)
     VECTOR_SIZE = MAX_POWER + 1
     
+    P_x = sp.expand(minimal_poly)
     huvudled_vektor = [0] * VECTOR_SIZE
     for i in range(n):
         if i < VECTOR_SIZE:
@@ -77,6 +87,12 @@ def find_math_structures_logical(n, minimal_poly):
                     continue
                     
                 potenser = [idx for idx, v in enumerate(ny_vektor) if v == 1]
+                
+                # Här tillämpar vi din regel strängt under själva sökningen:
+                # Om kombinationen innehåller en potens som är större än vår geometriska maxgräns, utesluter vi den.
+                if potenser and max(potenser) > max_k:
+                    continue
+                    
                 if sum(ny_vektor) == len(potenser) and len(potenser) > 0:
                     giltiga_kombinationer.add(tuple(sorted(potenser)))
                     
@@ -86,6 +102,7 @@ def find_math_structures_logical(n, minimal_poly):
                         kö.append(ny_tuple)
                         
     return sorted(list(giltiga_kombinationer), key=lambda c: (len(c), c))
+
 
 def evaluate_global_layout_numeric(sorted_matches, x_numeric):
     """ 
