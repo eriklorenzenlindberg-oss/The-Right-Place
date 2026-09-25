@@ -183,6 +183,7 @@ def render(math_data):
         selected_idx = combo_labels.index(selected_option)
 
     with col_plot:
+        height=300,
         line_color, bg_color = "#000000", "#FFFFFF"
         fig = go.Figure()
         x_lines, y_lines = [], []
