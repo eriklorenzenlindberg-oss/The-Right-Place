@@ -81,7 +81,7 @@ def calculate_bounds(pos1, pos2):
 
     # Hitta det maximala avståndet från origo för en perfekt kvadratisk vy
     max_val = max(max(abs(x) for x in xs), max(abs(y) for y in ys))
-    margin = max_val * 1.35  # Väl tilltagen marginal för att rymma texterna på utsidan
+    margin = max_val * 1.2  # Väl tilltagen marginal för att rymma texterna på utsidan
 
     return -margin, margin, -margin, margin
 
