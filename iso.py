@@ -100,12 +100,6 @@ def render(math_data):
     col_plot, col_controls = st.columns([8, 2])
 
     with col_controls:
-        st.text(" ")
-        st.text(" ")
-        st.text(" ")
-        st.text(" ")
-        st.text(" ")
-        st.text(" ")
 
         rotate_fig2 = st.checkbox("Rotate", value=False, key="iso_rotate")
         show_nodes = st.checkbox("Nodes", value=False, key="iso_nodes")
