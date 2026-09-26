@@ -9,12 +9,7 @@ import sympy as sp
 
 st.subheader("The Right Place")
 
-# --- INGRESS (Syns alltid) ---
-st.markdown(
-    """
-    
-    """
-)
+
 
 # --- BRÖDTEXT (Utfällbar "Läs mer") ---
 with st.expander("Visualizing generalizations of the golden ratio and self-similarity in n-dimensional space"):
