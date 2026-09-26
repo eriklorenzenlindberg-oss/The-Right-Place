@@ -96,11 +96,10 @@ def render(math_data):
     lengths2 = math_data["lengths2_numeric"]
 
     # --- PANEL-LAYOUT FÖR DIAGRAM OCH REGLAGE ---
-    col_plot, col_controls = st.columns([6, 3])
+    # Fixat: Tog bort den dubblerade raden och behåller 80/20-fördelningen
     col_plot, col_controls = st.columns([8, 2])
 
     with col_controls:
-
         rotate_fig2 = st.checkbox("Rotate", value=False, key="iso_rotate")
         show_nodes = st.checkbox("Nodes", value=False, key="iso_nodes")
         node_size = st.slider("Node size", 1, 3, 1, key="iso_node_size")
@@ -125,9 +124,9 @@ def render(math_data):
         pos1 = generate_positions(nodes, lengths1, directions1)
         pos2 = generate_positions(nodes, lengths2, directions2)
 
-        # Fasta färg-inställningar (Svart/Vit)
+        # STÄDAD: Ändrad från krämvit (#FDFBF7) till kritvit (#FFFFFF)
         line_color = "#000000"
-        bg_color = "#FDFBF7" 
+        bg_color = "#FFFFFF" 
 
         # Skapa figuren med subplots
         fig = make_subplots(
