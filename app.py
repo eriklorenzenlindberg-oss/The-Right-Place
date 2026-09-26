@@ -11,7 +11,7 @@ import sympy as sp
 
 st.subheader("The Right Place")
 with st.expander("Visualizing generalizations of the golden ratio and self-similarity in n-dimensional space"):
-    st.markdown("<small>More information coming soon.
+    st.markdown("<small>"More information coming soon.
 
                 Generalized golden ratios:
 
@@ -29,7 +29,7 @@ with st.expander("Visualizing generalizations of the golden ratio and self-simil
 
                 4=x^n
 
-                And so on..
+                And so on.."
     
                 </small>", unsafe_allow_html=True)
 
