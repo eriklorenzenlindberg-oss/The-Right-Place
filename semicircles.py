@@ -258,4 +258,17 @@ def render(math_data):
             xaxis=dict(visible=False, range=[x_min, x_max]),
             yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
         )
+
+        # NYTT: Detta CSS-hack tvingar webbläsaren att dölja hela verktygsraden
+        st.markdown(
+            """
+            <style>
+            .modebar {
+                display: none !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+        
         st.plotly_chart(fig, use_container_width=True, key="semicircles_plot_clean")
