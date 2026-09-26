@@ -127,7 +127,7 @@ def render(math_data):
 
         # Fasta färg-inställningar (Svart/Vit)
         line_color = "#000000"
-        bg_color = "#F5F5F5" 
+        bg_color = "#FDFBF7" 
 
         # Skapa figuren med subplots
         fig = make_subplots(
