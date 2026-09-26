@@ -281,6 +281,18 @@ def render(math_data):
 
         fig.update_xaxes(matches='x')
 
+        # NYTT: Detta CSS-hack tvingar webbläsaren att dölja hela verktygsraden
+        st.markdown(
+            """
+            <style>
+            .modebar {
+                display: none !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
         st.plotly_chart(
             fig,
             use_container_width=True,
