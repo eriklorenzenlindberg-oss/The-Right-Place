@@ -25,25 +25,24 @@ with st.expander("Visualizing generalizations of the golden ratio and self-simil
     unsafe_allow_html=True
 )
 
-
-
 # --------------------------------------------------
 # 1. SIDOMENY
 # --------------------------------------------------
 
-primary_blue = st.get_option("theme.primaryColor") or "#0041BA"
-
+# STÄDAD CSS: Sätter kritvit bakgrund och neutral mörk text ENBART i sidomenyn
 st.sidebar.markdown(
-    f"""
+    """
     <style>
-    div[data-baseweb="input"], div[data-baseweb="number-input"] {{
-        background-color: #FDFBF7 !important;
-        border: 1px solid {primary_blue} !important;
-    }}
-    div[data-baseweb="input"] input, div[data-baseweb="number-input"] input {{
-        color: {primary_blue} !important;
-        -webkit-text-fill-color: {primary_blue} !important;
-    }}
+    div[data-testid="stSidebar"] div[data-baseweb="input"], 
+    div[data-testid="stSidebar"] div[data-baseweb="number-input"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #CCCCCC !important;
+    }
+    div[data-testid="stSidebar"] div[data-baseweb="input"] input, 
+    div[data-testid="stSidebar"] div[data-baseweb="number-input"] input {
+        color: #31333F !important;
+        -webkit-text-fill-color: #31333F !important;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -56,7 +55,6 @@ n = st.sidebar.number_input(
     value=4, 
     step=1
 )
-
 
 eq_input = st.sidebar.text_input(
     "x:", 
@@ -74,7 +72,7 @@ placeholder_v = st.sidebar.empty()
 
 
 # --------------------------------------------------
-# NYTT: NAVIGERING I SIDOFÄLTET (Ersätter st.tabs)
+# NAVIGERING I SIDOFÄLTET
 # --------------------------------------------------
 st.sidebar.markdown("---")  # En linje för att separera inställningar och navigering
 valt_diagram = st.sidebar.radio(
@@ -97,27 +95,21 @@ math_data = calc.get_math_data(
 # --------------------------------------------------
 # 3. FYLL I PLATSHÅLLARNA MED RESULTATEN
 # --------------------------------------------------
-with placeholder_x:
-    with st.container():
-        if not math_data["is_equation"]:
-            st.markdown(f"$x = {sp.latex(math_data['x_symbolic'])}$")
-        else:
-            if math_data["minimal_poly"] is not None:
-                n_sym = sp.Symbol("n")
-                poly_display = math_data["minimal_poly"].subs(n_sym, n)
-                st.markdown(f"$x \\Rightarrow {sp.latex(poly_display)} = 0$")
+# Här skriver vi direkt till st.empty() utan extra containers
+if not math_data["is_equation"]:
+    placeholder_x.markdown(f"$x = {sp.latex(math_data['x_symbolic'])}$")
+else:
+    if math_data["minimal_poly"] is not None:
+        n_sym = sp.Symbol("n")
+        poly_display = math_data["minimal_poly"].subs(n_sym, n)
+        placeholder_x.markdown(f"$x \\Rightarrow {sp.latex(poly_display)} = 0$")
        
-
-with placeholder_v:
-    with st.container():
-        st.markdown(f"$v \\Rightarrow {sp.latex(math_data['v_simplified'])}$")
+placeholder_v.markdown(f"$v \\Rightarrow {sp.latex(math_data['v_simplified'])}$")
       
-
 
 # --------------------------------------------------
 # ÄKTA LAZY LOADING (Kör bara det diagram som faktiskt visas)
 # --------------------------------------------------
-
 if valt_diagram == "n-face":
     iso.render(math_data)
 
