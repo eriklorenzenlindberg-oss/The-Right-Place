@@ -7,14 +7,12 @@ import semicircles
 # import pyramid
 import sympy as sp
 
+# --- HUVUDLAYOUT
+
 st.subheader("The Right Place")
-
-
-
-# --- BRÖDTEXT (Utfällbar "Läs mer") ---
 with st.expander("Visualizing generalizations of the golden ratio and self-similarity in n-dimensional space"):
-    st.write(
-        """
+    st.markdown(
+        """<small>
         Generalizations of the golden ratio:
         
         1+x=x^n
@@ -31,7 +29,7 @@ with st.expander("Visualizing generalizations of the golden ratio and self-simil
         
         4=x^n
         
-        ...
+        </small>
         """
     )
 
