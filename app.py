@@ -12,7 +12,7 @@ st.subheader("The Right Place")
 
 
 # --- BRÖDTEXT (Utfällbar "Läs mer") ---
-with st.expander("Visualizing generalizations of the golden ratio and self-similarity in n-dimensional space"):
+with st.write("Visualizing generalizations of the golden ratio and self-similarity in n-dimensional space"):
     st.markdown(
         """
         Generalizations of the golden ratio:
