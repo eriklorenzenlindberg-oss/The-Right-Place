@@ -297,5 +297,4 @@ def render(math_data):
             fig,
             use_container_width=True,
             key="iso_subplots",
-            config={"displayModeBar": False}
         )
