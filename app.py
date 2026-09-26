@@ -23,8 +23,13 @@ the orthotope retains its n-dimensional shape. If the sums of the side lengths f
 orthotope can be considered an n-dimensional counterpart to the golden rectangle.
 
 
-There are several algebraic generalizations of the golden ratio that yield this property. For instance, consider the equation 1 + x = xⁿ. An orthotope based on this relation retains its shape when its second shortest side is added to its shortest side. Another example is the equation 1 + xⁿ⁻¹ = xⁿ. An orthotope defined by this relation preserves its shape when its longest side is added to its shortest side.
-For both equations, the classic golden ratio is recovered at n = 2. These generalizations also encompass the plastic number: it appears at n = 3 in the first example, and at n = 5 in the second.
+There are several algebraic generalizations of the golden ratio that yield this property. For instance, consider the equation 1 + x = xⁿ. 
+An orthotope based on this relation retains its shape when its second shortest side is added to its shortest side. Another example is the 
+equation 1 + xⁿ⁻¹ = xⁿ. An orthotope defined by this relation preserves its shape when its longest side is added to its shortest side.
+
+
+For both equations, the classic golden ratio is recovered at n = 2. These generalizations also encompass the plastic number: it appears at 
+n = 3 in the first example, and at n = 5 in the second.
 </small>""", 
     unsafe_allow_html=True
 )
