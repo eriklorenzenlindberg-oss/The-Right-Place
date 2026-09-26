@@ -28,7 +28,7 @@ with st.expander("Visualizing generalizations of the golden ratio and self-simil
 
 
 # --------------------------------------------------
-# 1. BYGG GRÄNSSNITTET MED STREAMLITS INBYGGDA INSTÄLLNINGAR
+# 1. SIDOMENY
 # --------------------------------------------------
 
 primary_blue = st.get_option("theme.primaryColor") or "#0041BA"
@@ -57,7 +57,6 @@ n = st.sidebar.number_input(
     step=1
 )
 
-st.sidebar.text("")
 
 eq_input = st.sidebar.text_input(
     "x:", 
@@ -65,7 +64,6 @@ eq_input = st.sidebar.text_input(
 )
 
 placeholder_x = st.sidebar.empty()
-st.sidebar.text("")
 
 add_value_str = st.sidebar.text_input(
     "v:", 
@@ -73,7 +71,6 @@ add_value_str = st.sidebar.text_input(
 )
 
 placeholder_v = st.sidebar.empty()
-st.sidebar.text("")
 
 
 # --------------------------------------------------
