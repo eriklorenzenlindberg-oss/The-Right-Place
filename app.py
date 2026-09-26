@@ -76,9 +76,11 @@ placeholder_v = st.sidebar.empty()
 # --------------------------------------------------
 st.sidebar.markdown("---")  # En linje för att separera inställningar och navigering
 valt_diagram = st.sidebar.radio(
+    "Select visualization:",
     options=["n-face", "1-faces"],
     key="main_navigation_radio"
 )
+
 
 
 # --------------------------------------------------
