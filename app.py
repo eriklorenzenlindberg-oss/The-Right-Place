@@ -12,16 +12,20 @@ import sympy as sp
 st.subheader("The Right Place")
 with st.expander("Visualizing generalizations of the golden ratio and self-similarity in n-dimensional space"):
     st.markdown(
-    """<small>More information coming soon.<br><br>
-    Generalized golden ratios:<br>
-    1+x=x^n<br>
-    1+x^(n/2)=x^n<br>
-    1+x^(n-1)=x^n<br><br>
-    Generalization of the root-rectangles:<br>
-    2=x^n<br>
-    3=x^n<br>
-    4=x^n<br><br>
-    And so on...</small>""", 
+    """<small>The golden rectangle is characterized by its self-similar properties. Its short side (1) 
+    relates to the long side (x) as the long side relates to the sum of both sides (1 + x = x²). 
+    Therefore, the golden rectangle retains its proportions when the length of the long side is added to the short side.
+
+    
+This app visualizes orthotopes – the n-dimensional generalizations of rectangles and cuboids – whose side lengths form a 
+geometric progression. For any such orthotope, there is a specific value that can be added to the shortest side so that 
+the orthotope retains its n-dimensional shape. If the sums of the side lengths further extend the geometric progression, the 
+orthotope can be considered an n-dimensional counterpart to the golden rectangle.
+
+
+There are several algebraic generalizations of the golden ratio that yield this property. For instance, consider the equation 1 + x = xⁿ. An orthotope based on this relation retains its shape when its second shortest side is added to its shortest side. Another example is the equation 1 + xⁿ⁻¹ = xⁿ. An orthotope defined by this relation preserves its shape when its longest side is added to its shortest side.
+For both equations, the classic golden ratio is recovered at n = 2. These generalizations also encompass the plastic number: it appears at n = 3 in the first example, and at n = 5 in the second.
+</small>""", 
     unsafe_allow_html=True
 )
 
