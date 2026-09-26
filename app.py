@@ -11,25 +11,20 @@ import sympy as sp
 
 st.subheader("The Right Place")
 with st.expander("Visualizing generalizations of the golden ratio and self-similarity in n-dimensional space"):
-    st.markdown("<small>More information coming soon.
+    st.markdown(
+    """<small>More information coming soon.<br><br>
+    Generalized golden ratios:<br>
+    1+x=x^n<br>
+    1+x^(n/2)=x^n<br>
+    1+x^(n-1)=x^n<br><br>
+    Generalization of the root-rectangles:<br>
+    2=x^n<br>
+    3=x^n<br>
+    4=x^n<br><br>
+    And so on...</small>""", 
+    unsafe_allow_html=True
+)
 
-                Generalized golden ratios:
-
-                1+x=x^n
-
-                1+x^(n/2)=x^n
-
-                1+x^(n-1)=x^n
-
-                Generalization of the "root rectangles":
-
-                2=x^n
-
-                3=x^n
-
-                4=x^n
-
-                And so on...</small>", unsafe_allow_html=True)
 
 
 # --------------------------------------------------
