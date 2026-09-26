@@ -95,15 +95,18 @@ def render(math_data):
     lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
 
+    # --- AUTOMATISKA DESIGNVAL ---
+    # Linjetjockleken blir 0.3 upp till n=7, därefter 0.1
+    linewidth = 0.3 if n <= 7 else 0.1
+    node_size = 1
+
     # --- PANEL-LAYOUT FÖR DIAGRAM OCH REGLAGE ---
-    # Fixat: Tog bort den dubblerade raden och behåller 80/20-fördelningen
     col_plot, col_controls = st.columns([8, 2])
 
     with col_controls:
+        # Bara de viktigaste valen är kvar för användaren
         rotate_fig2 = st.checkbox("Rotate", value=False, key="iso_rotate")
         show_nodes = st.checkbox("Nodes", value=False, key="iso_nodes")
-        node_size = st.slider("Node size", 1, 3, 1, key="iso_node_size")
-        linewidth = st.slider("Line width", 0.1, 1.0, 0.3, 0.1, key="iso_linewidth")     
 
     with col_plot:
         nodes, edges = generate_ncube_graph(n)
@@ -124,7 +127,7 @@ def render(math_data):
         pos1 = generate_positions(nodes, lengths1, directions1)
         pos2 = generate_positions(nodes, lengths2, directions2)
 
-        # STÄDAD: Ändrad från krämvit (#FDFBF7) till kritvit (#FFFFFF)
+        # Fasta färg-inställningar (Kritvit bakgrund)
         line_color = "#000000"
         bg_color = "#FFFFFF" 
 
