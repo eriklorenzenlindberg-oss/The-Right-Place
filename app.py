@@ -11,21 +11,7 @@ import sympy as sp
 
 st.subheader("The Right Place")
 with st.expander("Visualizing generalizations of the golden ratio and self-similarity in n-dimensional space"):
-    st.markdown("<small>Generalizations of the golden ratio:
-        
-        1+x=x^n
-        
-        1+x^(n-1)
-        
-        1+x^(n/2)
-        
-        Generalizations of the “root rectangles”:
-        
-        2=x^n
-        
-        3=x^n
-        
-        4=x^n</small>")
+    st.markdown("<small>Det här är en lite mindre text med small-taggen.</small>", unsafe_allow_html=True)
 
 
 # --------------------------------------------------
