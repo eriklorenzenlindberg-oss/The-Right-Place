@@ -51,7 +51,7 @@ st.sidebar.markdown(
     f"""
     <style>
     div[data-baseweb="input"], div[data-baseweb="number-input"] {{
-        background-color: #FFFFFF !important;
+        background-color: #FDFBF7 !important;
         border: 1px solid {primary_blue} !important;
     }}
     div[data-baseweb="input"] input, div[data-baseweb="number-input"] input {{
