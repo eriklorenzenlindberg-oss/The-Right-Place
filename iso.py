@@ -284,5 +284,6 @@ def render(math_data):
         st.plotly_chart(
             fig,
             use_container_width=True,
-            key="iso_subplots"
+            key="iso_subplots",
+            config={"displayModeBar": False}
         )
