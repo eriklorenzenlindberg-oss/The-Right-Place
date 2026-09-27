@@ -17,6 +17,7 @@ with st.expander("Visualizing generalizations of the golden rectangle and self-s
     the previous one by x, this creates the geometric sequence 1, x, x².</small>
 
 THE GOLDEN RECTANGLE
+
 <small>The golden rectangle is characterized by the property that its side lengths form a geometric sequence; the ratio of the 
 shorter side to the longer side equals the ratio of the longer side to the sum of both sides. This relationship is expressed as:
 
@@ -25,11 +26,13 @@ shorter side to the longer side equals the ratio of the longer side to the sum o
 Consequently, the golden rectangle retains its shape when the length of the longer side is added to the shorter side.</small>
 
 ORTHOTOPES
+
 <small>For a rectangular cuboid to retain its shape when its shortest side is extended, its side lengths must form a geometric sequence. 
 This is a general rule for orthotopes – the generalization of rectangles and cuboids – in higher dimensions. The orthotope retains 
 its shape when xⁿ−1 is added to the shortest side.</small> 
 
 N-FACE
+
 <small>This application visualizes this class of orthotopes, with a specific focus on those whose side lengths are derived from generalizations of the golden ratio.
 The "n-face" button generates two isometric projections of an orthotope. The left projection is generated based on two user-defined parameters:
 
@@ -40,6 +43,7 @@ x = the ratio governing the side lengths
 In the right projection, a value v is added to the shortest side. If v = xⁿ-1, the two projections become identical in shape. Selecting "rotate" aligns their orientation as well.</small>
 
 1-FACES
+
 <small>The "1-faces" button displays the side lengths of the orthotope represented as the radii of semicircles. Semicircles are also drawn whenever the sum of multiple lengths equals a power of x, illustrating how the geometric progression continues through these sums.
 
 There are several algebraic generalizations of the golden ratio that yield this property. For instance, consider the equation 1 + x = xⁿ. 
