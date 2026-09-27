@@ -9,12 +9,10 @@ def get_math_label(power):
 
 def render(math_data):
     n = math_data["n"]
-    
-    # Hämtar powers direkt från 'lengths1_numeric' (som innehåller x^0, x^1, x^2... upp till n)
     powers = math_data["lengths1_numeric"]
     
-    # Eftersom lengths2_numeric[0] är satt till (1.0 + add_value_numeric), 
-    # så kan vi räkna ut det rena v_num genom att ta bort 1.0 (powers[0] är alltid 1.0)
+    # BLIXTSNABB OCH KORREKT UTBERÄKNING AV v:
+    # Eftersom lengths2_numeric[0] = 1.0 + add_value_numeric, och powers[0] = 1.0
     v_num = math_data["lengths2_numeric"][0] - powers[0]
     
     line_color = st.get_option("theme.primaryColor") or "#000000"
@@ -25,11 +23,10 @@ def render(math_data):
     fig = go.Figure()
     x_lines, y_lines = [], []
     
-    # Listor för att samla ALLA texter till ett enda blixtsnabbt Plotly-spår
     x_texts, y_texts, text_labels, text_positions = [], [], [], []
     
-    unit = powers[0] # Detta är 1.0
-    left_col_width = unit + v_num  # 1+v: vänsterkolumnen på högra figuren utan rotate
+    unit = powers[0] # Detta är alltid 1.0
+    left_col_width = unit + v_num  
     gap = unit * 5.0
     x_max_fig1 = 0.0
 
@@ -41,13 +38,12 @@ def render(math_data):
         x_offset = x_start
         y_row_bottom = 0.0
 
-        # Vid rotate ligger kvarvarande kolumner till höger om 1+v-luckan
         if fig_idx == 1 and rotate:
             x_label_pos = x_start + left_col_width
         else:
             x_label_pos = x_start
         
-        # 1. Samla höjdannotationer till vänster om figuren
+        # 1. Höjdannotationer
         for i in range(n - 1):
             p = (n - 1) - i
             if fig_idx == 1 and rotate and p == 1: continue 
@@ -59,11 +55,10 @@ def render(math_data):
             
             y_row_bottom += powers[p]
 
-        # 2. Rita rektanglarna i trappan och samla bredd-texter
+        # 2. Rektanglar och bredd-texter
         for col in range(n - 1):
             if fig_idx == 1 and col == 0:
                 if rotate:
-                    # Hoppa över 1+v-kolumnen med dess verkliga bredd så övriga kolumner ligger kvar
                     x_offset += left_col_width
                     continue
                 width = left_col_width
@@ -88,7 +83,7 @@ def render(math_data):
         if fig_idx == 0:
             x_max_fig1 = x_offset 
 
-        # 3. Om rotate är aktiv: samla bottenradens rektanglar och texter
+        # 3. Vid rotation
         if fig_idx == 1 and rotate:
             y_bottom = -left_col_width
             
@@ -113,7 +108,7 @@ def render(math_data):
             x_offset = max(x_offset, x_row_offset)
 
     # --------------------------------------------------
-    # BYGG PLOTLY-GRAFEN (Endast TVÅ traces totalt)
+    # STRYLINJERADE TRACES (Blixtsnabb rendering)
     # --------------------------------------------------
     fig.add_trace(go.Scatter(x=x_lines, y=y_lines, mode="lines", line=dict(color=line_color, width=0.5), hoverinfo="skip", showlegend=False))
     
@@ -123,7 +118,6 @@ def render(math_data):
         hoverinfo="skip", showlegend=False
     ))
 
-    # Fast kamera för båda rotate-lägena så vänster trappa och högra kolumner inte hoppar
     x_start_fig2 = x_max_fig1 + gap
     y_top = sum(powers[p] for p in range(1, n))
     x_right = x_start_fig2 + left_col_width + sum(powers[k] for k in range(1, n))
@@ -142,4 +136,3 @@ def render(math_data):
     )
     
     st.plotly_chart(fig, use_container_width=True, key="rectangles_plot_short")
-
