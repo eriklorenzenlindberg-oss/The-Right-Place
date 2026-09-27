@@ -27,9 +27,10 @@ Consequently, the golden rectangle retains its shape when the length of the long
 
 ORTHOTOPES
 
-<small>For a rectangular cuboid to retain its shape when its shortest side is extended, its side lengths must form a geometric sequence. 
-This is a general rule for orthotopes – the generalization of rectangles and cuboids – in higher dimensions. The orthotope retains 
-its shape when xⁿ−1 is added to the shortest side.</small> 
+<small>A rectangular cuboid with side lengths that form a geometric sequence (1 : x : x²), retains its shape if the value x³-1 is added to the shortest side.
+
+An orthotopes – the generalization of rectangles and cuboids – with side lengths that form a geometric sequence, retains its shape if
+the value is xⁿ−1 is added to the shortest side.</small> 
 
 N-FACE
 
