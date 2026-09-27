@@ -3,7 +3,7 @@ import calculations as calc
 import iso
 import semicircles 
 # TILLFÄLLIGT BORTKOMMENTERADE IMPORTER:
-import rectangles
+#import rectangles
 # import pyramid
 import sympy as sp
 
@@ -126,5 +126,5 @@ if valt_diagram == "n-face":
 elif valt_diagram == "1-faces":
     semicircles.render(math_data)
 
-elif valt_diagram == "2-faces":
-    rectangles.render(math_data)
+#elif valt_diagram == "2-faces":
+   # rectangles.render(math_data)
