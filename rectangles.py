@@ -8,16 +8,16 @@ def get_math_label(power):
     return f"x{''.join(superscripts.get(c, c) for c in str(power))}"
 
 def render(math_data):
-    n, v_num = math_data["n"], math_data["v_numeric"]
-    raw_powers = math_data["numeric_powers"]
-    if isinstance(raw_powers, dict):
-        powers = [raw_powers[k] for k in sorted(raw_powers.keys())]
-    else:
-        powers = list(raw_powers)
+    n = math_data["n"]
+    
+    # Hämtar powers direkt från 'lengths1_numeric' (som innehåller x^0, x^1, x^2... upp till n)
+    powers = math_data["lengths1_numeric"]
+    
+    # Eftersom lengths2_numeric[0] är satt till (1.0 + add_value_numeric), 
+    # så kan vi räkna ut det rena v_num genom att ta bort 1.0 (powers[0] är alltid 1.0)
+    v_num = math_data["lengths2_numeric"][0] - powers[0]
     
     line_color = st.get_option("theme.primaryColor") or "#000000"
-    
-    # KORRIGERING: Här är raden som saknades i mitt förra block!
     bg_color = st.get_option("theme.backgroundColor") or "#FFFFFF"
     
     rotate = st.checkbox("Rotate", value=False)
@@ -28,7 +28,7 @@ def render(math_data):
     # Listor för att samla ALLA texter till ett enda blixtsnabbt Plotly-spår
     x_texts, y_texts, text_labels, text_positions = [], [], [], []
     
-    unit = powers[0]
+    unit = powers[0] # Detta är 1.0
     left_col_width = unit + v_num  # 1+v: vänsterkolumnen på högra figuren utan rotate
     gap = unit * 5.0
     x_max_fig1 = 0.0
@@ -142,3 +142,4 @@ def render(math_data):
     )
     
     st.plotly_chart(fig, use_container_width=True, key="rectangles_plot_short")
+
