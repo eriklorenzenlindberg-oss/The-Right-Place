@@ -14,7 +14,7 @@ with st.expander("Visualizing generalizations of the golden rectangle and self-s
     """<small>Any rectangle, regardless of its ratio, can be extended in one dimension and retain its shape. 
     Consider the rectangle 1 : x. Multiplying the shorter side by x² yields a length that matches the proportion of the 
     original shape. The same result is obtained by adding x²-1 to the shorter side. Since the new side length is found by multiplying 
-    the previous one by x, this creates the geometric sequence 1, x, x².</small>
+    the previous one by x², this creates the geometric sequence 1, x, x².</small>
 
 THE GOLDEN RECTANGLE
 
