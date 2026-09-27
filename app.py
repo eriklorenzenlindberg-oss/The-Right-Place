@@ -11,15 +11,23 @@ import sympy as sp
 st.subheader("The Right Place")
 with st.expander("Visualizing generalizations of the golden rectangle and self-similarity in n-dimensional space"):
     st.markdown(
-    """<small>Any rectangle, regardless of its ratio, can have its shorter side extended to form a new rectangle of identical shape. Consider a rectangle with sides 1 and x. Multiplying the shorter side by x² yields a length that matches the proportion of the original shape. The same result is obtained by adding x²-1 to the shorter side. Since the new side length is found by multiplying the previous one by x, this creates the geometric sequence 1, x, x².
+    """<small>Any rectangle, regardless of its ratio, can have its shorter side extended to form a new rectangle of identical shape. 
+    Consider a rectangle with sides 1 and x. Multiplying the shorter side by x² yields a length that matches the proportion of the 
+    original shape. The same result is obtained by adding x²-1 to the shorter side. Since the new side length is found by multiplying 
+    the previous one by x, this creates the geometric sequence 1, x, x².</small>
 
-The golden rectangle is characterized by the property that its side lengths form a geometric sequence; the ratio of the shorter side to the longer side equals the ratio of the longer side to the sum of both sides. This relationship is expressed as:
+THE GOLDEN RECTANGLE
+
+<small>The golden rectangle is characterized by the property that its side lengths form a geometric sequence; the ratio of the 
+shorter side to the longer side equals the ratio of the longer side to the sum of both sides. This relationship is expressed as:
 
 1 + x = x²
 
 Consequently, the golden rectangle retains its shape when the length of the longer side is added to the shorter side.
 
-For a rectangular cuboid to retain its shape when its shortest side is extended, its side lengths must form a geometric sequence. This is a general rule for orthotopes – the generalization of rectangles and cuboids – in higher dimensions. The orthotope retains its shape when xⁿ−1 is added to the shortest side. 
+For a rectangular cuboid to retain its shape when its shortest side is extended, its side lengths must form a geometric sequence. 
+This is a general rule for orthotopes – the generalization of rectangles and cuboids – in higher dimensions. The orthotope retains 
+its shape when xⁿ−1 is added to the shortest side. 
 
 This application visualizes this class of orthotopes, with a specific focus on those whose side lengths are derived from generalizations of the golden ratio.
 The "n-face" button generates two isometric projections of an orthotope. The left projection is generated based on two user-defined parameters:
