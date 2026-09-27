@@ -117,7 +117,7 @@ def render(math_data):
         # --------------------------------------------------
         # TRACES & LAYOUT (Matchad höjd och hastighet med iso)
         # --------------------------------------------------
-        fig.add_trace(go.Scatter(x=x_lines, y=y_lines, mode="lines", line=dict(color=line_color, width=0.5), hoverinfo="skip", showlegend=False))
+        fig.add_trace(go.Scatter(x=x_lines, y=y_lines, mode="lines", line=dict(color=line_color, width=0.8), hoverinfo="skip", showlegend=False))
         
         fig.add_trace(go.Scatter(
             x=x_texts, y=y_texts, text=text_labels, mode="text",
