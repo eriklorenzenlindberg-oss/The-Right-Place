@@ -9,7 +9,11 @@ def get_math_label(power):
 
 def render(math_data):
     n, v_num = math_data["n"], math_data["v_numeric"]
-    powers = [math_data["numeric_powers"][k] for k in range(len(math_data["numeric_powers"]))]
+    raw_powers = math_data["numeric_powers"]
+    if isinstance(raw_powers, dict):
+        powers = [raw_powers[k] for k in sorted(raw_powers.keys())]
+    else:
+        powers = list(raw_powers)
     
     line_color = st.get_option("theme.primaryColor") or "#000000"
     
