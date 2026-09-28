@@ -89,9 +89,8 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     fill_color = "#FFFFFF"
     bg_color = "#FFFFFF"
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("**Figur 2 Inställningar:**")
-    rotate = st.sidebar.checkbox("Rotate (Mått: $x$ till $1+v$)", value=False)
+    # FLYTTAD KNAPP: Ligger nu i huvudfönstret ovanför diagrammet istället för i sidomenyn
+    rotate = st.checkbox("Rotate Figure 2 (Align orientation with Figure 1)", value=False)
 
     v_modified_value = lengths2[0]
 
@@ -187,3 +186,4 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     )
 
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
