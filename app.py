@@ -3,7 +3,7 @@ import calculations as calc
 import iso
 import semicircles 
 import rectangles
-# import pyramid
+import pyramid
 import sympy as sp
 
 # --- HUVUDLAYOUT
@@ -110,7 +110,7 @@ placeholder_v = st.sidebar.empty()
 
 valt_diagram = st.sidebar.radio(
     "Select visualization:",
-    options=["n-face", "1-faces", "2-faces"],
+    options=["n-face", "1-faces", "2-faces", "3-faces"],
     key="main_navigation_radio"
 )
 
@@ -152,3 +152,6 @@ elif valt_diagram == "1-faces":
 
 elif valt_diagram == "2-faces":
     rectangles.render(math_data)
+
+elif valt_diagram == "3-faces":
+    pyramid.render(math_data)
