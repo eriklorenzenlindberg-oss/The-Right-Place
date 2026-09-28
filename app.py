@@ -11,48 +11,52 @@ import sympy as sp
 st.subheader("The Right Place")
 with st.expander("Visualizing generalizations of the golden rectangle and self-similarity in n-dimensional space"):
     st.markdown(
-    """<small>Any rectangle, regardless of its ratio, can be extended in one dimension and retain its shape. 
-    Consider the rectangle 1 : x. Multiplying the shorter side by x² yields a length that matches the proportion of the 
-    original shape. The same result is obtained by adding x²-1 to the shorter side. Since the new side length is found by multiplying 
-    the previous one by x², this creates the geometric sequence 1, x, x².</small>
+    """<small>TWO DIMENSIONS
+Any rectangle that is not a square can be extended in one dimension without deformation.
+Take a rectangle with the aspect ratio 1 : x.  (where x > 1). By multiplying the shorter side by the square of the aspect ratio, x², the rectangle changes in size and orientation but retains its shape. The same result is obtained by adding x² - 1 to the shorter side. This relationship is expressed by the geometric progression formed by the three distinct side lengths of the two configurations:
+
+1, x, x²
 
 THE GOLDEN RECTANGLE
 
-<small>The golden rectangle is characterized by the property that its side lengths form a geometric sequence; the ratio of the 
-shorter side to the longer side equals the ratio of the longer side to the sum of both sides. This relationship is expressed as:
-
+The golden rectangle is characterized by its sides forming a geometric progression; the shorter side is to the longer side as the longer side is to the sum of both sides:
 1 + x = x²
+Consequently, the golden rectangle retains its shape when the length of the longer side is added to the shorter side.
 
-Consequently, the golden rectangle retains its shape when the length of the longer side is added to the shorter side.</small>
+THREE DIMENSIONS
 
-ORTHOTOPES
+Any rectangular cuboid with side lengths that form a geometric sequence (1 : x : x²) retains its shape if the shortest side is multiplied by x³, or if x³ - 1 is added to it. 
 
-<small>A rectangular cuboid with side lengths that form a geometric sequence (1 : x : x²), retains its shape if the value x³-1 is added to the shortest side.
+N DIMENSIONS
 
-An orthotopes – the generalization of rectangles and cuboids – with side lengths that form a geometric sequence, retains its shape if
-the value is xⁿ−1 is added to the shortest side.</small> 
+The n-dimensional generalization of the rectangle and the cuboid is called an orthotope. Any orthotope with side lengths that form a geometric sequence (1, x, ..., xⁿ⁻¹) retains its shape if the shortest side is multiplied by xⁿ, or if xⁿ - 1 is added to it.
 
-N-FACE
+THE APPLICATION
 
-<small>This application visualizes this class of orthotopes, with a specific focus on those whose side lengths are derived from generalizations of the golden ratio.
-The "n-face" button generates two isometric projections of an orthotope. The left projection is generated based on two user-defined parameters:
-
+The Right Place visualizes this class of orthotopes, with a specific focus on those whose side lengths are derived from the golden ratio or its generalizations.
+The "n-face" button generates two isometric projections of an orthotope based on user-defined parameters:
 n = the number of dimensions
-
 x = the ratio governing the side lengths
-
-In the right projection, a value v is added to the shortest side. If v = xⁿ-1, the two projections become identical in shape. Selecting "rotate" aligns their orientation as well.</small>
+v = the value added to the shortest side
+Figure 1 is generated from n and x. Figure 2 shows the orthotope when v is added to the shortest side. If v = xⁿ - 1, the two projections become identical in shape. Selecting "rotate" aligns the orientation of Figure 2 with that of Figure 1.
 
 1-FACES
 
-<small>The "1-faces" button displays the side lengths of the orthotope represented as the radii of semicircles. Semicircles are also drawn whenever the sum of multiple lengths equals a power of x, illustrating how the geometric progression continues through these sums.
+The lines and rectangles that bound a cuboid can be generalized to k-faces.
+The "1-faces" button displays the side lengths of the orthotope — or its types of 1-faces — represented as the radii of semicircles. When x equals the golden ratio or a generalized golden ratio, such as:
+1 + x = xⁿ
+or
+1 + xⁿ⁻¹ = xⁿ
+the diagram also illustrates how sums of multiple lengths extend the geometric progression of the sides. An orthotope based on the equation 1 + x = xⁿ retains its shape when the length of the second shortest side is added to the shortest side. An orthotope based on the equation 1 + xⁿ⁻¹ = xⁿ retains his shape when the length of the longest side is added to the shortest side.
+For both these examples, the classic golden ratio is obtained when n = 2. The plastic ratio is obtained when n = 3 in the former equation, and when n = 5 in the latter. 
 
-There are several algebraic generalizations of the golden ratio that yield this property. For instance, consider the equation 1 + x = xⁿ. 
-An orthotope based on this relation retains its shape when the length of the second shortest side is added to the shortest side. Another example is the 
-equation 1 + xⁿ⁻¹ = xⁿ. An orthotope defined by this relation preserves its shape when the length of the longest side is added to the shortest side.
+2-FACES
 
-For both equations, the classic golden ratio is recovered at n = 2. These generalizations also encompass the plastic number: it appears at 
-n = 3 in the first example, and at n = 5 in the second.
+The "2-faces" button displays all types of 2-dimensional faces bounding the orthotope, and how this set is altered when extending its shortest side.
+
+3-FACES
+
+[Work in progress]
 </small>""", 
     unsafe_allow_html=True
 )
