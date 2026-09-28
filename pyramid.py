@@ -12,19 +12,19 @@ VZ = (0.0, -1.0)                                                # Rakt ner
 
 def iso_point(px, py, pz):
     return (
-        px * VX + py * VY + pz * VZ,
-        px * VX + py * VY + pz * VZ
+        px * VX[0] + py * VY[0] + pz * VZ[0],
+        px * VX[1] + py * VY[1] + pz * VZ[1]
     )
 
 # --------------------------------------------------
 # HJÄLP (Rita en solid yta)
 # --------------------------------------------------
 def add_face(fig, corners, line_color, fill_color, row, col):
-    xs = [p for p in corners]
-    ys = [p for p in corners]
+    xs = [p[0] for p in corners]
+    ys = [p[1] for p in corners]
 
-    xs.append(corners)
-    ys.append(corners)
+    xs.append(corners[0][0])
+    ys.append(corners[0][1])
 
     fig.add_trace(
         go.Scatter(
@@ -47,7 +47,7 @@ def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, 
     z_size = block_lengths[z_power]
 
     xy = [
-        (p + dx, p + dy) for p in [
+        (p[0] + dx, p[1] + dy) for p in [
             iso_point(offset_x, offset_y, offset_z),
             iso_point(offset_x + x_size, offset_y, offset_z),
             iso_point(offset_x + x_size, offset_y + y_size, offset_z),
@@ -55,7 +55,7 @@ def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, 
         ]
     ]
     yz = [
-        (p + dx, p + dy) for p in [
+        (p[0] + dx, p[1] + dy) for p in [
             iso_point(offset_x, offset_y, offset_z),
             iso_point(offset_x, offset_y + y_size, offset_z),
             iso_point(offset_x, offset_y + y_size, offset_z + z_size),
@@ -63,16 +63,7 @@ def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, 
         ]
     ]
     xz = [
-        (p + dx, p + dy) for p in [
-            iso_point(offset_x, offset_y, offset_z),
-            iso_point(offset_x + x_size, offset_y, offset_z),
-            iso_point(offset_x + x_size, offset_y, offset_z + z_size),
-            iso_point(offset_x, offset_y, offset_z, offset_z + z_size) # wait, fix the last point to pz+z_size
-        ]
-    ]
-    # Let's fix the xz face properly just to be safe
-    xz = [
-        (p + dx, p + dy) for p in [
+        (p[0] + dx, p[1] + dy) for p in [
             iso_point(offset_x, offset_y, offset_z),
             iso_point(offset_x + x_size, offset_y, offset_z),
             iso_point(offset_x + x_size, offset_y, offset_z + z_size),
@@ -96,11 +87,14 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     fill_color = "#FFFFFF"
     bg_color = "#FFFFFF"
 
+    # --- ENDAST HÄR ÄR ÄNDRINGEN SKEDD ---
+    # Skapar två kolumner och lägger checkboxen i den högra
     col1, col2 = st.columns(2)
     with col2:
         rotate = st.checkbox("Rotate", value=False)
+    # -------------------------------------
 
-    v_modified_value = lengths2
+    v_modified_value = lengths2[0]
 
     fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.05)
 
@@ -154,9 +148,9 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     f2_fix_x = -sum(chosen_lengths[p] for p in range(f2_a + 1)) - f2_a * x_gap
     f2_fix_pt = iso_point(f2_fix_x, f2_fix_y, f2_fix_z)
 
-    # KORREKT TUPEL-SUBTRAKTION (index 0 för x, index 1 för y)
-    dx = f1_fix_pt - f2_fix_pt
-    dy = f1_fix_pt - f2_fix_pt
+    # Hämtar komponenterna [0] och [1] ur tuplarna för stabil beräkning
+    dx = f1_fix_pt[0] - f2_fix_pt[0]
+    dy = f1_fix_pt[1] - f2_fix_pt[1]
 
     # RITA PYRAMID 2
     for z_power in range(n - 1, 1, -1):
