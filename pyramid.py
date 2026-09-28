@@ -80,8 +80,8 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
 
-    line_color = st.get_option("theme.primaryColor") or "#FFFFFF"
-    bg_color = st.get_option("theme.backgroundColor") or "#0041BA"
+    line_color = "#000000"
+    bg_color = "#FFFFFF"
 
     st.sidebar.markdown("---")
     st.sidebar.markdown("**Figur 2 Inställningar:**")
