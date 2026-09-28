@@ -1,5 +1,4 @@
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import streamlit as st
 import math
 
@@ -17,9 +16,9 @@ def iso_point(px, py, pz):
     )
 
 # --------------------------------------------------
-# HJÄLP (Rita en solid yta)
+# HJÄLP (Rita en solid yta i en fristående figur)
 # --------------------------------------------------
-def add_face(fig, corners, line_color, fill_color, row, col):
+def add_face(fig, corners, line_color, fill_color):
     xs = [p[0] for p in corners]
     ys = [p[1] for p in corners]
 
@@ -34,14 +33,13 @@ def add_face(fig, corners, line_color, fill_color, row, col):
             fillcolor=fill_color,
             line=dict(color=line_color, width=1.2),
             hoverinfo="skip", showlegend=False
-        ),
-        row=row, col=col
+        )
     )
 
 # --------------------------------------------------
 # GENERELLT BLOCK (Rita solida rätblock)
 # --------------------------------------------------
-def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row, col, dx=0.0, dy=0.0):
+def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=0.0, dy=0.0):
     x_size = block_lengths[a]
     y_size = block_lengths[b]
     z_size = block_lengths[z_power]
@@ -71,9 +69,9 @@ def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, 
         ]
     ]
 
-    add_face(fig, xy, line_color, fill_color, row, col)
-    add_face(fig, yz, line_color, fill_color, row, col)
-    add_face(fig, xz, line_color, fill_color, row, col)
+    add_face(fig, xy, line_color, fill_color)
+    add_face(fig, yz, line_color, fill_color)
+    add_face(fig, xz, line_color, fill_color)
 
 # --------------------------------------------------
 # RENDER
@@ -87,10 +85,10 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     fill_color = "#FFFFFF"
     bg_color = "#FFFFFF"
 
-    # 1. SKAPA DE TVÅ HUVUDKOLUMNERNA PÅ SIDAN
+    # 1. SKAPA DE TVÅ HUVUDKOLUMNERNA PÅ SIDAN (50% var)
     col1, col2 = st.columns(2)
 
-    # Vi skapar en separat Plotly-figur för Pyramid 1
+    # Vi skapar en helt fristående figur för Pyramid 1
     fig1 = go.Figure()
 
     # RITA PYRAMID 1
@@ -100,18 +98,20 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             offset_y = -sum(lengths1[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(lengths1[p] for p in range(a + 1)) - a * x_gap
-                draw_block(fig1, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row=None, col=None)
+                draw_block(fig1, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color)
 
-    # 2. BERÄKNA GEOMETRISK PLACERING AV FIGUR 2 (Samma exakta fixpunktslogik)
-    # Vi lägger checkboxen i kolumn 2 så den hamnar överst till höger
+    # 2. BERÄKNA GEOMETRISK PLACERING AV FIGUR 2
+    # Lägg checkboxen i den högra kolumnen så att den hamnar överst till höger
     with col2:
         rotate = st.checkbox("Rotate", value=False)
+
+    v_modified_value = lengths2[0]
 
     chosen_lengths = {}
     if rotate:
         for i in range(n + 5):
             if i == n - 1:
-                chosen_lengths[i] = lengths2
+                chosen_lengths[i] = v_modified_value
             else:
                 chosen_lengths[i] = lengths1[i + 1] if (i + 1) < len(lengths1) else (math_data["x_numeric"] ** (i + 1))
     else:
@@ -151,7 +151,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     dx = f1_fix_pt[0] - f2_fix_pt[0]
     dy = f1_fix_pt[1] - f2_fix_pt[1]
 
-    # Vi skapar en separat Plotly-figur för Pyramid 2
+    # Vi skapar en helt fristående figur för Pyramid 2
     fig2 = go.Figure()
 
     # RITA PYRAMID 2
@@ -161,14 +161,13 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             offset_y = -sum(chosen_lengths[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
-                draw_block(fig2, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row=None, col=None, dx=dx, dy=dy)
+                draw_block(fig2, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=dx, dy=dy)
     
-    # 3. APPLICERA UNGEFÄR SAMMA FASTA SKALA PÅ BÅDA FIGURERNA
+    # 3. APPLICERA FASTA RAMAR OCH SKALA PÅ BÅDA FIGURERNA
     max_span = sum(lengths1[p] for p in range(1, len(lengths1))) * 1.5
     fixed_range_x = [-max_span, max_span / 2]
     fixed_range_y = [-max_span, max_span / 2]
 
-    # Gemensam layout-uppdatering för ett rent utseende
     layout_specs = dict(
         plot_bgcolor=bg_color,
         paper_bgcolor=bg_color,
@@ -181,11 +180,9 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     fig1.update_layout(**layout_specs)
     fig2.update_layout(**layout_specs)
 
-    # 4. SKICKA UT DIAGRAMMEN I RÄTT KOLUMN
+    # 4. SKICKA UT RESPEKTIVE DIAGRAM I RÄTT Behållare
     with col1:
-        # Figur 1 hamnar till vänster (lämnar utrymme ovanför eftersom det inte finns någon checkbox här)
         st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
         
     with col2:
-        # Figur 2 hamnar till höger, direkt under sin checkbox
         st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
