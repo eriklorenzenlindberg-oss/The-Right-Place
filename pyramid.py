@@ -103,7 +103,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             offset_y = -sum(lengths1[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(lengths1[p] for p in range(a + 1)) - a * x_gap
-                draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, "#0041BA", row=1, col=1)
+                draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, "#FFFFFF", row=1, col=1)
 
     # --------------------------------------------------
     # GEOMETRISK PLACERING AV FIGUR 2 (Förskjutningslogik)
@@ -116,14 +116,14 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             else:
                 # Fallback till lengths1 om indexet skjuts utanför grundlängderna
                 chosen_lengths[i] = lengths1[i + 1] if (i + 1) < len(lengths1) else (math_data["x_numeric"] ** (i + 1))
-        fill_color = "#0041BA"
+        fill_color = "#FFFFFF"
     else:
         for i in range(n + 5):
             if i < len(lengths2):
                 chosen_lengths[i] = lengths2[i]
             else:
                 chosen_lengths[i] = math_data["x_numeric"] ** i
-        fill_color = "#0041BA"
+        fill_color = "#FFFFFF"
 
     # FIXPUNKT: Underkanten på det fysiska blocket x^(n-3), x^(n-2), x^(n-1)
     f1_z_power = n - 1
