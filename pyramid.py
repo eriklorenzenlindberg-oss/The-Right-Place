@@ -90,7 +90,6 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     # Skapa två deldiagram bredvid varandra
     fig = make_subplots(
         rows=1, cols=2, 
-        subplot_titles=("Standard bas (1)", "Modifierad bas (1 + v)"),
         horizontal_spacing=0.05
     )
 
