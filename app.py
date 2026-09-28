@@ -11,28 +11,26 @@ import sympy as sp
 st.subheader("The Right Place")
 with st.expander("Visualizing generalizations of the golden rectangle and self-similarity in n-dimensional space"):
     st.markdown(
-    """<small>TWO DIMENSIONS
+    """<small>
     
 Any rectangle that is not a square can be extended in one dimension without deformation.
 Take a rectangle with the aspect ratio 1 : x.  (where x > 1). By multiplying the shorter side by the square of the aspect ratio, x², the rectangle changes in size and orientation but retains its shape. The same result is obtained by adding x² - 1 to the shorter side. This relationship is expressed by the geometric progression formed by the three distinct side lengths of the two configurations:
 
 1, x, x²
 
-THE GOLDEN RECTANGLE
+GOLDEN RECTANGLE
 
 The golden rectangle is characterized by its sides forming a geometric progression; the shorter side is to the longer side as the longer side is to the sum of both sides:
 1 + x = x²
 Consequently, the golden rectangle retains its shape when the length of the longer side is added to the shorter side.
 
-THREE DIMENSIONS
+ORTHOTOPE
 
 Any rectangular cuboid with side lengths that form a geometric sequence (1 : x : x²) retains its shape if the shortest side is multiplied by x³, or if x³ - 1 is added to it. 
 
-N DIMENSIONS
-
 The n-dimensional generalization of the rectangle and the cuboid is called an orthotope. Any orthotope with side lengths that form a geometric sequence (1, x, ..., xⁿ⁻¹) retains its shape if the shortest side is multiplied by xⁿ, or if xⁿ - 1 is added to it.
 
-THE APPLICATION
+APPLICATION
 
 The Right Place visualizes this class of orthotopes, with a specific focus on those whose side lengths are derived from the golden ratio or its generalizations.
 The "n-face" button generates two isometric projections of an orthotope based on user-defined parameters:
