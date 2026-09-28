@@ -32,7 +32,7 @@ def add_face(fig, corners, line_color, fill_color, row, col):
             mode="lines",
             fill="toself",
             fillcolor=fill_color,
-            line=dict(color=line_color, width=1),
+            line=dict(color=line_color, width=1.5), # Något tjockare svarta linjer för tydlighet
             hoverinfo="skip", showlegend=False
         ),
         row=row, col=col
@@ -80,16 +80,21 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
 
-    line_color = "#000000"
-    bg_color = "#FFFFFF"
+    # HÅRDKODADE FÄRGER: Kritvit bakgrund, mörkgrå/svarta konturer, ljust grå/vit fyllning
+    line_color = "#1E1E1E" # Tydlig mörkgrå konturlinje
+    bg_color = "#FFFFFF"   # Helt vit bakgrund
+    fill_color = "#FAFAFA" # Svagt off-white fyllning inuti blocken för 3D-djup
 
     st.sidebar.markdown("---")
     st.sidebar.markdown("**Figur 2 Inställningar:**")
     rotate = st.sidebar.checkbox("Rotate (Mått: $x$ till $1+v$)", value=False)
 
+    v_modified_value = lengths2[0]
+
     # Skapa två deldiagram bredvid varandra
     fig = make_subplots(
         rows=1, cols=2, 
+        subplot_titles=("Standard bas (1)", "Modifierad bas (1 + v)"),
         horizontal_spacing=0.05
     )
 
@@ -102,7 +107,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             offset_y = -sum(lengths1[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(lengths1[p] for p in range(a + 1)) - a * x_gap
-                draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, "#FFFFFF", row=1, col=1)
+                draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row=1, col=1)
 
     # --------------------------------------------------
     # GEOMETRISK PLACERING AV FIGUR 2 (Förskjutningslogik)
@@ -111,18 +116,15 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     if rotate:
         for i in range(n + 5):
             if i == n - 1:
-                chosen_lengths[i] = lengths2[0]  # v_modified_value (1 + v)
+                chosen_lengths[i] = v_modified_value
             else:
-                # Fallback till lengths1 om indexet skjuts utanför grundlängderna
                 chosen_lengths[i] = lengths1[i + 1] if (i + 1) < len(lengths1) else (math_data["x_numeric"] ** (i + 1))
-        fill_color = "#FFFFFF"
     else:
         for i in range(n + 5):
             if i < len(lengths2):
                 chosen_lengths[i] = lengths2[i]
             else:
                 chosen_lengths[i] = math_data["x_numeric"] ** i
-        fill_color = "#FFFFFF"
 
     # FIXPUNKT: Underkanten på det fysiska blocket x^(n-3), x^(n-2), x^(n-1)
     f1_z_power = n - 1
@@ -200,10 +202,9 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
                 add_face(fig, xz, line_color, fill_color, row=1, col=2)
     
     # --------------------------------------------------
-    # FASTA RAMAR OCH SKALA (Gör att Figur 1 står helt still)
+    # FASTA RAMAR OCH SKALA (Strikt monokrom layout)
     # --------------------------------------------------
     max_span = sum(lengths1[p] for p in range(1, len(lengths1))) * 1.5
-    
     fixed_range_x = [-max_span, max_span / 2]
     fixed_range_y = [-max_span, max_span / 2]
 
@@ -211,7 +212,11 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
         plot_bgcolor=bg_color,
         paper_bgcolor=bg_color,
         showlegend=False,
-        margin=dict(l=50, r=50, t=50, b=50),
+        margin=dict(l=30, r=30, t=60, b=30),
+        
+        # Tvinga subplot-titlarna att bli svarta och läsbara mot det vita
+        font=dict(color="#1E1E1E", size=14),
+        
         xaxis=dict(visible=False, range=fixed_range_x),
         yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=fixed_range_y),
         xaxis2=dict(visible=False, range=fixed_range_x),
