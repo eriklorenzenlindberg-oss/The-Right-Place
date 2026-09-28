@@ -17,38 +17,64 @@ def iso_point(px, py, pz):
     )
 
 # --------------------------------------------------
-# SAMLA YTOR FÖR EFFEKTIV FYLLNING (Single-trace approach)
+# HJÄLP (Rita en solid yta)
 # --------------------------------------------------
-def collect_block_faces(x_list, y_list, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, dx=0.0, dy=0.0):
+def add_face(fig, corners, line_color, fill_color, row, col):
+    xs = [p[0] for p in corners]
+    ys = [p[1] for p in corners]
+
+    xs.append(corners[0][0])
+    ys.append(corners[0][1])
+
+    fig.add_trace(
+        go.Scatter(
+            x=xs, y=ys,
+            mode="lines",
+            fill="toself",
+            fillcolor=fill_color,
+            line=dict(color=line_color, width=1.2),
+            hoverinfo="skip", showlegend=False
+        ),
+        row=row, col=col
+    )
+
+# --------------------------------------------------
+# GENERELLT BLOCK (Rita solida rätblock)
+# --------------------------------------------------
+def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row, col, dx=0.0, dy=0.0):
     x_size = block_lengths[a]
     y_size = block_lengths[b]
     z_size = block_lengths[z_power]
 
-    # De 8 hörnpunkterna i 3D-rymd för ett block
-    p000 = iso_point(offset_x, offset_y, offset_z)
-    p100 = iso_point(offset_x + x_size, offset_y, offset_z)
-    p110 = iso_point(offset_x + x_size, offset_y + y_size, offset_z)
-    p010 = iso_point(offset_x, offset_y + y_size, offset_z)
-    
-    p001 = iso_point(offset_x, offset_y, offset_z + z_size)
-    p101 = iso_point(offset_x + x_size, offset_y, offset_z + z_size)
-    p111 = iso_point(offset_x + x_size, offset_y + y_size, offset_z + z_size)
-    p011 = iso_point(offset_x, offset_y + y_size, offset_z + z_size)
-
-    # Vi ritar de tre isometriskt synliga sidorna (xy, yz, xz)
-    # Varje yta stängs genom att återvända till startpunkten, och separeras med None
-    faces = [
-        [p000, p100, p110, p010, p000],  # xy-face (botten/plan)
-        [p000, p010, p011, p001, p000],  # yz-face (sida)
-        [p000, p100, p101, p001, p000]   # xz-face (front)
+    # Beräkna hörn med eventuell förskjutning (dx, dy) inlagd direkt
+    xy = [
+        (p[0] + dx, p[1] + dy) for p in [
+            iso_point(offset_x, offset_y, offset_z),
+            iso_point(offset_x + x_size, offset_y, offset_z),
+            iso_point(offset_x + x_size, offset_y + y_size, offset_z),
+            iso_point(offset_x, offset_y + y_size, offset_z)
+        ]
+    ]
+    yz = [
+        (p[0] + dx, p[1] + dy) for p in [
+            iso_point(offset_x, offset_y, offset_z),
+            iso_point(offset_x, offset_y + y_size, offset_z),
+            iso_point(offset_x, offset_y + y_size, offset_z + z_size),
+            iso_point(offset_x, offset_y, offset_z + z_size)
+        ]
+    ]
+    xz = [
+        (p[0] + dx, p[1] + dy) for p in [
+            iso_point(offset_x, offset_y, offset_z),
+            iso_point(offset_x + x_size, offset_y, offset_z),
+            iso_point(offset_x + x_size, offset_y, offset_z + z_size),
+            iso_point(offset_x, offset_y, offset_z + z_size)
+        ]
     ]
 
-    for face in faces:
-        for p in face:
-            x_list.append(p[0] + dx)
-            y_list.append(p[1] + dy)
-        x_list.append(None)
-        y_list.append(None)
+    add_face(fig, xy, line_color, fill_color, row, col)
+    add_face(fig, yz, line_color, fill_color, row, col)
+    add_face(fig, xz, line_color, fill_color, row, col)
 
 # --------------------------------------------------
 # RENDER
@@ -58,42 +84,33 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
 
+    # Strikt svartvita inställningar
+    line_color = "#000000"
+    fill_color = "#FFFFFF"
+    bg_color = "#FFFFFF"
+
     st.sidebar.markdown("---")
     st.sidebar.markdown("**Figur 2 Inställningar:**")
     rotate = st.sidebar.checkbox("Rotate (Mått: $x$ till $1+v$)", value=False)
 
     v_modified_value = lengths2[0]
 
-    # Skapa subplots helt utan rubriker
+    # Skapa två deldiagram bredvid varandra UTAN rubriker
     fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.05)
 
     # --------------------------------------------------
-    # STRUKTURERA PYRAMID 1 (Vänster)
+    # RITA PYRAMID 1 (Vänster kolumn: row=1, col=1)
     # --------------------------------------------------
-    p1_x, p1_y = [], []
     for z_power in range(n - 1, 1, -1):
         offset_z = sum(lengths1[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
         for b in range(1, z_power):
             offset_y = -sum(lengths1[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(lengths1[p] for p in range(a + 1)) - a * x_gap
-                collect_block_faces(p1_x, p1_y, lengths1, a, b, z_power, offset_x, offset_y, offset_z)
-
-    # Lägg till Pyramid 1 med solid vit fyllning och svarta konturlinjer
-    fig.add_trace(
-        go.Scatter(
-            x=p1_x, y=p1_y, 
-            mode="lines", 
-            fill="toself",
-            fillcolor="#FFFFFF",        # Helt vit solid fyllning
-            line=dict(color="#000000", width=1.2),  # Rena svarta linjer
-            connectgaps=False, hoverinfo="skip", showlegend=False
-        ),
-        row=1, col=1
-    )
+                draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row=1, col=1)
 
     # --------------------------------------------------
-    # GEOMETRISK PLACERING AV FIGUR 2 (Dina fixpunkter)
+    # GEOMETRISK PLACERING AV FIGUR 2 (Förskjutningslogik)
     # --------------------------------------------------
     chosen_lengths = {}
     if rotate:
@@ -109,6 +126,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             else:
                 chosen_lengths[i] = math_data["x_numeric"] ** i
 
+    # FIXPUNKT: Underkanten på det fysiska blocket x^(n-3), x^(n-2), x^(n-1)
     f1_z_power = n - 1
     f1_b = n - 2
     f1_a = n - 3
@@ -116,7 +134,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     f1_fix_z = sum(lengths1[p] for p in range(2, f1_z_power)) + (f1_z_power - 2) * z_gap
     f1_fix_y = -sum(lengths1[p] for p in range(1, f1_b + 1))
     f1_fix_x = -sum(lengths1[p] for p in range(f1_a + 1)) - f1_a * x_gap
-    f1_fix_y_space = iso_point(f1_fix_x, f1_fix_y, f1_fix_z)[1]
+    f1_fix_pt = iso_point(f1_fix_x, f1_fix_y, f1_fix_z)
 
     if not rotate:
         f2_z_power = n - 1
@@ -134,46 +152,32 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     f2_fix_z = sum(chosen_lengths[p] for p in range(2, f2_z_power)) + (f2_z_power - 2) * z_gap
     f2_fix_y = -sum(chosen_lengths[p] for p in range(1, f2_b + 1))
     f2_fix_x = -sum(chosen_lengths[p] for p in range(f2_a + 1)) - f2_a * x_gap
-    f2_fix_y_space = iso_point(f2_fix_x, f2_fix_y, f2_fix_z)[1]
+    f2_fix_pt = iso_point(f2_fix_x, f2_fix_y, f2_fix_z)
 
-    dx = 0.0
-    dy = f1_fix_y_space - f2_fix_y_space
+    dx = f1_fix_pt[0] - f2_fix_pt[0]
+    dy = f1_fix_pt[1] - f2_fix_pt[1]
 
     # --------------------------------------------------
-    # STRUKTURERA PYRAMID 2 (Höger)
+    # RITA PYRAMID 2 (Höger kolumn: row=1, col=2)
     # --------------------------------------------------
-    p2_x, p2_y = [], []
     for z_power in range(n - 1, 1, -1):
         offset_z = sum(chosen_lengths[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
         for b in range(1, z_power):
             offset_y = -sum(chosen_lengths[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
-                collect_block_faces(p2_x, p2_y, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, dx, dy)
-
-    # Lägg till Pyramid 2 med solid vit fyllning och svarta konturlinjer
-    fig.add_trace(
-        go.Scatter(
-            x=p2_x, y=p2_y, 
-            mode="lines", 
-            fill="toself",
-            fillcolor="#FFFFFF",        # Helt vit solid fyllning
-            line=dict(color="#000000", width=1.2),  # Rena svarta linjer
-            connectgaps=False, hoverinfo="skip", showlegend=False
-        ),
-        row=1, col=2
-    )
+                draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row=1, col=2, dx=dx, dy=dy)
     
     # --------------------------------------------------
-    # ABSOLUT PLAN SVART-VIT LAYOUT (Inga skuggor, inga rubriker)
+    # FASTA RAMAR OCH SKALA (Svartvita inställningar)
     # --------------------------------------------------
     max_span = sum(lengths1[p] for p in range(1, len(lengths1))) * 1.5
     fixed_range_x = [-max_span, max_span / 2]
     fixed_range_y = [-max_span, max_span / 2]
 
     fig.update_layout(
-        plot_bgcolor="#FFFFFF",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor=bg_color,
+        paper_bgcolor=bg_color,
         showlegend=False,
         margin=dict(l=10, r=10, t=10, b=10),
         xaxis=dict(visible=False, range=fixed_range_x),
