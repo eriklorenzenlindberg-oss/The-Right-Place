@@ -17,9 +17,9 @@ def iso_point(px, py, pz):
     )
 
 # --------------------------------------------------
-# GE KORREKT STRUKTUR FÖR BLOCK (Insamling till single-trace)
+# SAMLA YTOR FÖR EFFEKTIV FYLLNING (Single-trace approach)
 # --------------------------------------------------
-def collect_block_lines(x_list, y_list, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, dx=0.0, dy=0.0):
+def collect_block_faces(x_list, y_list, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, dx=0.0, dy=0.0):
     x_size = block_lengths[a]
     y_size = block_lengths[b]
     z_size = block_lengths[z_power]
@@ -35,11 +35,12 @@ def collect_block_lines(x_list, y_list, block_lengths, a, b, z_power, offset_x, 
     p111 = iso_point(offset_x + x_size, offset_y + y_size, offset_z + z_size)
     p011 = iso_point(offset_x, offset_y + y_size, offset_z + z_size)
 
-    # Skapa trådmodell (alla synliga linjer) för att undvika tung fyllningskod
+    # Vi ritar de tre isometriskt synliga sidorna (xy, yz, xz)
+    # Varje yta stängs genom att återvända till startpunkten, och separeras med None
     faces = [
-        [p000, p100, p110, p010, p000], # Botten
-        [p001, p101, p111, p011, p001], # Toppen
-        [p000, p001], [p100, p101], [p110, p111], [p010, p011] # Vertikala pelare
+        [p000, p100, p110, p010, p000],  # xy-face (botten/plan)
+        [p000, p010, p011, p001, p000],  # yz-face (sida)
+        [p000, p100, p101, p001, p000]   # xz-face (front)
     ]
 
     for face in faces:
@@ -57,18 +58,17 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
 
-    # Sidomenysknappen behålls lokalt i filen
     st.sidebar.markdown("---")
     st.sidebar.markdown("**Figur 2 Inställningar:**")
     rotate = st.sidebar.checkbox("Rotate (Mått: $x$ till $1+v$)", value=False)
 
     v_modified_value = lengths2[0]
 
-    # Skapa subplots helt UTAN titlar ("") för att fimpas helt
+    # Skapa subplots helt utan rubriker
     fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.05)
 
     # --------------------------------------------------
-    # STRUKTURERA PYRAMID 1 (Samla koordinater blixtsnabbt)
+    # STRUKTURERA PYRAMID 1 (Vänster)
     # --------------------------------------------------
     p1_x, p1_y = [], []
     for z_power in range(n - 1, 1, -1):
@@ -77,14 +77,16 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             offset_y = -sum(lengths1[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(lengths1[p] for p in range(a + 1)) - a * x_gap
-                collect_block_lines(p1_x, p1_y, lengths1, a, b, z_power, offset_x, offset_y, offset_z)
+                collect_block_faces(p1_x, p1_y, lengths1, a, b, z_power, offset_x, offset_y, offset_z)
 
-    # Lägg till Pyramid 1 som ETT ENNDA lättviktigt linjespår
+    # Lägg till Pyramid 1 med solid vit fyllning och svarta konturlinjer
     fig.add_trace(
         go.Scatter(
             x=p1_x, y=p1_y, 
             mode="lines", 
-            line=dict(color="#000000", width=1.2), 
+            fill="toself",
+            fillcolor="#FFFFFF",        # Helt vit solid fyllning
+            line=dict(color="#000000", width=1.2),  # Rena svarta linjer
             connectgaps=False, hoverinfo="skip", showlegend=False
         ),
         row=1, col=1
@@ -138,7 +140,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     dy = f1_fix_y_space - f2_fix_y_space
 
     # --------------------------------------------------
-    # STRUKTURERA PYRAMID 2 (Samla koordinater blixtsnabbt)
+    # STRUKTURERA PYRAMID 2 (Höger)
     # --------------------------------------------------
     p2_x, p2_y = [], []
     for z_power in range(n - 1, 1, -1):
@@ -147,21 +149,23 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             offset_y = -sum(chosen_lengths[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
-                collect_block_lines(p2_x, p2_y, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, dx, dy)
+                collect_block_faces(p2_x, p2_y, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, dx, dy)
 
-    # Lägg till Pyramid 2 som ETT ENDA lättviktigt linjespår
+    # Lägg till Pyramid 2 med solid vit fyllning och svarta konturlinjer
     fig.add_trace(
         go.Scatter(
             x=p2_x, y=p2_y, 
             mode="lines", 
-            line=dict(color="#000000", width=1.2), 
+            fill="toself",
+            fillcolor="#FFFFFF",        # Helt vit solid fyllning
+            line=dict(color="#000000", width=1.2),  # Rena svarta linjer
             connectgaps=False, hoverinfo="skip", showlegend=False
         ),
         row=1, col=2
     )
     
     # --------------------------------------------------
-    # ABSOLUT SVART-VIT LAYOUT (Inga skuggor, inga rubriker)
+    # ABSOLUT PLAN SVART-VIT LAYOUT (Inga skuggor, inga rubriker)
     # --------------------------------------------------
     max_span = sum(lengths1[p] for p in range(1, len(lengths1))) * 1.5
     fixed_range_x = [-max_span, max_span / 2]
@@ -171,7 +175,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
         plot_bgcolor="#FFFFFF",
         paper_bgcolor="#FFFFFF",
         showlegend=False,
-        margin=dict(l=10, r=10, t=10, b=10), # Minimal marginal, inga rubriker tar plats
+        margin=dict(l=10, r=10, t=10, b=10),
         xaxis=dict(visible=False, range=fixed_range_x),
         yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=fixed_range_y),
         xaxis2=dict(visible=False, range=fixed_range_x),
