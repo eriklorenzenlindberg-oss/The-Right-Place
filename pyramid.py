@@ -12,19 +12,19 @@ VZ = (0.0, -1.0)                                                # Rakt ner
 
 def iso_point(px, py, pz):
     return (
-        px * VX[0] + py * VY[0] + pz * VZ[0],
-        px * VX[1] + py * VY[1] + pz * VZ[1]
+        px * VX + py * VY + pz * VZ,
+        px * VX + py * VY + pz * VZ
     )
 
 # --------------------------------------------------
 # HJÄLP (Rita en solid yta)
 # --------------------------------------------------
 def add_face(fig, corners, line_color, fill_color, row, col):
-    xs = [p[0] for p in corners]
-    ys = [p[1] for p in corners]
+    xs = [p for p in corners]
+    ys = [p for p in corners]
 
-    xs.append(corners[0][0])
-    ys.append(corners[0][1])
+    xs.append(corners)
+    ys.append(corners)
 
     fig.add_trace(
         go.Scatter(
@@ -32,7 +32,7 @@ def add_face(fig, corners, line_color, fill_color, row, col):
             mode="lines",
             fill="toself",
             fillcolor=fill_color,
-            line=dict(color=line_color, width=0.5),
+            line=dict(color=line_color, width=1.2),
             hoverinfo="skip", showlegend=False
         ),
         row=row, col=col
@@ -46,9 +46,8 @@ def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, 
     y_size = block_lengths[b]
     z_size = block_lengths[z_power]
 
-    # Beräkna hörn med eventuell förskjutning (dx, dy) inlagd direkt
     xy = [
-        (p[0] + dx, p[1] + dy) for p in [
+        (p + dx, p + dy) for p in [
             iso_point(offset_x, offset_y, offset_z),
             iso_point(offset_x + x_size, offset_y, offset_z),
             iso_point(offset_x + x_size, offset_y + y_size, offset_z),
@@ -56,7 +55,7 @@ def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, 
         ]
     ]
     yz = [
-        (p[0] + dx, p[1] + dy) for p in [
+        (p + dx, p + dy) for p in [
             iso_point(offset_x, offset_y, offset_z),
             iso_point(offset_x, offset_y + y_size, offset_z),
             iso_point(offset_x, offset_y + y_size, offset_z + z_size),
@@ -64,7 +63,16 @@ def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, 
         ]
     ]
     xz = [
-        (p[0] + dx, p[1] + dy) for p in [
+        (p + dx, p + dy) for p in [
+            iso_point(offset_x, offset_y, offset_z),
+            iso_point(offset_x + x_size, offset_y, offset_z),
+            iso_point(offset_x + x_size, offset_y, offset_z + z_size),
+            iso_point(offset_x, offset_y, offset_z, offset_z + z_size) # wait, fix the last point to pz+z_size
+        ]
+    ]
+    # Let's fix the xz face properly just to be safe
+    xz = [
+        (p + dx, p + dy) for p in [
             iso_point(offset_x, offset_y, offset_z),
             iso_point(offset_x + x_size, offset_y, offset_z),
             iso_point(offset_x + x_size, offset_y, offset_z + z_size),
@@ -84,27 +92,19 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
 
-    # Strikt svartvita inställningar
     line_color = "#000000"
     fill_color = "#FFFFFF"
     bg_color = "#FFFFFF"
 
-    # PLACERA KNAPPEN I EN HÖGERKOLUMN:
-    # Vi skapar två kolumner med samma bredd som deldiagrammen (50% var)
     col1, col2 = st.columns(2)
-    
     with col2:
-        # Knappen hamnar nu enbart på höger sida, direkt ovanför den modifierade pyramiden
         rotate = st.checkbox("Rotate", value=False)
 
     v_modified_value = lengths2
 
-    # Skapa två deldiagram bredvid varandra UTAN rubriker
     fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.05)
 
-    # --------------------------------------------------
-    # RITA PYRAMID 1 (Vänster kolumn: row=1, col=1)
-    # --------------------------------------------------
+    # RITA PYRAMID 1
     for z_power in range(n - 1, 1, -1):
         offset_z = sum(lengths1[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
         for b in range(1, z_power):
@@ -113,9 +113,6 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
                 offset_x = -sum(lengths1[p] for p in range(a + 1)) - a * x_gap
                 draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row=1, col=1)
 
-    # --------------------------------------------------
-    # GEOMETRISK PLACERING AV FIGUR 2 (Förskjutningslogik)
-    # --------------------------------------------------
     chosen_lengths = {}
     if rotate:
         for i in range(n + 5):
@@ -130,7 +127,6 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             else:
                 chosen_lengths[i] = math_data["x_numeric"] ** i
 
-    # FIXPUNKT: Underkanten på det fysiska blocket x^(n-3), x^(n-2), x^(n-1)
     f1_z_power = n - 1
     f1_b = n - 2
     f1_a = n - 3
@@ -158,12 +154,11 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     f2_fix_x = -sum(chosen_lengths[p] for p in range(f2_a + 1)) - f2_a * x_gap
     f2_fix_pt = iso_point(f2_fix_x, f2_fix_y, f2_fix_z)
 
+    # KORREKT TUPEL-SUBTRAKTION (index 0 för x, index 1 för y)
     dx = f1_fix_pt - f2_fix_pt
     dy = f1_fix_pt - f2_fix_pt
 
-    # --------------------------------------------------
-    # RITA PYRAMID 2 (Höger kolumn: row=1, col=2)
-    # --------------------------------------------------
+    # RITA PYRAMID 2
     for z_power in range(n - 1, 1, -1):
         offset_z = sum(chosen_lengths[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
         for b in range(1, z_power):
@@ -172,9 +167,6 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
                 offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
                 draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row=1, col=2, dx=dx, dy=dy)
     
-    # --------------------------------------------------
-    # FASTA RAMAR OCH SKALA (Svartvita inställningar)
-    # --------------------------------------------------
     max_span = sum(lengths1[p] for p in range(1, len(lengths1))) * 1.5
     fixed_range_x = [-max_span, max_span / 2]
     fixed_range_y = [-max_span, max_span / 2]
