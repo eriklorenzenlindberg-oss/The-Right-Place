@@ -17,60 +17,37 @@ def iso_point(px, py, pz):
     )
 
 # --------------------------------------------------
-# HJÄLP (Anpassad för att hantera rader/kolumner i subplots)
+# GE KORREKT STRUKTUR FÖR BLOCK (Insamling till single-trace)
 # --------------------------------------------------
-def add_face(fig, corners, line_color, fill_color, row, col):
-    xs = [p[0] for p in corners]
-    ys = [p[1] for p in corners]
-
-    xs.append(corners[0][0])
-    ys.append(corners[0][1])
-
-    fig.add_trace(
-        go.Scatter(
-            x=xs, y=ys,
-            mode="lines",
-            fill="toself",
-            fillcolor=fill_color,
-            line=dict(color=line_color, width=1.5), # Något tjockare svarta linjer för tydlighet
-            hoverinfo="skip", showlegend=False
-        ),
-        row=row, col=col
-    )
-
-# --------------------------------------------------
-# GENERELLT BLOCK
-# --------------------------------------------------
-def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row, col):
+def collect_block_lines(x_list, y_list, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, dx=0.0, dy=0.0):
     x_size = block_lengths[a]
     y_size = block_lengths[b]
     z_size = block_lengths[z_power]
 
-    # xy-face
-    xy = [
-        iso_point(offset_x, offset_y, offset_z),
-        iso_point(offset_x + x_size, offset_y, offset_z),
-        iso_point(offset_x + x_size, offset_y + y_size, offset_z),
-        iso_point(offset_x, offset_y + y_size, offset_z)
-    ]
-    # yz-face
-    yz = [
-        iso_point(offset_x, offset_y, offset_z),
-        iso_point(offset_x, offset_y + y_size, offset_z),
-        iso_point(offset_x, offset_y + y_size, offset_z + z_size),
-        iso_point(offset_x, offset_y, offset_z + z_size)
-    ]
-    # xz-face
-    xz = [
-        iso_point(offset_x, offset_y, offset_z),
-        iso_point(offset_x + x_size, offset_y, offset_z),
-        iso_point(offset_x + x_size, offset_y, offset_z + z_size),
-        iso_point(offset_x, offset_y, offset_z + z_size)
+    # De 8 hörnpunkterna i 3D-rymd för ett block
+    p000 = iso_point(offset_x, offset_y, offset_z)
+    p100 = iso_point(offset_x + x_size, offset_y, offset_z)
+    p110 = iso_point(offset_x + x_size, offset_y + y_size, offset_z)
+    p010 = iso_point(offset_x, offset_y + y_size, offset_z)
+    
+    p001 = iso_point(offset_x, offset_y, offset_z + z_size)
+    p101 = iso_point(offset_x + x_size, offset_y, offset_z + z_size)
+    p111 = iso_point(offset_x + x_size, offset_y + y_size, offset_z + z_size)
+    p011 = iso_point(offset_x, offset_y + y_size, offset_z + z_size)
+
+    # Skapa trådmodell (alla synliga linjer) för att undvika tung fyllningskod
+    faces = [
+        [p000, p100, p110, p010, p000], # Botten
+        [p001, p101, p111, p011, p001], # Toppen
+        [p000, p001], [p100, p101], [p110, p111], [p010, p011] # Vertikala pelare
     ]
 
-    add_face(fig, xy, line_color, fill_color, row, col)
-    add_face(fig, yz, line_color, fill_color, row, col)
-    add_face(fig, xz, line_color, fill_color, row, col)
+    for face in faces:
+        for p in face:
+            x_list.append(p[0] + dx)
+            y_list.append(p[1] + dy)
+        x_list.append(None)
+        y_list.append(None)
 
 # --------------------------------------------------
 # RENDER
@@ -80,37 +57,41 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
 
-    # HÅRDKODADE FÄRGER: Kritvit bakgrund, mörkgrå/svarta konturer, ljust grå/vit fyllning
-    line_color = "#1E1E1E" # Tydlig mörkgrå konturlinje
-    bg_color = "#FFFFFF"   # Helt vit bakgrund
-    fill_color = "#FAFAFA" # Svagt off-white fyllning inuti blocken för 3D-djup
-
+    # Sidomenysknappen behålls lokalt i filen
     st.sidebar.markdown("---")
     st.sidebar.markdown("**Figur 2 Inställningar:**")
     rotate = st.sidebar.checkbox("Rotate (Mått: $x$ till $1+v$)", value=False)
 
     v_modified_value = lengths2[0]
 
-    # Skapa två deldiagram bredvid varandra
-    fig = make_subplots(
-        rows=1, cols=2, 
-        subplot_titles=("Standard bas (1)", "Modifierad bas (1 + v)"),
-        horizontal_spacing=0.05
-    )
+    # Skapa subplots helt UTAN titlar ("") för att fimpas helt
+    fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.05)
 
     # --------------------------------------------------
-    # RITA PYRAMID 1 (Vänster kolumn: row=1, col=1)
+    # STRUKTURERA PYRAMID 1 (Samla koordinater blixtsnabbt)
     # --------------------------------------------------
+    p1_x, p1_y = [], []
     for z_power in range(n - 1, 1, -1):
         offset_z = sum(lengths1[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
         for b in range(1, z_power):
             offset_y = -sum(lengths1[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(lengths1[p] for p in range(a + 1)) - a * x_gap
-                draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row=1, col=1)
+                collect_block_lines(p1_x, p1_y, lengths1, a, b, z_power, offset_x, offset_y, offset_z)
+
+    # Lägg till Pyramid 1 som ETT ENNDA lättviktigt linjespår
+    fig.add_trace(
+        go.Scatter(
+            x=p1_x, y=p1_y, 
+            mode="lines", 
+            line=dict(color="#000000", width=1.2), 
+            connectgaps=False, hoverinfo="skip", showlegend=False
+        ),
+        row=1, col=1
+    )
 
     # --------------------------------------------------
-    # GEOMETRISK PLACERING AV FIGUR 2 (Förskjutningslogik)
+    # GEOMETRISK PLACERING AV FIGUR 2 (Dina fixpunkter)
     # --------------------------------------------------
     chosen_lengths = {}
     if rotate:
@@ -126,7 +107,6 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             else:
                 chosen_lengths[i] = math_data["x_numeric"] ** i
 
-    # FIXPUNKT: Underkanten på det fysiska blocket x^(n-3), x^(n-2), x^(n-1)
     f1_z_power = n - 1
     f1_b = n - 2
     f1_a = n - 3
@@ -158,69 +138,44 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     dy = f1_fix_y_space - f2_fix_y_space
 
     # --------------------------------------------------
-    # RITA PYRAMID 2 (Höger kolumn: row=1, col=2)
+    # STRUKTURERA PYRAMID 2 (Samla koordinater blixtsnabbt)
     # --------------------------------------------------
+    p2_x, p2_y = [], []
     for z_power in range(n - 1, 1, -1):
         offset_z = sum(chosen_lengths[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
         for b in range(1, z_power):
             offset_y = -sum(chosen_lengths[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
-                
-                x_size = chosen_lengths[a]
-                y_size = chosen_lengths[b]
-                z_size = chosen_lengths[z_power]
+                collect_block_lines(p2_x, p2_y, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, dx, dy)
 
-                # Generera hörn och lägg till den globala förskjutningen (dx, dy) i bildrummet
-                xy = [
-                    (p[0] + dx, p[1] + dy) for p in [
-                        iso_point(offset_x, offset_y, offset_z),
-                        iso_point(offset_x + x_size, offset_y, offset_z),
-                        iso_point(offset_x + x_size, offset_y + y_size, offset_z),
-                        iso_point(offset_x, offset_y + y_size, offset_z)
-                    ]
-                ]
-                yz = [
-                    (p[0] + dx, p[1] + dy) for p in [
-                        iso_point(offset_x, offset_y, offset_z),
-                        iso_point(offset_x, offset_y + y_size, offset_z),
-                        iso_point(offset_x, offset_y + y_size, offset_z + z_size),
-                        iso_point(offset_x, offset_y, offset_z + z_size)
-                    ]
-                ]
-                xz = [
-                    (p[0] + dx, p[1] + dy) for p in [
-                        iso_point(offset_x, offset_y, offset_z),
-                        iso_point(offset_x + x_size, offset_y, offset_z),
-                        iso_point(offset_x + x_size, offset_y, offset_z + z_size),
-                        iso_point(offset_x, offset_y, offset_z + z_size)
-                    ]
-                ]
-
-                add_face(fig, xy, line_color, fill_color, row=1, col=2)
-                add_face(fig, yz, line_color, fill_color, row=1, col=2)
-                add_face(fig, xz, line_color, fill_color, row=1, col=2)
+    # Lägg till Pyramid 2 som ETT ENDA lättviktigt linjespår
+    fig.add_trace(
+        go.Scatter(
+            x=p2_x, y=p2_y, 
+            mode="lines", 
+            line=dict(color="#000000", width=1.2), 
+            connectgaps=False, hoverinfo="skip", showlegend=False
+        ),
+        row=1, col=2
+    )
     
     # --------------------------------------------------
-    # FASTA RAMAR OCH SKALA (Strikt monokrom layout)
+    # ABSOLUT SVART-VIT LAYOUT (Inga skuggor, inga rubriker)
     # --------------------------------------------------
     max_span = sum(lengths1[p] for p in range(1, len(lengths1))) * 1.5
     fixed_range_x = [-max_span, max_span / 2]
     fixed_range_y = [-max_span, max_span / 2]
 
     fig.update_layout(
-        plot_bgcolor=bg_color,
-        paper_bgcolor=bg_color,
+        plot_bgcolor="#FFFFFF",
+        paper_bgcolor="#FFFFFF",
         showlegend=False,
-        margin=dict(l=30, r=30, t=60, b=30),
-        
-        # Tvinga subplot-titlarna att bli svarta och läsbara mot det vita
-        font=dict(color="#1E1E1E", size=14),
-        
+        margin=dict(l=10, r=10, t=10, b=10), # Minimal marginal, inga rubriker tar plats
         xaxis=dict(visible=False, range=fixed_range_x),
         yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=fixed_range_y),
         xaxis2=dict(visible=False, range=fixed_range_x),
         yaxis2=dict(visible=False, scaleanchor="x2", scaleratio=1, range=fixed_range_y)
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
