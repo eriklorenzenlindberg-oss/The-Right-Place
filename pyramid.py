@@ -6,8 +6,6 @@ import math
 # --------------------------------------------------
 # SANN ISOMETRISKA AXLAR (120 grader mellan alla axlar)
 # --------------------------------------------------
-# Z pekar rakt upp (eller rakt ner beroende på preferens, här behålls riktningen)
-# Med Z rakt upp/ner blir X och Y snett uppåt/åt sidorna för 120° separation.
 VX = (-math.cos(math.radians(30)), math.sin(math.radians(30)))  # ca (-0.866, 0.5)
 VY = (math.cos(math.radians(30)), math.sin(math.radians(30)))   # ca (0.866, 0.5)
 VZ = (0.0, -1.0)                                                # Rakt ner
@@ -77,10 +75,9 @@ def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, 
 # --------------------------------------------------
 # RENDER
 # --------------------------------------------------
-# FIX: Satt defaultvärden på z_gap och x_gap så att anropet från app.py inte kraschar
 def render(math_data, z_gap=0.0, x_gap=0.0):
     n = math_data["n"]
-    numeric_powers = math_data["numeric_powers"]
+    lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
 
     line_color = st.get_option("theme.primaryColor") or "#FFFFFF"
@@ -89,9 +86,6 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     st.sidebar.markdown("---")
     st.sidebar.markdown("**Figur 2 Inställningar:**")
     rotate = st.sidebar.checkbox("Rotate (Mått: $x$ till $1+v$)", value=False)
-
-    # FIX: Om lengths2_numeric är en lista/array, se till att plocka första värdet
-    v_modified_value = lengths2[0] if isinstance(lengths2, (list, tuple)) else lengths2
 
     # Skapa två deldiagram bredvid varandra
     fig = make_subplots(
@@ -104,12 +98,12 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     # RITA PYRAMID 1 (Vänster kolumn: row=1, col=1)
     # --------------------------------------------------
     for z_power in range(n - 1, 1, -1):
-        offset_z = sum(numeric_powers[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
+        offset_z = sum(lengths1[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
         for b in range(1, z_power):
-            offset_y = -sum(numeric_powers[p] for p in range(1, b + 1))
+            offset_y = -sum(lengths1[p] for p in range(1, b + 1))
             for a in range(0, b):
-                offset_x = -sum(numeric_powers[p] for p in range(a + 1)) - a * x_gap
-                draw_block(fig, numeric_powers, a, b, z_power, offset_x, offset_y, offset_z, line_color, "#0041BA", row=1, col=1)
+                offset_x = -sum(lengths1[p] for p in range(a + 1)) - a * x_gap
+                draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, "#0041BA", row=1, col=1)
 
     # --------------------------------------------------
     # GEOMETRISK PLACERING AV FIGUR 2 (Förskjutningslogik)
@@ -118,16 +112,17 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     if rotate:
         for i in range(n + 5):
             if i == n - 1:
-                chosen_lengths[i] = v_modified_value
+                chosen_lengths[i] = lengths2[0]  # v_modified_value (1 + v)
             else:
-                chosen_lengths[i] = numeric_powers[i + 1]
+                # Fallback till lengths1 om indexet skjuts utanför grundlängderna
+                chosen_lengths[i] = lengths1[i + 1] if (i + 1) < len(lengths1) else (math_data["x_numeric"] ** (i + 1))
         fill_color = "#0041BA"
     else:
         for i in range(n + 5):
-            if i == 0:
-                chosen_lengths[i] = v_modified_value
+            if i < len(lengths2):
+                chosen_lengths[i] = lengths2[i]
             else:
-                chosen_lengths[i] = numeric_powers[i]
+                chosen_lengths[i] = math_data["x_numeric"] ** i
         fill_color = "#0041BA"
 
     # FIXPUNKT: Underkanten på det fysiska blocket x^(n-3), x^(n-2), x^(n-1)
@@ -135,9 +130,9 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     f1_b = n - 2
     f1_a = n - 3
 
-    f1_fix_z = sum(numeric_powers[p] for p in range(2, f1_z_power)) + (f1_z_power - 2) * z_gap
-    f1_fix_y = -sum(numeric_powers[p] for p in range(1, f1_b + 1))
-    f1_fix_x = -sum(numeric_powers[p] for p in range(f1_a + 1)) - f1_a * x_gap
+    f1_fix_z = sum(lengths1[p] for p in range(2, f1_z_power)) + (f1_z_power - 2) * z_gap
+    f1_fix_y = -sum(lengths1[p] for p in range(1, f1_b + 1))
+    f1_fix_x = -sum(lengths1[p] for p in range(f1_a + 1)) - f1_a * x_gap
     f1_fix_y_space = iso_point(f1_fix_x, f1_fix_y, f1_fix_z)[1]
 
     if not rotate:
@@ -208,7 +203,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     # --------------------------------------------------
     # FASTA RAMAR OCH SKALA (Gör att Figur 1 står helt still)
     # --------------------------------------------------
-    max_span = sum(numeric_powers[p] for p in range(1, n)) * 1.5
+    max_span = sum(lengths1[p] for p in range(1, len(lengths1))) * 1.5
     
     fixed_range_x = [-max_span, max_span / 2]
     fixed_range_y = [-max_span, max_span / 2]
