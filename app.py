@@ -12,6 +12,7 @@ st.subheader("The Right Place")
 with st.expander("Visualizing generalizations of the golden rectangle and self-similarity in n-dimensional space"):
     st.markdown(
     """<small>TWO DIMENSIONS
+    
 Any rectangle that is not a square can be extended in one dimension without deformation.
 Take a rectangle with the aspect ratio 1 : x.  (where x > 1). By multiplying the shorter side by the square of the aspect ratio, x², the rectangle changes in size and orientation but retains its shape. The same result is obtained by adding x² - 1 to the shorter side. This relationship is expressed by the geometric progression formed by the three distinct side lengths of the two configurations:
 
