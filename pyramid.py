@@ -32,7 +32,7 @@ def add_face(fig, corners, line_color, fill_color, row, col):
             mode="lines",
             fill="toself",
             fillcolor=fill_color,
-            line=dict(color=line_color, width=1.2),
+            line=dict(color=line_color, width=0.5),
             hoverinfo="skip", showlegend=False
         ),
         row=row, col=col
