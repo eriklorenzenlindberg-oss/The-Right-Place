@@ -18,8 +18,6 @@ Take a rectangle with the aspect ratio 1 : x.  (where x > 1). By multiplying the
 
 1, x, x²
 
-GOLDEN RECTANGLE
-
 The golden rectangle is characterized by its sides forming a geometric progression; the shorter side is to the longer side as the longer side is to the sum of both sides:
 1 + x = x²
 Consequently, the golden rectangle retains its shape when the length of the longer side is added to the shorter side.
