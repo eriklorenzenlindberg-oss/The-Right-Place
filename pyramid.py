@@ -89,10 +89,15 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     fill_color = "#FFFFFF"
     bg_color = "#FFFFFF"
 
-    # FLYTTAD KNAPP: Ligger nu i huvudfönstret ovanför diagrammet istället för i sidomenyn
-    rotate = st.checkbox("Rotate Figure 2 (Align orientation with Figure 1)", value=False)
+    # PLACERA KNAPPEN I EN HÖGERKOLUMN:
+    # Vi skapar två kolumner med samma bredd som deldiagrammen (50% var)
+    col1, col2 = st.columns(2)
+    
+    with col2:
+        # Knappen hamnar nu enbart på höger sida, direkt ovanför den modifierade pyramiden
+        rotate = st.checkbox("Rotate", value=False)
 
-    v_modified_value = lengths2[0]
+    v_modified_value = lengths2
 
     # Skapa två deldiagram bredvid varandra UTAN rubriker
     fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.05)
@@ -153,8 +158,8 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     f2_fix_x = -sum(chosen_lengths[p] for p in range(f2_a + 1)) - f2_a * x_gap
     f2_fix_pt = iso_point(f2_fix_x, f2_fix_y, f2_fix_z)
 
-    dx = f1_fix_pt[0] - f2_fix_pt[0]
-    dy = f1_fix_pt[1] - f2_fix_pt[1]
+    dx = f1_fix_pt - f2_fix_pt
+    dy = f1_fix_pt - f2_fix_pt
 
     # --------------------------------------------------
     # RITA PYRAMID 2 (Höger kolumn: row=1, col=2)
@@ -186,4 +191,3 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     )
 
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-
