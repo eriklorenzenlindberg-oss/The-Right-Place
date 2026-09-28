@@ -87,16 +87,11 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     fill_color = "#FFFFFF"
     bg_color = "#FFFFFF"
 
-    # --- ENDAST HÄR ÄR ÄNDRINGEN SKEDD ---
-    # Skapar två kolumner och lägger checkboxen i den högra
+    # 1. SKAPA DE TVÅ HUVUDKOLUMNERNA PÅ SIDAN
     col1, col2 = st.columns(2)
-    with col2:
-        rotate = st.checkbox("Rotate", value=False)
-    # -------------------------------------
 
-    v_modified_value = lengths2[0]
-
-    fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.05)
+    # Vi skapar en separat Plotly-figur för Pyramid 1
+    fig1 = go.Figure()
 
     # RITA PYRAMID 1
     for z_power in range(n - 1, 1, -1):
@@ -105,13 +100,18 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             offset_y = -sum(lengths1[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(lengths1[p] for p in range(a + 1)) - a * x_gap
-                draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row=1, col=1)
+                draw_block(fig1, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row=None, col=None)
+
+    # 2. BERÄKNA GEOMETRISK PLACERING AV FIGUR 2 (Samma exakta fixpunktslogik)
+    # Vi lägger checkboxen i kolumn 2 så den hamnar överst till höger
+    with col2:
+        rotate = st.checkbox("Rotate", value=False)
 
     chosen_lengths = {}
     if rotate:
         for i in range(n + 5):
             if i == n - 1:
-                chosen_lengths[i] = v_modified_value
+                chosen_lengths[i] = lengths2
             else:
                 chosen_lengths[i] = lengths1[i + 1] if (i + 1) < len(lengths1) else (math_data["x_numeric"] ** (i + 1))
     else:
@@ -148,9 +148,11 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     f2_fix_x = -sum(chosen_lengths[p] for p in range(f2_a + 1)) - f2_a * x_gap
     f2_fix_pt = iso_point(f2_fix_x, f2_fix_y, f2_fix_z)
 
-    # Hämtar komponenterna [0] och [1] ur tuplarna för stabil beräkning
     dx = f1_fix_pt[0] - f2_fix_pt[0]
     dy = f1_fix_pt[1] - f2_fix_pt[1]
+
+    # Vi skapar en separat Plotly-figur för Pyramid 2
+    fig2 = go.Figure()
 
     # RITA PYRAMID 2
     for z_power in range(n - 1, 1, -1):
@@ -159,21 +161,31 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             offset_y = -sum(chosen_lengths[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
-                draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row=1, col=2, dx=dx, dy=dy)
+                draw_block(fig2, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, row=None, col=None, dx=dx, dy=dy)
     
+    # 3. APPLICERA UNGEFÄR SAMMA FASTA SKALA PÅ BÅDA FIGURERNA
     max_span = sum(lengths1[p] for p in range(1, len(lengths1))) * 1.5
     fixed_range_x = [-max_span, max_span / 2]
     fixed_range_y = [-max_span, max_span / 2]
 
-    fig.update_layout(
+    # Gemensam layout-uppdatering för ett rent utseende
+    layout_specs = dict(
         plot_bgcolor=bg_color,
         paper_bgcolor=bg_color,
         showlegend=False,
         margin=dict(l=10, r=10, t=10, b=10),
         xaxis=dict(visible=False, range=fixed_range_x),
-        yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=fixed_range_y),
-        xaxis2=dict(visible=False, range=fixed_range_x),
-        yaxis2=dict(visible=False, scaleanchor="x2", scaleratio=1, range=fixed_range_y)
+        yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=fixed_range_y)
     )
+    
+    fig1.update_layout(**layout_specs)
+    fig2.update_layout(**layout_specs)
 
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    # 4. SKICKA UT DIAGRAMMEN I RÄTT KOLUMN
+    with col1:
+        # Figur 1 hamnar till vänster (lämnar utrymme ovanför eftersom det inte finns någon checkbox här)
+        st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
+        
+    with col2:
+        # Figur 2 hamnar till höger, direkt under sin checkbox
+        st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
