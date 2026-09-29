@@ -70,8 +70,8 @@ def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, 
     ]
 
     add_face(fig, xy, line_color, fill_color)
-    add_face(fig, yz, line_color, fill_color)
-    add_face(fig, xz, line_color, "#D3D3D3")
+    add_face(fig, yz, line_color, "#D3D3D3")
+    add_face(fig, xz, line_color, fill_color)
 
 # --------------------------------------------------
 # RENDER
