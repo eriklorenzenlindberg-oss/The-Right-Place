@@ -40,24 +40,27 @@ def get_layer_geometry_numeric(combo, x_numeric):
 
 
 @st.cache_data
-def find_math_structures_logical(n, minimal_poly, x_numeric):
-    """ Sökning som är 100% symbolisk och fri från flyttalsapproximationer """
-    if minimal_poly is not None:
-        minimal_poly = sp.sympify(minimal_poly)
-        
+def find_math_structures_logical(n, minimal_poly_str, x_numeric):
+    """
+    Sökning som är 100% logisk och fri från flyttalsapproximationer.
+    minimal_poly_str tas emot som en sträng för att inte krascha Streamlits cache.
+    """
     x = sp.Symbol("x")
-    if minimal_poly is None:
+
+    # Om inget polynom skickas med, returnera huvudleden direkt
+    if not minimal_poly_str:
         return [tuple(range(n))]
-        
-    # Helt symbolisk gränssättning: 
-    # För (x^n-1)/(x-1) = x^n vet vi att x^n är den exakta matematiska gränsen.
-    # Vi sätter max_k till n direkt, utan att blanda in x_numeric eller float().
-    max_k = n 
-    
+
+    # Återskapa polynomet symboliskt inuti funktionen
+    minimal_poly = sp.sympify(minimal_poly_str)
+
+    # För ekvationen (x^n-1)/(x-1) = x^n vet vi matematiskt
+    # att x^n är den exakta gränsen. Vi sätter n helt utan float().
+    max_k = n
+
+    # Sätt storleken på våra vektorer
     MAX_POWER = max(max_k + 2, n + 5)
     VECTOR_SIZE = MAX_POWER + 1
-    
-
 
     P_x = sp.expand(minimal_poly)
     huvudled_vektor = [0] * VECTOR_SIZE
@@ -105,6 +108,7 @@ def find_math_structures_logical(n, minimal_poly, x_numeric):
 
                 potenser = [idx for idx, v in enumerate(ny_vektor) if v == 1]
 
+                # Sträng matematisk gräns utan flyttal
                 if potenser and max(potenser) > max_k:
                     continue
 
@@ -117,6 +121,7 @@ def find_math_structures_logical(n, minimal_poly, x_numeric):
                         kö.append(ny_tuple)
 
     return sorted(list(giltiga_kombinationer), key=lambda c: (len(c), c))
+
 
 
 def evaluate_global_layout_numeric(sorted_matches, x_numeric):
