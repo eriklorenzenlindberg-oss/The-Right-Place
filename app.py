@@ -98,14 +98,14 @@ n = st.sidebar.number_input(
 )
 
 eq_input = st.sidebar.text_input(
-    "x (ratio of the side lengths):", 
+    "x (ratio):", 
     value="1+x=x^n"
 )
 
 placeholder_x = st.sidebar.empty()
 
 add_value_str = st.sidebar.text_input(
-    "v (value added to shortest side Fig. 2):", 
+    "v (adds to side 1, Fig. 2):", 
     value="x^n-1"
 )
 
