@@ -82,7 +82,7 @@ st.sidebar.markdown(
 )
 
 n = st.sidebar.number_input(
-    "n:", 
+    "n (number of dimensions):", 
     min_value=2, 
     max_value=15, 
     value=4, 
@@ -90,14 +90,14 @@ n = st.sidebar.number_input(
 )
 
 eq_input = st.sidebar.text_input(
-    "x:", 
+    "x (ratio of the side lengths):", 
     value="1+x=x^n"
 )
 
 placeholder_x = st.sidebar.empty()
 
 add_value_str = st.sidebar.text_input(
-    "v:", 
+    "v (value added to shortest side Fig. 2):", 
     value="x^n-1"
 )
 
