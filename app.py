@@ -22,7 +22,7 @@ The golden rectangle is characterized by its sides forming a geometric progressi
 1 + x = x²
 Consequently, the golden rectangle retains its shape when the length of the longer side is added to the shorter side.
 
-ORTHOTOPE
+</small>ORTHOTOPE<small>
 
 Any rectangular cuboid with side lengths that form a geometric sequence (1 : x : x²) retains its shape if the shortest side is multiplied by x³, or if x³ - 1 is added to it. 
 
