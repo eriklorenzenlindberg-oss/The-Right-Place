@@ -37,9 +37,9 @@ def add_face(fig, corners, line_color, fill_color):
     )
 
 # --------------------------------------------------
-# GENERELLT BLOCK (Rita solida rätblock och spara koordinater)
+# GENERELLT BLOCK (Rita solida rätblock)
 # --------------------------------------------------
-def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, all_coords, dx=0.0, dy=0.0):
+def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=0.0, dy=0.0):
     x_size = block_lengths[a]
     y_size = block_lengths[b]
     z_size = block_lengths[z_power]
@@ -72,11 +72,6 @@ def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, 
     add_face(fig, xy, line_color, fill_color)
     add_face(fig, yz, line_color, fill_color)
     add_face(fig, xz, line_color, fill_color)
-    
-    # Spara alla hörn i vår lista för att kunna räkna ut bildrutans storlek senare
-    all_coords.extend(xy)
-    all_coords.extend(yz)
-    all_coords.extend(xz)
 
 # --------------------------------------------------
 # RENDER
@@ -89,9 +84,6 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     line_color = "#000000"
     fill_color = "#FFFFFF"
     bg_color = "#FFFFFF"
-
-    # En tom lista som samlar alla beräknade punkter i 2D
-    all_coords = []
 
     # 1. LAYOUT MED TVÅ KOLUMNER (80% för diagrammet, 20% för reglage till höger)
     col_plot, col_controls = st.columns([8, 2])
@@ -109,7 +101,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             offset_y = -sum(lengths1[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(lengths1[p] for p in range(a + 1)) - a * x_gap
-                draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, all_coords)
+                draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color)
 
     # 3. BERÄKNA GEOMETRISK PLACERING AV PYRAMID 2
     v_modified_value = lengths2[0]
@@ -155,7 +147,8 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     f2_fix_x = -sum(chosen_lengths[p] for p in range(f2_a + 1)) - f2_a * x_gap
     f2_fix_pt = iso_point(f2_fix_x, f2_fix_y, f2_fix_z)
 
-    # Dynamiskt mellanrum baserat på Pyramid 1:s bredd
+    # Här lägger vi till en extra separation i X-led (t.ex. max_span) 
+    # så att Pyramid 2 ritas till höger om Pyramid 1 i samma koordinatsystem
     max_span = sum(lengths1[p] for p in range(1, len(lengths1))) * 1.5
     gap_between_pyramids = max_span * 1.5
 
@@ -169,39 +162,15 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             offset_y = -sum(chosen_lengths[p] for p in range(1, b + 1))
             for a in range(0, b):
                 offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
-                draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, all_coords, dx=dx, dy=dy)
+                draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=dx, dy=dy)
     
-        # 4. BERÄKNA DYNAMISK KVADRATISK BILDRUTA UTIFRÅN ALLA EXISTERANDE KOORDINATER
-    if all_coords:
-        xs = [p[0] for p in all_coords]
-        ys = [p[1] for p in all_coords]
-        
-        x_min, x_max = min(xs), max(xs)
-        y_min, y_max = min(ys), max(ys)
-        
-        # Hitta mittpunkten för hela geometrin
-        center_x = (x_min + x_max) / 2
-        center_y = (y_min + y_max) / 2
-        
-        # Räkna ut hur brett och högt diagrammet är från mitten
-        half_span_x = (x_max - x_min) / 2
-        half_span_y = (y_max - y_min) / 2
-        
-        # Välj det största måttet och lägg på 10% marginal (luft) för att garantera att inget klipper
-        max_half_span = max(half_span_x, half_span_y) * 1.10
-        
-        # Skapa en helt kvadratisk ruta runt mittpunkten
-        fixed_range_x = [center_x - max_half_span, center_x + max_half_span]
-        fixed_range_y = [center_y - max_half_span, center_y + max_half_span]
-    else:
-        # Fallback om listan mot förmodan skulle vara tom
-        fixed_range_x = [-max_span, max_span / 2 + gap_between_pyramids]
-        fixed_range_y = [-max_span, max_span / 2]
+    # 4. SKALA OCH ANPASSNING AV DEN GEMENSAMMA PROJEKTIONEN
+    # Vi expanderar X-axeln så att den täcker in båda pyramiderna bredvid varandra
+    fixed_range_x = [-max_span, max_span / 2 + gap_between_pyramids]
+    fixed_range_y = [-max_span, max_span / 2]
 
-
-    # 5. APPLICERA LAYOUT MED FAST 1:1 SKALA OCH LÅST ZOOM
     fig.update_layout(
-        height=290,  
+        height=290,  # Matchar höjden på ditt andra rektangel-diagram!
         plot_bgcolor=bg_color,
         paper_bgcolor=bg_color,
         showlegend=False,
@@ -211,6 +180,6 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
         yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=fixed_range_y, fixedrange=True)
     )
 
-    # 6. RENDERAS I EN GEMENSAM BEHÅLLARE UTAN VERKTYGSRAD
+    # 5. RENDERAS I EN GEMENSAM BEHÅLLARE
     with col_plot:
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'scrollZoom': False}, key="pyramid_combined_plot")
