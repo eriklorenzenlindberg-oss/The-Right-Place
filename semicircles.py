@@ -39,31 +39,21 @@ def get_layer_geometry_numeric(combo, x_numeric):
     return centers
 
 
-@st.cache_data
-def find_math_structures_logical(n, minimal_poly_str, x_numeric):
-    """
-    Sökning som är 100% logisk och fri från flyttalsapproximationer.
-    minimal_poly_str tas emot som en sträng för att inte krascha Streamlits cache.
-    """
+def find_math_structures_logical(n, minimal_poly, x_numeric):
+    """Sökning som sätter gränsen symboliskt utan flyttalsapproximationer"""
     x = sp.Symbol("x")
-
-    # Om inget polynom skickas med, returnera huvudleden direkt
-    if not minimal_poly_str:
+    if minimal_poly is None:
         return [tuple(range(n))]
 
-    # Återskapa polynomet symboliskt inuti funktionen
-    minimal_poly = sp.sympify(minimal_poly_str)
-
-    # För ekvationen (x^n-1)/(x-1) = x^n vet vi matematiskt
-    # att x^n är den exakta gränsen. Vi sätter n helt utan float().
+    # Helt symbolisk gräns: För (x^n-1)/(x-1) = x^n är den exakta matematiska gränsen n.
+    # Vi sätter max_k helt utan float() eller x_numeric för att undvika avrundningsfel.
     max_k = n
 
-    # Sätt storleken på våra vektorer
     MAX_POWER = max(max_k + 2, n + 5)
     VECTOR_SIZE = MAX_POWER + 1
 
     P_x = sp.expand(minimal_poly)
-    huvudled_vektor = [0] * VECTOR_SIZE
+    huvudled_vektor = * VECTOR_SIZE
     for i in range(n):
         if i < VECTOR_SIZE:
             huvudled_vektor[i] = 1
@@ -71,7 +61,7 @@ def find_math_structures_logical(n, minimal_poly_str, x_numeric):
     regler_vektorer = []
     for k in range(VECTOR_SIZE):
         regel = sp.expand(P_x * x**k)
-        vektor = [0] * VECTOR_SIZE
+        vektor = * VECTOR_SIZE
         giltig = True
 
         for p in range(VECTOR_SIZE):
@@ -108,7 +98,7 @@ def find_math_structures_logical(n, minimal_poly_str, x_numeric):
 
                 potenser = [idx for idx, v in enumerate(ny_vektor) if v == 1]
 
-                # Sträng matematisk gräns utan flyttal
+                # Sträng symbolisk regel under själva sökningen:
                 if potenser and max(potenser) > max_k:
                     continue
 
@@ -121,7 +111,6 @@ def find_math_structures_logical(n, minimal_poly_str, x_numeric):
                         kö.append(ny_tuple)
 
     return sorted(list(giltiga_kombinationer), key=lambda c: (len(c), c))
-
 
 
 def evaluate_global_layout_numeric(sorted_matches, x_numeric):
@@ -161,13 +150,10 @@ def evaluate_global_layout_numeric(sorted_matches, x_numeric):
 
 def render(math_data):
     n = math_data["n"]
-    # Konvertera till sträng eller behåll sympy-uttryck (cache-säkert)
-    minimal_poly_str = str(math_data["minimal_poly"])
+    minimal_poly = math_data["minimal_poly"]
     x_numeric = math_data["x_numeric"]
 
-    # Hämtar (eller läser från cache)
-    raw_matches = find_math_structures_logical(
-        n, minimal_poly_str, x_numeric
+    raw_matches = find_math_structures_logical(n, minimal_poly, x_numeric)
 
     if not raw_matches or len(raw_matches) == 0:
         st.info("The main line is missing from the data.")
@@ -187,7 +173,9 @@ def render(math_data):
     col_plot, col_controls = st.columns([6, 3])
 
     with col_controls:
-        max_overlap = st.checkbox("Overlap", value=True, key=f"overlap_cb_{n}")
+        max_overlap = st.checkbox(
+            "Overlap", value=True, key=f"circles_overlap_{n}"
+        )
 
         if max_overlap:
             final_layouts = evaluate_global_layout_numeric(
@@ -200,19 +188,13 @@ def render(math_data):
             " + ".join(get_math_label(k) for k in combo)
             for combo in final_layouts
         ]
-
-        # Stabiliserad nyckel för att förhindra state-förlust vid klick
         selected_option = st.radio(
             "Select combination to highlight:",
             options=combo_labels,
             index=0,
-            key=f"circles_radio_{n}",
+            key=f"circles_highlight_{n}_{max_overlap}",
         )
-        selected_idx = (
-            combo_labels.index(selected_option)
-            if selected_option in combo_labels
-            else 0
-        )
+        selected_idx = combo_labels.index(selected_option)
 
     with col_plot:
         line_color, bg_color = "#000000", "#FFFFFF"
@@ -220,7 +202,6 @@ def render(math_data):
         x_lines, y_lines = [], []
         theta_upper = np.linspace(0, np.pi, 40)
 
-        # 1. Rita den markerade kombinationen (Tjock linje) först
         if 0 <= selected_idx < len(final_layouts):
             chosen_combo = final_layouts[selected_idx]
             chosen_centers = get_layer_geometry_numeric(
@@ -242,7 +223,6 @@ def render(math_data):
                     )
                 )
 
-        # 2. Rita alla unika cirklar i bakgrunden (Tunna linjer)
         all_radii = []
         drawn_circles = set()
         for combo in final_layouts:
@@ -273,7 +253,6 @@ def render(math_data):
             )
         )
 
-        # Geometrisk skalning 1:1
         max_actual_height = (
             max(all_radii) if all_radii else (target_value * 0.5)
         )
@@ -306,6 +285,17 @@ def render(math_data):
             ),
         )
 
-        # Renderar diagrammet stabilt och döljer hela modebaren utan ful CSS-injektion
+        st.markdown(
+            """
+            <style>
+            .modebar {
+                display: none !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
         st.plotly_chart(
-            fig,
+            fig, use_container_width=True, key="semicircles_plot_clean"
+        )
