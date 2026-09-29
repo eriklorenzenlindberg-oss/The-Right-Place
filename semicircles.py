@@ -43,7 +43,7 @@ def find_math_structures_logical(n, minimal_poly, x_numeric):
     VECTOR_SIZE = MAX_POWER + 1
     
     P_x = sp.expand(minimal_poly)
-    huvudled_vektor = [0] * VECTOR_SIZE
+    huvudled_vektor = [0] * VECTOR_SIZE  # Återställd till en lista med nollor
     for i in range(n):
         if i < VECTOR_SIZE:
             huvudled_vektor[i] = 1
@@ -51,7 +51,7 @@ def find_math_structures_logical(n, minimal_poly, x_numeric):
     regler_vektorer = []
     for k in range(VECTOR_SIZE):
         regel = sp.expand(P_x * x**k)
-        vektor = [0] * VECTOR_SIZE
+        vektor = [0] * VECTOR_SIZE  # Återställd till en lista med nollor
         giltig = True
         
         for p in range(VECTOR_SIZE):
@@ -162,7 +162,7 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    col_plot, col_controls = st.columns([6, 3])
+    col_plot, col_controls = st.columns()
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key="circles_overlap")
@@ -253,5 +253,4 @@ def render(math_data):
         fig.update_layout(
             plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
             margin=dict(l=10, r=10, t=10, b=10), height=400, dragmode=False,
-            xaxis=dict(visible=False, range=[x_min, x_max]),
         )
