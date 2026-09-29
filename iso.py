@@ -101,7 +101,7 @@ def render(math_data):
     node_size = linewidth * 15
 
     # --- PANEL-LAYOUT FÖR DIAGRAM OCH REGLAGE ---
-    col_plot, col_controls = st.columns([9, 1])
+    col_plot, col_controls = st.columns([9, 2])
 
     with col_controls:
         # Bara de viktigaste valen är kvar för användaren
