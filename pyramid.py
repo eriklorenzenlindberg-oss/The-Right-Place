@@ -89,7 +89,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     col_plot, col_controls = st.columns([8, 2])
 
     with col_controls:
-        rotate = st.checkbox("Rotate", value=False, key="pyramid_rotate")
+        rotate = st.checkbox("Rearrange fig. 2", value=False, key="pyramid_rotate")
 
     # 2. SKAPA EN ENSTAKA GEMENSAM FIGUR FÖR BÅDA PYRAMIDERNA
     fig = go.Figure()
