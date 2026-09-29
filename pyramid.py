@@ -171,7 +171,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
                 offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
                 draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, all_coords, dx=dx, dy=dy)
     
-    # 4. BERÄKNA DYNAMISK BILDRUTA UTIFRÅN ALLA EXISTERANDE KOORDINATER
+        # 4. BERÄKNA DYNAMISK KVADRATISK BILDRUTA UTIFRÅN ALLA EXISTERANDE KOORDINATER
     if all_coords:
         xs = [p[0] for p in all_coords]
         ys = [p[1] for p in all_coords]
@@ -179,19 +179,25 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
         x_min, x_max = min(xs), max(xs)
         y_min, y_max = min(ys), max(ys)
         
-        # Skapa 5 % marginal (luft) runt det mest extrema hörnen
-        span_x = x_max - x_min
-        span_y = y_max - y_min
+        # Hitta mittpunkten för hela geometrin
+        center_x = (x_min + x_max) / 2
+        center_y = (y_min + y_max) / 2
         
-        margin_x = span_x * 0.05
-        margin_y = span_y * 0.05
+        # Räkna ut hur brett och högt diagrammet är från mitten
+        half_span_x = (x_max - x_min) / 2
+        half_span_y = (y_max - y_min) / 2
         
-        fixed_range_x = [x_min - margin_x, x_max + margin_x]
-        fixed_range_y = [y_min - margin_y, y_max + margin_y]
+        # Välj det största måttet och lägg på 10% marginal (luft) för att garantera att inget klipper
+        max_half_span = max(half_span_x, half_span_y) * 1.10
+        
+        # Skapa en helt kvadratisk ruta runt mittpunkten
+        fixed_range_x = [center_x - max_half_span, center_x + max_half_span]
+        fixed_range_y = [center_y - max_half_span, center_y + max_half_span]
     else:
         # Fallback om listan mot förmodan skulle vara tom
         fixed_range_x = [-max_span, max_span / 2 + gap_between_pyramids]
         fixed_range_y = [-max_span, max_span / 2]
+
 
     # 5. APPLICERA LAYOUT MED FAST 1:1 SKALA OCH LÅST ZOOM
     fig.update_layout(
