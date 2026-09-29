@@ -43,7 +43,7 @@ def find_math_structures_logical(n, minimal_poly, x_numeric):
     VECTOR_SIZE = MAX_POWER + 1
     
     P_x = sp.expand(minimal_poly)
-    huvudled_vektor = [0] * VECTOR_SIZE  # Återställd till en lista med nollor
+    huvudled_vektor = [0] * VECTOR_SIZE
     for i in range(n):
         if i < VECTOR_SIZE:
             huvudled_vektor[i] = 1
@@ -51,7 +51,7 @@ def find_math_structures_logical(n, minimal_poly, x_numeric):
     regler_vektorer = []
     for k in range(VECTOR_SIZE):
         regel = sp.expand(P_x * x**k)
-        vektor = [0] * VECTOR_SIZE  # Återställd till en lista med nollor
+        vektor = [0] * VECTOR_SIZE
         giltig = True
         
         for p in range(VECTOR_SIZE):
@@ -102,6 +102,7 @@ def find_math_structures_logical(n, minimal_poly, x_numeric):
                         kö.append(ny_tuple)
                         
     return sorted(list(giltiga_kombinationer), key=lambda c: (len(c), c))
+
 
 def evaluate_global_layout_numeric(sorted_matches, x_numeric):
     """ 
@@ -162,7 +163,7 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    col_plot, col_controls = st.columns()
+    col_plot, col_controls = st.columns([6, 3])
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key="circles_overlap")
@@ -182,6 +183,7 @@ def render(math_data):
         selected_idx = combo_labels.index(selected_option)
 
     with col_plot:
+        height=100,
         line_color, bg_color = "#000000", "#FFFFFF"
         fig = go.Figure()
         x_lines, y_lines = [], []
@@ -204,7 +206,7 @@ def render(math_data):
                     showlegend=False
                 ))
 
-        # Rita alla unika cirklar i bakgrunden (Tunna linjer)
+# Rita alla unika cirklar i bakgrunden (Tunna linjer)
         all_radii = []
         drawn_circles = set()
         for combo in final_layouts:
@@ -253,4 +255,20 @@ def render(math_data):
         fig.update_layout(
             plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
             margin=dict(l=10, r=10, t=10, b=10), height=400, dragmode=False,
+            xaxis=dict(visible=False, range=[x_min, x_max]),
+            yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
         )
+
+        # NYTT: Detta CSS-hack tvingar webbläsaren att dölja hela verktygsraden
+        st.markdown(
+            """
+            <style>
+            .modebar {
+                display: none !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        st.plotly_chart(fig, use_container_width=True, key="semicircles_plot_clean")
