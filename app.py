@@ -90,7 +90,7 @@ st.sidebar.markdown(
 )
 
 n = st.sidebar.number_input(
-    "n (number of dimensions):", 
+    "n (dimensions):", 
     min_value=2, 
     max_value=15, 
     value=4, 
@@ -105,7 +105,7 @@ eq_input = st.sidebar.text_input(
 placeholder_x = st.sidebar.empty()
 
 add_value_str = st.sidebar.text_input(
-    "v (adds to side 1, Fig. 2):", 
+    "v (value added to side 1 (Fig. 2)):", 
     value="x^n-1"
 )
 
