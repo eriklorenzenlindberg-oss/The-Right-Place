@@ -39,26 +39,25 @@ def get_layer_geometry_numeric(combo, x_numeric):
     return centers
 
 
-# Vi cachar denna funktion så att den tunga sökningen inte körs om vid varje klick!
 @st.cache_data
 def find_math_structures_logical(n, minimal_poly, x_numeric):
-    """Sökning som dynamiskt sätter gränsen baserat på summan av huvudleden"""
-    # Fix för att göra sympy-objektet sträng-kompatibelt inuti cache-motorn
+    """ Sökning som är 100% symbolisk och fri från flyttalsapproximationer """
     if minimal_poly is not None:
         minimal_poly = sp.sympify(minimal_poly)
-
+        
     x = sp.Symbol("x")
     if minimal_poly is None:
         return [tuple(range(n))]
-
-    target_value = sum(float(x_numeric**m) for m in range(n))
-
-    max_k = n
-    while float(x_numeric**max_k) <= target_value:
-        max_k += 1
-
+        
+    # Helt symbolisk gränssättning: 
+    # För (x^n-1)/(x-1) = x^n vet vi att x^n är den exakta matematiska gränsen.
+    # Vi sätter max_k till n direkt, utan att blanda in x_numeric eller float().
+    max_k = n 
+    
     MAX_POWER = max(max_k + 2, n + 5)
     VECTOR_SIZE = MAX_POWER + 1
+    
+
 
     P_x = sp.expand(minimal_poly)
     huvudled_vektor = [0] * VECTOR_SIZE
