@@ -53,7 +53,7 @@ def find_math_structures_logical(n, minimal_poly, x_numeric):
     VECTOR_SIZE = MAX_POWER + 1
 
     P_x = sp.expand(minimal_poly)
-    huvudled_vektor = * VECTOR_SIZE
+    huvudled_vektor = [0] * VECTOR_SIZE
     for i in range(n):
         if i < VECTOR_SIZE:
             huvudled_vektor[i] = 1
