@@ -31,7 +31,6 @@ The n-dimensional generalization of the rectangle and the cuboid is called an or
 APPLICATION
 
 The Right Place visualizes this class of orthotopes, with a specific focus on those whose side lengths are derived from the golden ratio or its generalizations.
-
 The "n-face" button generates two isometric projections of an orthotope based on user-defined parameters:
 
 n = the number of dimensions
@@ -41,15 +40,18 @@ x = the ratio governing the side lengths
 v = the value added to the shortest side
 
 Figure 1 is generated from n and x. Figure 2 shows the orthotope when v is added to the shortest side. 
-
 If v = xⁿ - 1, the two projections become identical in shape. Selecting "rotate" aligns the orientation of Figure 2 with that of Figure 1.
 
 1-FACES
 
 The "1-faces" button displays the side lengths of the orthotope — or its types of 1-faces — represented as the radii of semicircles. When x equals the golden ratio or a generalized golden ratio, such as:
+
 1 + x = xⁿ
+
 or
+
 1 + xⁿ⁻¹ = xⁿ
+
 the diagram also illustrates how sums of multiple lengths extend the geometric progression of the sides. An orthotope based on the equation 1 + x = xⁿ retains its shape when the length of the second shortest side is added to the shortest side. An orthotope based on the equation 1 + xⁿ⁻¹ = xⁿ retains his shape when the length of the longest side is added to the shortest side.
 For both these examples, the classic golden ratio is obtained when n = 2. The plastic ratio is obtained when n = 3 in the former equation, and when n = 5 in the latter. 
 
