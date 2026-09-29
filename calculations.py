@@ -49,12 +49,17 @@ def get_math_data(n, eq_input, add_value_str):
             y_sym = sp.Symbol("y")
             eq_input_substituted = eq_input.replace("x**(n/2)", "y**n").replace("x**(n / 2)", "y**n").replace("x", "y**2")
             left_str, right_str = eq_input_substituted.split("=")
-            expr_poly = sp.expand(sp.sympify(left_str) - sp.sympify(right_str)).subs(n_sym, n)
+            raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
             var_sym = y_sym
         else:
             left_str, right_str = eq_input.split("=")
-            expr_poly = sp.expand(sp.sympify(left_str) - sp.sympify(right_str)).subs(n_sym, n)
+            raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
             var_sym = x_sym
+
+        # NYTT & KRITISKT: Multiplicera bort eventuella nämnare (t.ex. x-1) 
+        # så att uttrycket blir ett rent polynom (täljaren av bråket)
+        num, denom = sp.together(raw_expr).as_numer_denom()
+        expr_poly = sp.expand(num).subs(n_sym, n)
 
         # 1. Hitta den numeriska gissningen som vi vet fungerar stabilt
         approx_root = find_numeric_root(expr_poly, var_sym)
@@ -68,13 +73,7 @@ def get_math_data(n, eq_input, add_value_str):
             # Beräkna det sanna, irreducibla minimalpolynomet över de rationella talen
             raw_min_poly = sp.minpoly(exact_root, var_sym)
             
-            # Om vi använde substitution (y), transformera tillbaka till x på ett rent sätt
             if use_substitution:
-                # Ersätt y^2 med x, y^4 med x^2 osv. genom sp.Poly-manipulation
-                poly_y = sp.Poly(raw_min_poly, y_sym)
-                coeffs = poly_y.all_coeffs()
-                # Detta antar att minpoly för y bara har jämna potenser, 
-                # annars faller vi tillbaka på din exakta originalersättning:
                 minimal_poly = sp.expand(raw_min_poly).subs(y_sym, sp.sqrt(x_sym))
             else:
                 minimal_poly = sp.expand(raw_min_poly)
@@ -83,8 +82,9 @@ def get_math_data(n, eq_input, add_value_str):
             # Säker fallback om den exakta algebraiska sökningen skulle misslyckas
             minimal_poly = sp.expand(expr_poly) if not use_substitution else sp.expand(expr_poly).subs(y_sym, sp.sqrt(x_sym))
 
-        # Sätt det stabila flyttalsvärdet för x (viktigt för de andra diagrammen!)
+        # Sätt det stabila flyttalsvärdet för x
         x_numeric = approx_root if not use_substitution else approx_root ** 2
+
     else:
         try:
             explicit_expr = sp.sympify(eq_input)
