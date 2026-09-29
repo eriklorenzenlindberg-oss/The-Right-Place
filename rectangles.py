@@ -25,7 +25,7 @@ def render(math_data):
     
     with col_controls:
         # Sätter en unik nyckel så den inte krockar med iso
-        rotate = st.checkbox("Rotate", value=False, key="rectangles_rotate")
+        rotate = st.checkbox("Rearrange fig. 2", value=False, key="rectangles_rotate")
     
     with col_plot:
         fig = go.Figure()
