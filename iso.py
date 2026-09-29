@@ -105,7 +105,7 @@ def render(math_data):
 
     with col_controls:
         # Bara de viktigaste valen är kvar för användaren
-        rotate_fig2 = st.checkbox("Rotate", value=False, key="iso_rotate")
+        rotate_fig2 = st.checkbox("Rotate fig. 2", value=False, key="iso_rotate")
         show_nodes = st.checkbox("Nodes", value=False, key="iso_nodes")
 
     with col_plot:
