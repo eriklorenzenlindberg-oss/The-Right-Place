@@ -162,11 +162,12 @@ def evaluate_global_layout_numeric(sorted_matches, x_numeric):
 def render(math_data):
     n = math_data["n"]
     # Konvertera till sträng eller behåll sympy-uttryck (cache-säkert)
-    minimal_poly = math_data["minimal_poly"]
+    minimal_poly_str = str(math_data["minimal_poly"])
     x_numeric = math_data["x_numeric"]
 
     # Hämtar (eller läser från cache)
-    raw_matches = find_math_structures_logical(n, minimal_poly, x_numeric)
+    raw_matches = find_math_structures_logical(
+        n, minimal_poly_str, x_numeric
 
     if not raw_matches or len(raw_matches) == 0:
         st.info("The main line is missing from the data.")
