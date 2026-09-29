@@ -170,7 +170,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     fixed_range_y = [-max_span, max_span / 2]
 
     fig.update_layout(
-        height=400,  # Matchar höjden på ditt andra rektangel-diagram!
+        height=500,  # Matchar höjden på ditt andra rektangel-diagram!
         plot_bgcolor=bg_color,
         paper_bgcolor=bg_color,
         showlegend=False,
