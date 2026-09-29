@@ -85,8 +85,12 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     fill_color = "#FFFFFF"
     bg_color = "#FFFFFF"
 
-    # 1. SKAPA DE TVÅ HUVUDKOLUMNERNA PÅ SIDAN (50% var)
-    col1, col2 = st.columns(2)
+    # 1. SKAPA TRE KOLUMNER (Diagram 1, Diagram 2, och reglage till höger)
+    col1, col2, col3 = st.columns([45, 45, 10])
+
+    # Placera checkboxen i kolumnen längst till höger (col3)
+    with col3:
+        rotate = st.checkbox("Rotate", value=False)
 
     # Vi skapar en helt fristående figur för Pyramid 1
     fig1 = go.Figure()
@@ -101,10 +105,6 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
                 draw_block(fig1, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color)
 
     # 2. BERÄKNA GEOMETRISK PLACERING AV FIGUR 2
-    # Lägg checkboxen i den högra kolumnen så att den hamnar överst till höger
-    with col2:
-        rotate = st.checkbox("Rotate", value=False)
-
     v_modified_value = lengths2[0]
 
     chosen_lengths = {}
@@ -163,7 +163,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
                 offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
                 draw_block(fig2, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=dx, dy=dy)
     
-    # 3. APPLICERA FASTA RAMAR OCH SKALA PÅ BÅDA FIGURERNA
+    # 3. APPLICERA FASTA RAMAR OCH LÅS AXLARNA MOT ZOOM/PAN
     max_span = sum(lengths1[p] for p in range(1, len(lengths1))) * 1.5
     fixed_range_x = [-max_span, max_span / 2]
     fixed_range_y = [-max_span, max_span / 2]
@@ -173,16 +173,24 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
         paper_bgcolor=bg_color,
         showlegend=False,
         margin=dict(l=10, r=10, t=10, b=10),
-        xaxis=dict(visible=False, range=fixed_range_x),
-        yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=fixed_range_y)
+        # fixedrange=True förhindrar zoom och panorering (pan) på axeln
+        xaxis=dict(visible=False, range=fixed_range_x, fixedrange=True),
+        yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=fixed_range_y, fixedrange=True)
     )
     
     fig1.update_layout(**layout_specs)
     fig2.update_layout(**layout_specs)
 
-    # 4. SKICKA UT RESPEKTIVE DIAGRAM I RÄTT Behållare
+    # 4. SKICKA UT RESPEKTIVE DIAGRAM I RÄTT BEHÅLLARE MED STRÄNGT LÅST KONFIGURATION
+    # config-objektet stänger av Plotlys verktygsfält och interaktionslägen helt
+    chart_config = {
+        'displayModeBar': False,
+        'scrollZoom': False,
+        'staticPlot': False  # Gör att man kan ha hover/klick om man vill, men axlarna är låsta via layout_specs.
+    }
+
     with col1:
-        st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig1, use_container_width=True, config=chart_config)
         
     with col2:
-        st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig2, use_container_width=True, config=chart_config)
