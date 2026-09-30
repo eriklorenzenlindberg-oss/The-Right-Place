@@ -18,14 +18,14 @@ def iso_point(px, py, pz):
 # --------------------------------------------------
 # HJÄLP (Rita en solid yta i en gemensam figur)
 # --------------------------------------------------
-def add_face(fig, corners, line_color, fill_color, dash=None):
+def add_face(fig, corners, line_color, fill_color, dash=None, line_width=0.4):
     xs = [p[0] for p in corners]
     ys = [p[1] for p in corners]
 
     xs.append(corners[0][0])
     ys.append(corners[0][1])
 
-    mode = "lines" if dash else "lines"
+    mode = "lines"
     fill = None if dash else "toself"
 
     fig.add_trace(
@@ -34,7 +34,7 @@ def add_face(fig, corners, line_color, fill_color, dash=None):
             mode=mode,
             fill=fill,
             fillcolor=fill_color,
-            line=dict(color=line_color, width=0.4 if not dash else 1.0, dash=dash),
+            line=dict(color=line_color, width=line_width, dash=dash),
             hoverinfo="skip", showlegend=False
         )
     )
@@ -42,7 +42,7 @@ def add_face(fig, corners, line_color, fill_color, dash=None):
 # --------------------------------------------------
 # GENERELLT BLOCK (Rita solida rätblock eller streckade trådmodeller)
 # --------------------------------------------------
-def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=0.0, dy=0.0, dash=None):
+def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=0.0, dy=0.0, dash=None, line_width=0.4):
     x_size = block_lengths[a]
     y_size = block_lengths[b]
     z_size = block_lengths[z_power]
@@ -73,13 +73,13 @@ def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, 
     ]
 
     if dash:
-        add_face(fig, xy, line_color, fill_color, dash=dash)
-        add_face(fig, yz, line_color, fill_color, dash=dash)
-        add_face(fig, xz, line_color, fill_color, dash=dash)
+        add_face(fig, xy, line_color, fill_color, dash=dash, line_width=line_width)
+        add_face(fig, yz, line_color, fill_color, dash=dash, line_width=line_width)
+        add_face(fig, xz, line_color, fill_color, dash=dash, line_width=line_width)
     else:
-        add_face(fig, xy, line_color, fill_color)
-        add_face(fig, yz, line_color, "#F5F5F5")
-        add_face(fig, xz, line_color, fill_color)
+        add_face(fig, xy, line_color, fill_color, line_width=line_width)
+        add_face(fig, yz, line_color, "#F5F5F5", line_width=line_width)
+        add_face(fig, xz, line_color, fill_color, line_width=line_width)
 
 # --------------------------------------------------
 # RENDER
@@ -93,9 +93,12 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     fill_color = "#FFFFFF"
     bg_color = "#FFFFFF"
     
-    # Streckade inställningar
+    # --------------------------------------------------
+    # STRECKADE INSTÄLLNINGAR - Ändra linjetjocklek här!
+    # --------------------------------------------------
     dashed_line_color = "#000000"
-    dashed_pattern = "3px 3px"
+    dashed_pattern = "3px 4px"
+    dashed_line_width = 0.3  # <--- Ändra detta värde (t.ex. 0.5 för tunnare, 2.0 för tjockare)
 
     # 1. LAYOUT MED TVÅ KOLUMNER (80% för diagrammet, 20% för reglage till höger)
     col_plot, col_controls = st.columns([8, 2])
@@ -165,7 +168,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     dx = f1_fix_pt[0] - f2_fix_pt[0] + gap_between_pyramids
     dy = f1_fix_pt[1] - f2_fix_pt[1]
 
-    # Räknar ut det exakta värdet på v (hur mycket blocket har expanderat i förhållande till 1)
+    # Hämtar v_num säkert via index 0
     v_num = lengths2[0] - lengths1[0]
 
     # --------------------------------------------------
@@ -182,17 +185,15 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=dx, dy=dy)
 
     # STEG 2B: Lås och rita den STRECKADE triangelformationen (Bredd 1)
-    # Vi tar baspositionen från Figur 1 (där a=0) och flyttar den "v i rätt riktning" (minskar x-offseten med v eftersom axeln går åt det hållet)
     for z_power in range(n - 1, 1, -1):
         offset_z = sum(lengths1[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
         for b in range(1, z_power):
             offset_y = -sum(lengths1[p] for p in range(1, b + 1))
             a = 0
-            # Den vanliga positionen i figur 1: -lengths1[0]
-            # Flyttas nu "v" steg i axelns riktning för att hamna kloss intill x-sektionen
             offset_x = -lengths1[0] - v_num
             
-            draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, dashed_line_color, None, dx=dx, dy=dy, dash=dashed_pattern)
+            # Här skickar vi med den nya variabeln dashed_line_width
+            draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, dashed_line_color, None, dx=dx, dy=dy, dash=dashed_pattern, line_width=dashed_line_width)
 
     # STEG 2C: Rita resten av Pyramid 2 (alla block där a > 0)
     for z_power in range(n - 1, 1, -1):
