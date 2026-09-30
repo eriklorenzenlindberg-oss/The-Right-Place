@@ -18,31 +18,28 @@ def iso_point(px, py, pz):
 # --------------------------------------------------
 # HJÄLP (Rita en solid yta i en gemensam figur)
 # --------------------------------------------------
-def add_face(fig, corners, line_color, fill_color, dash=None, line_width=0.4):
+def add_face(fig, corners, line_color, fill_color):
     xs = [p[0] for p in corners]
     ys = [p[1] for p in corners]
 
     xs.append(corners[0][0])
     ys.append(corners[0][1])
 
-    mode = "lines"
-    fill = None if dash else "toself"
-
     fig.add_trace(
         go.Scatter(
             x=xs, y=ys,
-            mode=mode,
-            fill=fill,
+            mode="lines",
+            fill="toself",
             fillcolor=fill_color,
-            line=dict(color=line_color, width=line_width, dash=dash),
+            line=dict(color=line_color, width=0.4),
             hoverinfo="skip", showlegend=False
         )
     )
 
 # --------------------------------------------------
-# GENERELLT BLOCK (Rita solida rätblock eller streckade trådmodeller)
+# GENERELLT BLOCK (Rita solida rätblock)
 # --------------------------------------------------
-def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=0.0, dy=0.0, dash=None, line_width=0.4):
+def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=0.0, dy=0.0):
     x_size = block_lengths[a]
     y_size = block_lengths[b]
     z_size = block_lengths[z_power]
@@ -72,14 +69,9 @@ def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, 
         ]
     ]
 
-    if dash:
-        add_face(fig, xy, line_color, fill_color, dash=dash, line_width=line_width)
-        add_face(fig, yz, line_color, fill_color, dash=dash, line_width=line_width)
-        add_face(fig, xz, line_color, fill_color, dash=dash, line_width=line_width)
-    else:
-        add_face(fig, xy, line_color, fill_color, line_width=line_width)
-        add_face(fig, yz, line_color, "#F5F5F5", line_width=line_width)
-        add_face(fig, xz, line_color, fill_color, line_width=line_width)
+    add_face(fig, xy, line_color, fill_color)
+    add_face(fig, yz, line_color, "#F5F5F5")
+    add_face(fig, xz, line_color, fill_color)
 
 # --------------------------------------------------
 # RENDER
@@ -92,12 +84,8 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     line_color = "#000000"
     fill_color = "#FFFFFF"
     bg_color = "#FFFFFF"
-    
-    dashed_line_color = "#666666"
-    dashed_pattern = "4px 4px"
-    dashed_line_width = 1.0
 
-    # 1. LAYOUT MED TVÅ KOLUMNER
+    # 1. LAYOUT MED TVÅ KOLUMNER (80% för diagrammet, 20% för reglage till höger)
     col_plot, col_controls = st.columns([8, 2])
 
     with col_controls:
@@ -159,56 +147,30 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     f2_fix_x = -sum(chosen_lengths[p] for p in range(f2_a + 1)) - f2_a * x_gap
     f2_fix_pt = iso_point(f2_fix_x, f2_fix_y, f2_fix_z)
 
+    # Här lägger vi till en extra separation i X-led (t.ex. max_span) 
+    # så att Pyramid 2 ritas till höger om Pyramid 1 i samma koordinatsystem
     max_span = sum(lengths1[p] for p in range(1, len(lengths1))) * 1.5
     gap_between_pyramids = max_span * 1.5
 
     dx = f1_fix_pt[0] - f2_fix_pt[0] + gap_between_pyramids
     dy = f1_fix_pt[1] - f2_fix_pt[1]
 
-    # Beräkna v_num på ett säkert sätt från matrisdata
-    v_num = lengths2[0] - lengths1[0]
-
-    # --------------------------------------------------
-    # STRUKTURERAD RITNING AV PYRAMID 2 (STRIKT RITORDNING)
-    # --------------------------------------------------
-    
-    # STEG 2A: Rita blocken i Pyramid 2 som har bredd 1+v (dvs a = 0)
+    # RITA PYRAMID 2 (i samma fig-objekt)
     for z_power in range(n - 1, 1, -1):
         offset_z = sum(chosen_lengths[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
         for b in range(1, z_power):
             offset_y = -sum(chosen_lengths[p] for p in range(1, b + 1))
-            a = 0
-            offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
-            draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=dx, dy=dy)
-
-    # STEG 2B: Rita den STRECKADE triangelformationen (Bredd 1)
-    # Helt fristående från Pyramid 2! Vi utgår från den stabila Pyramid 1 och förskjuter bara i X-led
-    for z_power in range(n - 1, 1, -1):
-        offset_z = sum(lengths1[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
-        for b in range(1, z_power):
-            offset_y = -sum(lengths1[p] for p in range(1, b + 1))
-            a = 0
-            # Vi utgår från grundpositionen i Pyramid 1 men lägger till gapet samt drar bort v
-            # för att lägga den streckade sektionen helt intill x-sektionen i Figur 2.
-            offset_x = -lengths1[0] - v_num
-            
-            draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, dashed_line_color, None, dx=gap_between_pyramids, dy=0.0, dash=dashed_pattern, line_width=dashed_line_width)
-
-    # STEG 2C: Rita resten av Pyramid 2 (alla block där a > 0)
-    for z_power in range(n - 1, 1, -1):
-        offset_z = sum(chosen_lengths[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
-        for b in range(1, z_power):
-            offset_y = -sum(chosen_lengths[p] for p in range(1, b + 1))
-            for a in range(1, b):
+            for a in range(0, b):
                 offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
                 draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=dx, dy=dy)
     
     # 4. SKALA OCH ANPASSNING AV DEN GEMENSAMMA PROJEKTIONEN
+    # Vi expanderar X-axeln så att den täcker in båda pyramiderna bredvid varandra
     fixed_range_x = [-max_span, max_span / 2 + gap_between_pyramids]
     fixed_range_y = [-max_span, max_span / 2]
 
     fig.update_layout(
-        height=500,
+        height=500,  # Matchar höjden på ditt andra rektangel-diagram!
         plot_bgcolor=bg_color,
         paper_bgcolor=bg_color,
         showlegend=False,
