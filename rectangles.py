@@ -75,16 +75,31 @@ def render(math_data):
                 # --- UPPDATERAT: Generera den streckade kolumnen 1 i Figur 2 ---
                 if fig_idx == 1 and col == 0:
                     dash_col_width = unit 
+                    x_dl = x_start + v_num
+                    x_dr = x_dl + dash_col_width
                     
-                    # Förskjuter startpositionen med v_num så att kolumnen hamnar precis intill nästa kolumn (x)
-                    x_dash_offset = x_start + v_num
+                    # Beräkna totalhöjden för den streckade kolumnen
+                    total_dash_height = sum(powers[power] for power in range(n - 1, 0, -1))
+                    
+                    # 1. Lång sammanhängande vänsterlinje (nerifrån och upp)
+                    x_dashed.extend([x_dl, x_dl, None])
+                    y_dashed.extend([0.0, total_dash_height, None])
+                    
+                    # 2. Lång sammanhängande högerlinje (nerifrån och upp)
+                    x_dashed.extend([x_dr, x_dr, None])
+                    y_dashed.extend([0.0, total_dash_height, None])
+                    
+                    # 3. Horisontella avdelare
                     y_dash_offset = 0.0
+                    # Bottenlinje
+                    x_dashed.extend([x_dl, x_dr, None])
+                    y_dashed.extend([y_dash_offset, y_dash_offset, None])
+                    
                     for power in range(n - 1, 0, -1):
-                        x0, y0 = x_dash_offset, y_dash_offset
-                        x1, y1 = x0 + dash_col_width, y0 + powers[power]
-                        x_dashed.extend([x0, x1, x1, x0, x0, None])
-                        y_dashed.extend([y0, y0, y1, y1, y0, None])
                         y_dash_offset += powers[power]
+                        # Mellanväggar och topplinje
+                        x_dashed.extend([x_dl, x_dr, None])
+                        y_dashed.extend([y_dash_offset, y_dash_offset, None])
                     
                     if rotate:
                         x_offset += left_col_width
