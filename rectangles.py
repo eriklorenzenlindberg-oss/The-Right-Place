@@ -22,7 +22,7 @@ def render(math_data):
     
     # --- NYA INSTÄLLNINGAR FÖR DEN STRECKADE KOLUMNEN ---
     dashed_line_color = "#000000"  # Grå nyans så den upplevs som sekundär
-    dashed_line_width = 0.5        # Tunn linje
+    dashed_line_width = 0.3        # Tunn linje
     dashed_pattern = "3px 3px"     # Förhållande mellan streck och mellanrum (t.ex. "5px 3px")
     
     # --- PANEL-LAYOUT (Exakt som i iso.py) ---
