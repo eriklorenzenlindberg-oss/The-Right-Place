@@ -165,18 +165,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     dx = f1_fix_pt[0] - f2_fix_pt[0] + gap_between_pyramids
     dy = f1_fix_pt[1] - f2_fix_pt[1]
 
-    # --- NYTT: Fasta positioner för den streckade rutan (påverkas ej av rotation) ---
-    f2_z_power_static = n - 1
-    f2_b_static = n - 2
-    f2_a_static = n - 3
-    f2_fix_z_static = sum(chosen_lengths[p] for p in range(2, f2_z_power_static)) + (f2_z_power_static - 2) * z_gap
-    f2_fix_y_static = -sum(chosen_lengths[p] for p in range(1, f2_b_static + 1))
-    f2_fix_x_static = -sum(chosen_lengths[p] for p in range(f2_a_static + 1)) - f2_a_static * x_gap
-    f2_fix_pt_static = iso_point(f2_fix_x_static, f2_fix_y_static, f2_fix_z_static)
-    
-    dx_dash = f1_fix_pt[0] - f2_fix_pt_static[0] + gap_between_pyramids
-    dy_dash = f1_fix_pt[1] - f2_fix_pt_static[1]
-
+    # Beräkna v_num på ett säkert sätt från matrisdata
     v_num = lengths2[0] - lengths1[0]
 
     # --------------------------------------------------
@@ -192,15 +181,18 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
             draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=dx, dy=dy)
 
-    # STEG 2B: Lås och rita den STRECKADE triangelformationen (använder dx_dash/dy_dash)
+    # STEG 2B: Rita den STRECKADE triangelformationen (Bredd 1)
+    # Helt fristående från Pyramid 2! Vi utgår från den stabila Pyramid 1 och förskjuter bara i X-led
     for z_power in range(n - 1, 1, -1):
         offset_z = sum(lengths1[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
         for b in range(1, z_power):
             offset_y = -sum(lengths1[p] for p in range(1, b + 1))
             a = 0
+            # Vi utgår från grundpositionen i Pyramid 1 men lägger till gapet samt drar bort v
+            # för att lägga den streckade sektionen helt intill x-sektionen i Figur 2.
             offset_x = -lengths1[0] - v_num
             
-            draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, dashed_line_color, None, dx=dx_dash, dy=dy_dash, dash=dashed_pattern, line_width=dashed_line_width)
+            draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, dashed_line_color, None, dx=gap_between_pyramids, dy=0.0, dash=dashed_pattern, line_width=dashed_line_width)
 
     # STEG 2C: Rita resten av Pyramid 2 (alla block där a > 0)
     for z_power in range(n - 1, 1, -1):
