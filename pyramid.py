@@ -178,20 +178,17 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
             draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=dx, dy=dy)
 
-    # STEG 2B: Lås och rita den STRECKADE triangelformationen (Bredd 1, baserad på lengths1)
-    # Justerad position: Dockar nu ALLTID helt intill sektionen med bredd x (a=1)
+    # STEG 2B: Lås och rita den STRECKADE triangelformationen (Bredd 1)
+    # Exakt samma positionering som i Figur 1 (använder lengths1 för både offset och dimensioner)
     for z_power in range(n - 1, 1, -1):
         offset_z = sum(lengths1[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
         for b in range(1, z_power):
             offset_y = -sum(lengths1[p] for p in range(1, b + 1))
+            a = 0
+            offset_x = -sum(lengths1[p] for p in range(a + 1)) - a * x_gap
             
-            # Startkoordinaten för sektionen till höger (a=1)
-            x_start_of_a1 = -sum(chosen_lengths[p] for p in range(2)) - 1 * x_gap
-            
-            # Vi backar med bredden på det streckade blocket (lengths1[0]) för att docka precis intill x-sektionen
-            offset_x = x_start_of_a1 - lengths1[0]
-            
-            draw_block(fig, lengths1, 0, b, z_power, offset_x, offset_y, offset_z, dashed_line_color, None, dx=dx, dy=dy, dash=dashed_pattern)
+            # Ritas med det streckade mönstret, flyttat till höger med dx och dy
+            draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, dashed_line_color, None, dx=dx, dy=dy, dash=dashed_pattern)
 
     # STEG 2C: Rita resten av Pyramid 2 (alla block där a > 0)
     for z_power in range(n - 1, 1, -1):
