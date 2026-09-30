@@ -72,12 +72,12 @@ def render(math_data):
 
             # 2. Rektanglar och bredd-texter
             for col in range(n - 1):
-                # --- NYTT: Generera den streckade kolumnen 1 i Figur 2 ---
+                # --- UPPDATERAT: Generera den streckade kolumnen 1 i Figur 2 ---
                 if fig_idx == 1 and col == 0:
                     dash_col_width = unit 
                     
-                    # Den streckade kolumnen ritas ALLTID upp vertikalt längst till vänster i Fig 2
-                    x_dash_offset = x_start
+                    # Förskjuter startpositionen med v_num så att kolumnen hamnar precis intill nästa kolumn (x)
+                    x_dash_offset = x_start + v_num
                     y_dash_offset = 0.0
                     for power in range(n - 1, 0, -1):
                         x0, y0 = x_dash_offset, y_dash_offset
