@@ -93,14 +93,11 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     fill_color = "#FFFFFF"
     bg_color = "#FFFFFF"
     
-    # --------------------------------------------------
-    # STRECKADE INSTÄLLNINGAR - Ändra linjetjocklek här!
-    # --------------------------------------------------
-    dashed_line_color = "#000000"
-    dashed_pattern = "3px 4px"
-    dashed_line_width = 0.3  # <--- Ändra detta värde (t.ex. 0.5 för tunnare, 2.0 för tjockare)
+    dashed_line_color = "#666666"
+    dashed_pattern = "4px 4px"
+    dashed_line_width = 1.0
 
-    # 1. LAYOUT MED TVÅ KOLUMNER (80% för diagrammet, 20% för reglage till höger)
+    # 1. LAYOUT MED TVÅ KOLUMNER
     col_plot, col_controls = st.columns([8, 2])
 
     with col_controls:
@@ -168,7 +165,18 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     dx = f1_fix_pt[0] - f2_fix_pt[0] + gap_between_pyramids
     dy = f1_fix_pt[1] - f2_fix_pt[1]
 
-    # Hämtar v_num säkert via index 0
+    # --- NYTT: Fasta positioner för den streckade rutan (påverkas ej av rotation) ---
+    f2_z_power_static = n - 1
+    f2_b_static = n - 2
+    f2_a_static = n - 3
+    f2_fix_z_static = sum(chosen_lengths[p] for p in range(2, f2_z_power_static)) + (f2_z_power_static - 2) * z_gap
+    f2_fix_y_static = -sum(chosen_lengths[p] for p in range(1, f2_b_static + 1))
+    f2_fix_x_static = -sum(chosen_lengths[p] for p in range(f2_a_static + 1)) - f2_a_static * x_gap
+    f2_fix_pt_static = iso_point(f2_fix_x_static, f2_fix_y_static, f2_fix_z_static)
+    
+    dx_dash = f1_fix_pt[0] - f2_fix_pt_static[0] + gap_between_pyramids
+    dy_dash = f1_fix_pt[1] - f2_fix_pt_static[1]
+
     v_num = lengths2[0] - lengths1[0]
 
     # --------------------------------------------------
@@ -184,7 +192,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
             draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=dx, dy=dy)
 
-    # STEG 2B: Lås och rita den STRECKADE triangelformationen (Bredd 1)
+    # STEG 2B: Lås och rita den STRECKADE triangelformationen (använder dx_dash/dy_dash)
     for z_power in range(n - 1, 1, -1):
         offset_z = sum(lengths1[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
         for b in range(1, z_power):
@@ -192,8 +200,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             a = 0
             offset_x = -lengths1[0] - v_num
             
-            # Här skickar vi med den nya variabeln dashed_line_width
-            draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, dashed_line_color, None, dx=dx, dy=dy, dash=dashed_pattern, line_width=dashed_line_width)
+            draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, dashed_line_color, None, dx=dx_dash, dy=dy_dash, dash=dashed_pattern, line_width=dashed_line_width)
 
     # STEG 2C: Rita resten av Pyramid 2 (alla block där a > 0)
     for z_power in range(n - 1, 1, -1):
