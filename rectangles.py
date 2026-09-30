@@ -20,6 +20,11 @@ def render(math_data):
     line_color = "#000000"
     bg_color = "#FFFFFF"
     
+    # --- NYA INSTÄLLNINGAR FÖR DEN STRECKADE KOLUMNEN ---
+    dashed_line_color = "#666666"  # Grå nyans så den upplevs som sekundär
+    dashed_line_width = 1.0        # Tunn linje
+    dashed_pattern = "4px 4px"     # Förhållande mellan streck och mellanrum (t.ex. "5px 3px")
+    
     # --- PANEL-LAYOUT (Exakt som i iso.py) ---
     col_plot, col_controls = st.columns([8, 2])
     
@@ -31,6 +36,9 @@ def render(math_data):
         fig = go.Figure()
         x_lines, y_lines = [], []
         x_texts, y_texts, text_labels, text_positions = [], [], [], []
+        
+        # Separata listor för de streckade linjerna i Fig 2
+        x_dashed, y_dashed = [], []
         
         unit = powers[0]  # Detta är alltid 1.0
         left_col_width = unit + v_num  
@@ -64,11 +72,40 @@ def render(math_data):
 
             # 2. Rektanglar och bredd-texter
             for col in range(n - 1):
+                # --- NYTT: Generera den streckade kolumnen 1 i Figur 2 ---
                 if fig_idx == 1 and col == 0:
+                    # Bredden på den streckade kolumnen är alltid 1 (dvs unit/powers[0])
+                    dash_col_width = unit 
+                    
                     if rotate:
+                        # Om roterad: Kolumnen ligger liggande underst i den nya strukturen.
+                        # Den sträcker sig från y = -left_col_width upp till y = -v_num
+                        # och har en bredd som motsvarar trappans totala bredd till höger.
+                        # Vi ritar rektanglarna för denna dolda kolumn liggande här:
+                        y_dash_start = -left_col_width
+                        x_dash_offset = x_start + left_col_width
+                        
+                        for power in range(n - 1, 0, -1):
+                            x0, y0 = x_dash_offset, y_dash_start
+                            x1, y1 = x0 + powers[power], y_dash_start + dash_col_width
+                            x_dashed.extend([x0, x1, x1, x0, x0, None])
+                            y_dashed.extend([y0, y0, y1, y1, y0, None])
+                            x_dash_offset += powers[power]
+                            
                         x_offset += left_col_width
                         continue
-                    width = left_col_width
+                    else:
+                        # Om EJ roterad: Rita en streckad kolumn med bredd 1 längst till vänster i Fig 2
+                        x_dash_offset = x_offset
+                        y_dash_offset = 0.0
+                        for power in range(n - 1, 0, -1):
+                            x0, y0 = x_dash_offset, y_dash_offset
+                            x1, y1 = x0 + dash_col_width, y0 + powers[power]
+                            x_dashed.extend([x0, x1, x1, x0, x0, None])
+                            y_dashed.extend([y0, y0, y1, y1, y0, None])
+                            y_dash_offset += powers[power]
+                        
+                        width = left_col_width
                 else:
                     width = powers[col]
 
@@ -95,7 +132,8 @@ def render(math_data):
                 y_bottom = -left_col_width
                 
                 x_texts.append(x_label_pos - (unit * 0.3))
-                y_texts.append(y_bottom + (left_col_width / 2))
+                y_bottom_label = y_bottom + (left_col_width / 2)
+                y_texts.append(y_bottom_label)
                 text_labels.append("1+v")
                 text_positions.append("middle left")
                 
@@ -117,8 +155,18 @@ def render(math_data):
         # --------------------------------------------------
         # TRACES & LAYOUT (Matchad höjd och hastighet med iso)
         # --------------------------------------------------
+        # Huvudlinjer (Solida)
         fig.add_trace(go.Scatter(x=x_lines, y=y_lines, mode="lines", line=dict(color=line_color, width=1.0), hoverinfo="skip", showlegend=False))
         
+        # --- NYTT: Lägg till den streckade kolumnen som ett eget lager ---
+        if x_dashed:
+            fig.add_trace(go.Scatter(
+                x=x_dashed, y=y_dashed, mode="lines", 
+                line=dict(color=dashed_line_color, width=dashed_line_width, dash=dashed_pattern), 
+                hoverinfo="skip", showlegend=False
+            ))
+        
+        # Textetiketter
         fig.add_trace(go.Scatter(
             x=x_texts, y=y_texts, text=text_labels, mode="text",
             textposition=text_positions, textfont=dict(color=line_color, size=11),
