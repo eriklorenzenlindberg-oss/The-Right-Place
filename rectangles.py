@@ -74,37 +74,22 @@ def render(math_data):
             for col in range(n - 1):
                 # --- NYTT: Generera den streckade kolumnen 1 i Figur 2 ---
                 if fig_idx == 1 and col == 0:
-                    # Bredden på den streckade kolumnen är alltid 1 (dvs unit/powers[0])
                     dash_col_width = unit 
                     
+                    # Den streckade kolumnen ritas ALLTID upp vertikalt längst till vänster i Fig 2
+                    x_dash_offset = x_start
+                    y_dash_offset = 0.0
+                    for power in range(n - 1, 0, -1):
+                        x0, y0 = x_dash_offset, y_dash_offset
+                        x1, y1 = x0 + dash_col_width, y0 + powers[power]
+                        x_dashed.extend([x0, x1, x1, x0, x0, None])
+                        y_dashed.extend([y0, y0, y1, y1, y0, None])
+                        y_dash_offset += powers[power]
+                    
                     if rotate:
-                        # Om roterad: Kolumnen ligger liggande underst i den nya strukturen.
-                        # Den sträcker sig från y = -left_col_width upp till y = -v_num
-                        # och har en bredd som motsvarar trappans totala bredd till höger.
-                        # Vi ritar rektanglarna för denna dolda kolumn liggande här:
-                        y_dash_start = -left_col_width
-                        x_dash_offset = x_start + left_col_width
-                        
-                        for power in range(n - 1, 0, -1):
-                            x0, y0 = x_dash_offset, y_dash_start
-                            x1, y1 = x0 + powers[power], y_dash_start + dash_col_width
-                            x_dashed.extend([x0, x1, x1, x0, x0, None])
-                            y_dashed.extend([y0, y0, y1, y1, y0, None])
-                            x_dash_offset += powers[power]
-                            
                         x_offset += left_col_width
                         continue
                     else:
-                        # Om EJ roterad: Rita en streckad kolumn med bredd 1 längst till vänster i Fig 2
-                        x_dash_offset = x_offset
-                        y_dash_offset = 0.0
-                        for power in range(n - 1, 0, -1):
-                            x0, y0 = x_dash_offset, y_dash_offset
-                            x1, y1 = x0 + dash_col_width, y0 + powers[power]
-                            x_dashed.extend([x0, x1, x1, x0, x0, None])
-                            y_dashed.extend([y0, y0, y1, y1, y0, None])
-                            y_dash_offset += powers[power]
-                        
                         width = left_col_width
                 else:
                     width = powers[col]
@@ -132,8 +117,7 @@ def render(math_data):
                 y_bottom = -left_col_width
                 
                 x_texts.append(x_label_pos - (unit * 0.3))
-                y_bottom_label = y_bottom + (left_col_width / 2)
-                y_texts.append(y_bottom_label)
+                y_texts.append(y_bottom + (left_col_width / 2))
                 text_labels.append("1+v")
                 text_positions.append("middle left")
                 
