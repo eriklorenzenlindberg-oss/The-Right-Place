@@ -165,6 +165,9 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     dx = f1_fix_pt[0] - f2_fix_pt[0] + gap_between_pyramids
     dy = f1_fix_pt[1] - f2_fix_pt[1]
 
+    # Räknar ut det exakta värdet på v (hur mycket blocket har expanderat i förhållande till 1)
+    v_num = lengths2[0] - lengths1[0]
+
     # --------------------------------------------------
     # STRUKTURERAD RITNING AV PYRAMID 2 (STRIKT RITORDNING)
     # --------------------------------------------------
@@ -179,15 +182,16 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=dx, dy=dy)
 
     # STEG 2B: Lås och rita den STRECKADE triangelformationen (Bredd 1)
-    # Exakt samma positionering som i Figur 1 (använder lengths1 för både offset och dimensioner)
+    # Vi tar baspositionen från Figur 1 (där a=0) och flyttar den "v i rätt riktning" (minskar x-offseten med v eftersom axeln går åt det hållet)
     for z_power in range(n - 1, 1, -1):
         offset_z = sum(lengths1[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
         for b in range(1, z_power):
             offset_y = -sum(lengths1[p] for p in range(1, b + 1))
             a = 0
-            offset_x = -sum(lengths1[p] for p in range(a + 1)) - a * x_gap
+            # Den vanliga positionen i figur 1: -lengths1[0]
+            # Flyttas nu "v" steg i axelns riktning för att hamna kloss intill x-sektionen
+            offset_x = -lengths1[0] - v_num
             
-            # Ritas med det streckade mönstret, flyttat till höger med dx och dy
             draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, dashed_line_color, None, dx=dx, dy=dy, dash=dashed_pattern)
 
     # STEG 2C: Rita resten av Pyramid 2 (alla block där a > 0)
