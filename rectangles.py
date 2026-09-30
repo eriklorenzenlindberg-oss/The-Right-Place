@@ -21,9 +21,9 @@ def render(math_data):
     bg_color = "#FFFFFF"
     
     # --- NYA INSTÄLLNINGAR FÖR DEN STRECKADE KOLUMNEN ---
-    dashed_line_color = "#666666"  # Grå nyans så den upplevs som sekundär
-    dashed_line_width = 1.0        # Tunn linje
-    dashed_pattern = "4px 4px"     # Förhållande mellan streck och mellanrum (t.ex. "5px 3px")
+    dashed_line_color = "#000000"  # Grå nyans så den upplevs som sekundär
+    dashed_line_width = 0.5        # Tunn linje
+    dashed_pattern = "3px 3px"     # Förhållande mellan streck och mellanrum (t.ex. "5px 3px")
     
     # --- PANEL-LAYOUT (Exakt som i iso.py) ---
     col_plot, col_controls = st.columns([8, 2])
