@@ -20,7 +20,7 @@ a_kol, b_kol, c_kol = st.columns([1, 1, 4])
 # KOLUMN A: HUVUDPARAMETRAR (n, x, v)
 # --------------------------------------------------
 with a_kol:
-    st.markdown("### Settings")
+    
     n = st.number_input(
         "n (dimensions):", 
         min_value=2, 
