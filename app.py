@@ -78,7 +78,7 @@ a_kol, b_kol, c_kol = st.columns([1, 1, 4])
 # --------------------------------------------------
 # KOLUMN A: HUVUDPARAMETRAR (n, x, v)
 # --------------------------------------------------
-with a_kol:
+with c_kol:
     
     n = st.number_input(
         "n (dimensions):", 
@@ -142,7 +142,7 @@ placeholder_v.markdown(f"$\\small v \\Rightarrow {sp.latex(math_data['v_simplifi
 # --------------------------------------------------
 # KOLUMN C:  DIAGRAM
 # --------------------------------------------------
-with c_kol:
+with a_kol:
    
 
     # ÄKTA LAZY LOADING (Nu inuti kolumn C)
