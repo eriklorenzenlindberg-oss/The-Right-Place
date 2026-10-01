@@ -112,6 +112,7 @@ with c_kol:
         "k-face:",
         options=["n-face", "1-faces", "2-faces", "3-faces"],
         key="main_navigation_radio"
+        horizontal=True
     )
 
 
