@@ -12,6 +12,15 @@ st.set_page_config(layout="wide")
 # --- HUVUDLAYOUT
 st.subheader("The Right Place")
 
+with st.expander("Visualizing generalizations of the golden rectangle and self-similarity in n-dimensional space"):
+        st.markdown(
+            """<small>
+            Any rectangle that is not a square can be extended in one dimension without deformation...
+            [Hela din introduktionstext ligger här]
+            </small>""", 
+            unsafe_allow_html=True
+        )
+
 # Skapa de tre kolumnerna enligt din önskade fördelning
 a_kol, b_kol, c_kol = st.columns([1, 1, 4])
 
