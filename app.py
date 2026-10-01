@@ -49,8 +49,7 @@ with a_kol:
 # --------------------------------------------------
 with b_kol:
     
-    valt_diagram = st.radio(
-        "Select visualization:",
+    valt_diagram = st.radio,
         options=["n-face", "1-faces", "2-faces", "3-faces"],
         key="main_navigation_radio"
     )
