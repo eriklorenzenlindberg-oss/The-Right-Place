@@ -14,7 +14,7 @@ st.subheader("The Right Place")
 
 # Skapa två kolumner på huvudsidan. 
 # [1, 3] betyder att högerkolumnen är 3 gånger bredare än vänsterkolumnen.
-vanster_kol, hoger_kol = st.columns([1, 3])
+vanster_kol, hoger_kol = st.columns([1, 7])
 
 
 # --------------------------------------------------
