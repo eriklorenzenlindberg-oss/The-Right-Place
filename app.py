@@ -146,7 +146,7 @@ else:
         poly_display = math_data["minimal_poly"].subs(n_sym, n)
         placeholder_x.markdown(f'<span style="font-size: 13px;">$x \\Rightarrow {sp.latex(poly_display)} = 0$</span>', unsafe_allow_html=True)
        
-placeholder_v.markdown(f"$v \\Rightarrow {sp.latex(math_data['v_simplified'])}$")
+placeholder_v.markdown(f'<span style="font-size: 13px;">$v \\Rightarrow {sp.latex(math_data["v_simplified"])}$</span>', unsafe_allow_html=True)
       
 
 # --------------------------------------------------
