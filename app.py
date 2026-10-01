@@ -44,7 +44,6 @@ with kol_a:
     placeholder_v = st.empty()
 
     with kol_b:
-
     valt_diagram = st.radio(
         "Select visualization:",
         options=["n-face", "1-faces", "2-faces", "3-faces"],
