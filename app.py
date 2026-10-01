@@ -13,7 +13,7 @@ st.set_page_config(layout="wide")
 st.subheader("The Right Place")
 
 # Skapa de tre kolumnerna enligt din önskade fördelning
-a_kol, b_kol, c_kol = st.columns([1, 1, 4])
+a_kol, b_kol, c_kol = st.columns([1, 1, 5])
 
 
 # --------------------------------------------------
