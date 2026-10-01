@@ -111,7 +111,7 @@ with c_kol:
     valt_diagram = st.radio(
         "k-face:",
         options=["n-face", "1-faces", "2-faces", "3-faces"],
-        key="main_navigation_radio"
+        key="main_navigation_radio",
         horizontal=True
     )
 
