@@ -71,6 +71,13 @@ with st.expander("Visualizing generalizations of the golden rectangle and self-s
             unsafe_allow_html=True
         )
 
+        valt_diagram = st.radio(
+        "k-face:",
+        options=["n-face", "1-faces", "2-faces", "3-faces"],
+        key="main_navigation_radio",
+        horizontal=True
+    )
+
 # Skapa de tre kolumnerna enligt din önskade fördelning
 a_kol, b_kol, c_kol = st.columns([4, 1, 1])
 
@@ -108,12 +115,7 @@ with b_kol:
 # --------------------------------------------------
 with c_kol:
     
-    valt_diagram = st.radio(
-        "k-face:",
-        options=["n-face", "1-faces", "2-faces", "3-faces"],
-        key="main_navigation_radio",
-        horizontal=True
-    )
+    
 
 
 # --------------------------------------------------
