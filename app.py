@@ -19,7 +19,9 @@ with st.expander("Visualizing generalizations of the golden rectangle and self-s
         Take a rectangle with the aspect ratio 1 : x.  (where x > 1). By multiplying the shorter side with x², 
         the rectangle changes in size and orientation but retains its shape. The same result is obtained by 
         adding x² - 1 to the shorter side. This relationship is expressed by the geometric progression formed 
-        by the three distinct side lengths of the two configurations: 1, x, x²
+        by the three distinct side lengths of the two configurations: 
+        
+        1, x, x²
 
         The golden rectangle is characterized by its sides forming a geometric progression; the shorter side is to the longer side as the longer side is to the sum of both sides:
         1 + x = x²
