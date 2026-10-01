@@ -48,7 +48,7 @@ with a_kol:
 # KOLUMN B: RADIOKNAPPARNA (Navigering)
 # --------------------------------------------------
 with b_kol:
-    st.markdown("### Visualization")
+    
     valt_diagram = st.radio(
         "Select visualization:",
         options=["n-face", "1-faces", "2-faces", "3-faces"],
