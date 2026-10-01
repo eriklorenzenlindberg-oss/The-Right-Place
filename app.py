@@ -76,7 +76,8 @@ valt_diagram = st.radio(
     "k-face:",
     options=["n-face", "1-faces", "2-faces", "3-faces"],
     key="main_navigation_radio",
-    horizontal=True
+    horizontal=True,
+    label_visibility="collapsed" 
 )
 
 # RÄTTAT: Tog bort det extra kommatecknet efter b_kol
