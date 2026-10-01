@@ -90,17 +90,10 @@ placeholder_v.markdown(f"$\\small v \\Rightarrow {sp.latex(math_data['v_simplifi
 
 
 # --------------------------------------------------
-# KOLUMN C: EXPANDER OCH DIAGRAM
+# KOLUMN C:  DIAGRAM
 # --------------------------------------------------
 with c_kol:
-    with st.expander("Visualizing generalizations of the golden rectangle and self-similarity in n-dimensional space"):
-        st.markdown(
-            """<small>
-            Any rectangle that is not a square can be extended in one dimension without deformation...
-            [Hela din introduktionstext ligger här]
-            </small>""", 
-            unsafe_allow_html=True
-        )
+   
 
     # ÄKTA LAZY LOADING (Nu inuti kolumn C)
     if valt_diagram == "n-face":
