@@ -20,7 +20,7 @@ a_kol, b_kol, c_kol = st.columns([1, 1, 4])
 # KOLUMN A: HUVUDPARAMETRAR (n, x, v)
 # --------------------------------------------------
 with a_kol:
-    st.markdown("### Settings")
+    
     n = st.number_input(
         "n (dimensions):", 
         min_value=2, 
@@ -48,9 +48,9 @@ with a_kol:
 # KOLUMN B: RADIOKNAPPARNA (Navigering)
 # --------------------------------------------------
 with b_kol:
-    st.markdown("### Visualization")
+    
     valt_diagram = st.radio(
-        "Select visualization:",
+        "k-face:",
         options=["n-face", "1-faces", "2-faces", "3-faces"],
         key="main_navigation_radio"
     )
