@@ -144,7 +144,7 @@ else:
     if math_data["minimal_poly"] is not None:
         n_sym = sp.Symbol("n")
         poly_display = math_data["minimal_poly"].subs(n_sym, n)
-        placeholder_x.markdown(f"$x \\Rightarrow {sp.latex(poly_display)} = 0$")
+        placeholder_x.markdown(f'<span style="font-size: 13px;">$x \\Rightarrow {sp.latex(poly_display)} = 0$</span>', unsafe_allow_html=True)
        
 placeholder_v.markdown(f"$v \\Rightarrow {sp.latex(math_data['v_simplified'])}$")
       
