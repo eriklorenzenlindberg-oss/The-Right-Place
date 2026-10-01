@@ -78,7 +78,7 @@ a_kol, b_kol, c_kol = st.columns([4, 1, 1])
 # --------------------------------------------------
 # KOLUMN A: HUVUDPARAMETRAR (n, x, v)
 # --------------------------------------------------
-with c_kol:
+with b_kol:
     
     n = st.number_input(
         "n (dimensions):", 
@@ -106,7 +106,7 @@ with c_kol:
 # --------------------------------------------------
 # KOLUMN B: RADIOKNAPPARNA (Navigering)
 # --------------------------------------------------
-with b_kol:
+with c_kol:
     
     valt_diagram = st.radio(
         "k-face:",
