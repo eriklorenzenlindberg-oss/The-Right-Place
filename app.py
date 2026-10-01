@@ -14,13 +14,13 @@ st.subheader("The Right Place")
 
 # Skapa två kolumner på huvudsidan. 
 # [1, 3] betyder att högerkolumnen är 3 gånger bredare än vänsterkolumnen.
-vanster_kol, hoger_kol = st.columns([1, 4])
+kol_a, kol_b, kol_c = st.columns([1, 1, 4])
 
 
 # --------------------------------------------------
 # 1. FAST VÄNSTERKOLUMN (Inställningar & Navigering)
 # --------------------------------------------------
-with vanster_kol:
+with kol_a:
     n = st.number_input(
         "n (dimensions):", 
         min_value=2, 
@@ -43,8 +43,7 @@ with vanster_kol:
 
     placeholder_v = st.empty()
 
-    # En visuell linje för att separera inmatning från navigering
-    st.write("---")
+    with kol_b:
 
     valt_diagram = st.radio(
         "Select visualization:",
@@ -80,7 +79,7 @@ placeholder_v.markdown(f"$\\small \\Rightarrow {sp.latex(math_data['v_simplified
 # --------------------------------------------------
 # 4. HÖGERKOLUMN (Expandern och diagrammen)
 # --------------------------------------------------
-with hoger_kol:
+with kol_c:
     with st.expander("Visualizing generalizations of the golden rectangle and self-similarity in n-dimensional space"):
         st.markdown(
             """<small>
