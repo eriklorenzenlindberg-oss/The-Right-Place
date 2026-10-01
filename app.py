@@ -37,7 +37,7 @@ with a_kol:
     placeholder_x = st.empty()
 
     add_value_str = st.text_input(
-        "v (value added to side 1 (Fig. 2)):", 
+        "v (adds to side 1):", 
         value="x^n-1"
     )
 
