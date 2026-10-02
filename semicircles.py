@@ -184,7 +184,7 @@ def render(math_data):
 
     with col_plot:
         height=100,
-        line_color, bg_color = "#000000", "rgba(0,0,0,0)"
+        line_color, bg_color = "#FFFFFF", "rgba(0,0,0,0)"
         fig = go.Figure()
         x_lines, y_lines = [], []
         theta_upper = np.linspace(0, np.pi, 40)
