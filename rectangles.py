@@ -18,7 +18,7 @@ def render(math_data):
     v_num = lengths2[0] - powers[0]
     
     line_color = "#000000"
-    bg_color = "#FFFFFF"
+    bg_color = "rgba(0,0,0,0)"
     
     # --- NYA INSTÄLLNINGAR FÖR DEN STRECKADE KOLUMNEN ---
     dashed_line_color = "#000000"  # Grå nyans så den upplevs som sekundär
