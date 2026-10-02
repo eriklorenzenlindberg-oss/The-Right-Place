@@ -83,7 +83,7 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
 
     line_color = "#FFFFFF"
     fill_color = "#0041BA"
-    bg_color = "rgba(0,0,0,0)" 
+    bg_color = "#0041BA" 
 
     # 1. LAYOUT MED TVÅ KOLUMNER (80% för diagrammet, 20% för reglage till höger)
     col_plot, col_controls = st.columns([8, 2])
