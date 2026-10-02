@@ -129,7 +129,7 @@ def render(math_data):
 
         # Fasta färg-inställningar (Kritvit bakgrund)
         line_color = "#000000"
-        bg_color = "#FFFFFF" 
+        bg_color = "rgba(0,0,0,0)" 
 
         # Skapa figuren med subplots
         fig = make_subplots(
