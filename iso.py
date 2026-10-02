@@ -97,7 +97,7 @@ def render(math_data):
 
     # --- AUTOMATISKA DESIGNVAL ---
     # Linjetjockleken blir 0.3 upp till n=7, därefter 0.1
-    linewidth = 0.2 if n <= 7 else 0.1
+    linewidth = 0.5 if n <= 7 else 0.3
     node_size = linewidth * 15
 
     # --- PANEL-LAYOUT FÖR DIAGRAM OCH REGLAGE ---
