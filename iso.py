@@ -128,7 +128,7 @@ def render(math_data):
         pos2 = generate_positions(nodes, lengths2, directions2)
 
         # Fasta färg-inställningar (Kritvit bakgrund)
-        line_color = "#000000"
+       
         bg_color = "rgba(0,0,0,0)" 
 
         # Skapa figuren med subplots
@@ -149,7 +149,7 @@ def render(math_data):
         fig.add_trace(
             go.Scatter(
                 x=x1_lines, y=y1_lines, mode="lines",
-                line=dict(color=line_color, width=linewidth),
+                line=dict(width=linewidth),
                 hoverinfo="none"
             ),
             row=1, col=1
@@ -159,7 +159,7 @@ def render(math_data):
             fig.add_trace(
                 go.Scatter(
                     x=[pos1[node][0] for node in nodes], y=[pos1[node][1] for node in nodes],
-                    mode="markers", marker=dict(color=line_color, size=node_size),
+                    mode="markers", marker=dict(size=node_size),
                     hoverinfo="none"
                 ),
                 row=1, col=1
@@ -175,7 +175,7 @@ def render(math_data):
         fig.add_trace(
             go.Scatter(
                 x=x2_lines, y=y2_lines, mode="lines",
-                line=dict(color=line_color, width=linewidth),
+                line=dict(width=linewidth),
                 hoverinfo="none"
             ),
             row=1, col=2
@@ -185,7 +185,7 @@ def render(math_data):
             fig.add_trace(
                 go.Scatter(
                     x=[pos2[node][0] for node in nodes], y=[pos2[node][1] for node in nodes],
-                    mode="markers", marker=dict(color=line_color, size=node_size),
+                    mode="markers", marker=dict(size=node_size),
                     hoverinfo="none"
                 ),
                 row=1, col=2
@@ -254,7 +254,7 @@ def render(math_data):
                         y=anno_pos[1],
                         text=format_label(dim_k, is_fig2=is_fig2),
                         showarrow=False,
-                        font=dict(color=line_color, size=10),
+                        font=dict(size=10),
                         xref=x_ref_target,
                         yref=y_ref_target
                     )
