@@ -9,22 +9,24 @@ import sympy as sp
 # 1. SÄTT SIDAN TILL BREDBILD
 st.set_page_config(layout="wide")
 
-        # NYTT: Detta CSS-hack döljer verktygsraden OCH tvingar rutorna att ha svart text
-        st.markdown(
-            """
-            <style>
-            .modebar {
-                display: none !important;
-            }
-            /* Gör bakgrunden vit och texten svart i alla nummer- och textfält */
-            .stTextInput input, .stNumberInput input {
-                color: #000000 !important;
-                background-color: #FFFFFF !important;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
+# --- NYTT: HÄR LÄGGER DU CSS-HACKET FÖR HELA APPEN ---
+st.markdown(
+    """
+    <style>
+    /* Döljer Plotlys verktygsrad */
+    .modebar {
+        display: none !important;
+    }
+    /* Gör bakgrunden vit och texten svart i alla nummer- och textfält */
+    .stTextInput input, .stNumberInput input {
+        color: #000000 !important;
+        background-color: #FFFFFF !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 
 
 # --- HUVUDLAYOUT
