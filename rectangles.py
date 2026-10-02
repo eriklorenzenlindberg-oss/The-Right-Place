@@ -17,7 +17,7 @@ def render(math_data):
     # Plockar ut det numeriska v på ett säkert sätt via index 0
     v_num = lengths2[0] - powers[0]
     
-    line_color = "#000000"
+    line_color = "#FFFFFF"
     bg_color = "rgba(0,0,0,0)"
     
     # --- NYA INSTÄLLNINGAR FÖR DEN STRECKADE KOLUMNEN ---
