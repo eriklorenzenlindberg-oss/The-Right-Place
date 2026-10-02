@@ -70,7 +70,7 @@ def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, 
     ]
 
     add_face(fig, xy, line_color, fill_color)
-    add_face(fig, yz, line_color, "#F5F5F5")
+    add_face(fig, yz, line_color, "003699")
     add_face(fig, xz, line_color, fill_color)
 
 # --------------------------------------------------
