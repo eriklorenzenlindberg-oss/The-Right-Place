@@ -96,6 +96,7 @@ def render(math_data):
     lengths2 = math_data["lengths2_numeric"]
 
     # --- AUTOMATISKA DESIGNVAL ---
+    # Linjetjockleken blir 0.3 upp till n=7, därefter 0.1
     linewidth = 0.2 if n <= 7 else 0.1
     node_size = linewidth * 15
 
@@ -103,6 +104,7 @@ def render(math_data):
     col_plot, col_controls = st.columns([9, 2])
 
     with col_controls:
+        # Bara de viktigaste valen är kvar för användaren
         rotate_fig2 = st.checkbox("Rotate fig. 2", value=False, key="iso_rotate")
         show_nodes = st.checkbox("Nodes", value=False, key="iso_nodes")
 
@@ -125,11 +127,9 @@ def render(math_data):
         pos1 = generate_positions(nodes, lengths1, directions1)
         pos2 = generate_positions(nodes, lengths2, directions2)
 
-        # --------------------------------------------------
-        # DYNAMISKA FÄRGER FRÅN STREAMLIT TEMA (config.toml)
-        # --------------------------------------------------
-        line_color = st.theme().textColor if st.theme() else "#000000"
-        bg_color = st.theme().backgroundColor if st.theme() else "#FFFFFF"
+        # Fasta färg-inställningar (Kritvit bakgrund)
+        line_color = "#000000"
+        bg_color = "#FFFFFF" 
 
         # Skapa figuren med subplots
         fig = make_subplots(
@@ -228,7 +228,7 @@ def render(math_data):
 
             annotated_dimensions = set()
             x_ref_target = "x" if col_idx == 1 else "x2"
-            y_ref_target = "y" if col_idx == 1 else "y2"
+            y_ref_target = "y"
             is_fig2 = (col_idx == 2)
 
             for edge in outer_edge_data:
@@ -263,7 +263,7 @@ def render(math_data):
         add_contour_annotations(pos1, col_idx=1)
         add_contour_annotations(pos2, col_idx=2)
 
-        # --- LAYOUT OCH ABSOLUT AXELLÅSNING (Färganpassad bakgrund) ---
+        # --- LAYOUT OCH ABSOLUT AXELLÅSNING ---
         fig.update_layout(
             height=290,
             plot_bgcolor=bg_color,
@@ -281,7 +281,7 @@ def render(math_data):
 
         fig.update_xaxes(matches='x')
 
-        # Döljer Plotlys verktygsrad
+        # NYTT: Detta CSS-hack tvingar webbläsaren att dölja hela verktygsraden
         st.markdown(
             """
             <style>
