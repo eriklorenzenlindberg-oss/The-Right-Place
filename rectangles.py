@@ -21,7 +21,7 @@ def render(math_data):
     bg_color = "rgba(0,0,0,0)"
     
     # --- NYA INSTÄLLNINGAR FÖR DEN STRECKADE KOLUMNEN ---
-    dashed_line_color = "#000000"  # Grå nyans så den upplevs som sekundär
+    dashed_line_color = "#FFFFFF"  
     dashed_line_width = 0.3        # Tunn linje
     dashed_pattern = "3px 3px"     # Förhållande mellan streck och mellanrum (t.ex. "5px 3px")
     
