@@ -19,7 +19,7 @@ st.markdown(
     }
     /* Gör bakgrunden vit och texten svart i alla nummer- och textfält */
     .stTextInput input, .stNumberInput input {
-        color: #F0EAD6 !important;
+        color: #0041BA !important;
         background-color: #FFFFFF !important;
     }
     </style>
