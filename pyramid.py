@@ -31,7 +31,7 @@ def add_face(fig, corners, line_color, fill_color):
             mode="lines",
             fill="toself",
             fillcolor=fill_color,
-            line=dict(color=line_color, width=0.4),
+            line=dict(color=line_color, width=0.8),
             hoverinfo="skip", showlegend=False
         )
     )
