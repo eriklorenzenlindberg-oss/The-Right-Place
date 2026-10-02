@@ -128,7 +128,7 @@ def render(math_data):
         pos2 = generate_positions(nodes, lengths2, directions2)
 
         # Fasta färg-inställningar (Kritvit bakgrund)
-        line_color = "#000000"
+        line_color = "#FFFFFF"
         bg_color = "rgba(0,0,0,0)" 
 
         # Skapa figuren med subplots
