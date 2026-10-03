@@ -153,7 +153,7 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    col_plot, col_controls = st.columns([8, 2])
+    col_plot, col_controls = st.columns([6, 3])
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key=f"circles_overlap_{n}")
@@ -176,8 +176,8 @@ def render(math_data):
         fig = go.Figure()
         theta_upper = np.linspace(0, np.pi, 40)
         
-        # Beräkna maxradie för figur 1 baserat på huvudleden
-        centers_sample = get_layer_geometry_numeric(sorted_matches[0], x_numeric)
+        # KORRIGERING: Vi skickar in sorted_matches[0] (huvudleden) för att mäta radien korrekt
+        centers_sample = get_layer_geometry_numeric(sorted_matches[0], x_numeric) if sorted_matches else []
         max_radius = max((d/2.0) for _, _, d in centers_sample) if centers_sample else (target_value * 0.5)
         
         gap = max_radius * 0.8
@@ -223,13 +223,12 @@ def render(math_data):
         x_bg2, y_bg2 = [], []
         
         # Beräkna geometri för ENBART huvudleden (index 0) med modifierade diametrar
-        main_centers_v = get_layer_geometry_from_list(sorted_matches[0], lengths2_numeric)
+        main_centers_v = get_layer_geometry_from_list(sorted_matches[0], lengths2_numeric) if sorted_matches else []
         
         for k, x_center, diameter in main_centers_v:
             radius = diameter / 2.0
             cx = x_center + radius * np.cos(theta_upper)
             cy = radius * np.sin(theta_upper)
-            # Roterad och förskjuten till höger med fig2_x_offset
             x_bg2.extend(list(-cy + fig2_x_offset) + [None])
             y_bg2.extend(list(cx) + [None])
 
@@ -238,10 +237,36 @@ def render(math_data):
         x_bg2.extend([fig2_x_offset, fig2_x_offset, None])
         y_bg2.extend([0.0, target_value_v, None])
         
-        # Rita ut huvudleden i diagram 2 (Tjockare linje då det är huvudleden)
         fig.add_trace(go.Scatter(x=x_bg2, y=y_bg2, mode="lines", line=dict(color=line_color, width=2.5), hoverinfo="skip", showlegend=False))
 
 
         # --- GEMENSAM SKALNING ---
         y_max_bound = max(target_value, target_value_v)
         y_min = -y_max_bound * 0.05
+        y_max = y_max_bound + (y_max_bound * 0.05)
+        
+        max_rad2 = max((d/2.0) for _, _, d in main_centers_v) if main_centers_v else max_radius
+        x_min = fig2_x_offset - (max_rad2 * 1.1)
+        x_max = max_radius * 0.1
+
+        y_span = y_max - y_min
+        x_span = x_max - x_min
+        if y_span > x_span:
+            diff = (y_span - x_span) / 2.0
+            x_min -= diff
+            x_max += diff
+        else:
+            diff = (x_span - y_span) / 2.0
+            y_min -= diff
+            y_max += diff
+
+        fig.update_layout(
+            plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
+            margin=dict(l=10, r=10, t=10, b=10), height=400, dragmode=False,
+            xaxis=dict(visible=False, range=[x_min, x_max]),
+            yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
+        )
+
+        st.plotly_chart(fig, use_container_width=True, key=f"semicircles_combined_{n}")
+
+    st.markdown("<style>.modebar { display: none !important; }</style>", unsafe_allow_html=True)
