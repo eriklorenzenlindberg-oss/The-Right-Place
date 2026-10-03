@@ -163,7 +163,8 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    col_plot, col_controls = st.columns([6, 3])
+    # DELA UPP I TRE KOLUMNER: Två för diagrammen och en för kontrollerna längst till höger
+    col_plot1, col_plot2, col_controls = st.columns()
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key="circles_overlap")
@@ -182,7 +183,8 @@ def render(math_data):
         )
         selected_idx = combo_labels.index(selected_option)
 
-    with col_plot:
+    # Funktion för att bygga figuren (använder din exakta 90-graders rotation)
+    def build_figure():
         line_color, bg_color = "#FFFFFF", "rgba(0,0,0,0)"
         fig = go.Figure()
         x_lines, y_lines = [], []
@@ -191,13 +193,12 @@ def render(math_data):
         # Rita den markerade kombinationen (Tjock linje)
         if 0 <= selected_idx < len(final_layouts):
             chosen_combo = final_layouts[selected_idx]
-            chosen_centers = get_layer_geometry_numeric(chosen_combo, x_numeric)
-            for k, x_center, diameter in chosen_centers:
+            chosen_combo_centers = get_layer_geometry_numeric(chosen_combo, x_numeric)
+            for k, x_center, diameter in chosen_combo_centers:
                 radius = diameter / 2.0
                 cx = x_center + radius * np.cos(theta_upper)
                 cy = radius * np.sin(theta_upper)
                 
-                # ROTATION 90 GRADER: x_ny = -cy, y_ny = cx
                 fig.add_trace(go.Scatter(
                     x=-cy, y=cx, 
                     mode="lines", 
@@ -220,13 +221,9 @@ def render(math_data):
                     drawn_circles.add(circle_id)
                     cx = x_center + radius * np.cos(theta_upper)
                     cy = radius * np.sin(theta_upper)
-                    
-                    # ROTATION 90 GRADER: x_ny = -cy, y_ny = cx
                     x_lines.extend(list(-cy) + [None])
                     y_lines.extend(list(cx) + [None])
 
-        # Ursprunglig baslinje: x=[0.0, target_value], y=[0.0, 0.0]
-        # Roterad 90 grader: x=[-0.0, -0.0], y=[0.0, target_value]
         x_lines.extend([0.0, 0.0, None])
         y_lines.extend([0.0, target_value, None])
 
@@ -238,7 +235,7 @@ def render(math_data):
             showlegend=False
         ))
 
-        # Geometrisk skalning 1:1 (Anpassad för den roterade layouten)
+        # Skalning
         max_actual_height = max(all_radii) if all_radii else (target_value * 0.5)
         base_x_margin = target_value * 0.05
         total_graph_width = target_value + (2 * base_x_margin)
@@ -262,17 +259,22 @@ def render(math_data):
             xaxis=dict(visible=False, range=[x_min, x_max]),
             yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
         )
+        return fig
 
-        # CSS-hack tvingar webbläsaren att dölja hela verktygsraden
-        st.markdown(
-            """
-            <style>
-            .modebar {
-                display: none !important;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-        
-        st.plotly_chart(fig, use_container_width=True, key="semicircles_plot_clean")
+    # RITA UT BÅDA DIAGRAMMEN BREDVID VARANDRA
+    with col_plot1:
+        fig1 = build_figure()
+        st.plotly_chart(fig1, use_container_width=True, key=f"plot_left_{n}")
+
+    with col_plot2:
+        fig2 = build_figure()
+        st.plotly_chart(fig2, use_container_width=True, key=f"plot_right_{n}")
+
+    st.markdown(
+        """
+        <style>
+        .modebar { display: none !important; }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
