@@ -153,8 +153,7 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # Sidopanels-layout med fasta kolumnbredder angivna
-    col_plot, col_controls = st.columns([8, 2])
+    col_plot, col_controls = st.columns()
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key=f"circles_overlap_{n}")
@@ -177,12 +176,13 @@ def render(math_data):
         fig = go.Figure()
         theta_upper = np.linspace(0, np.pi, 40)
         
-        # Mät radien för diagram 1 utifrån den enskilda kombinationen main_line
-        centers_sample = get_layer_geometry_numeric(main_line, x_numeric) if main_line else []
+        # SÄKERT UTGÅNGSPUNKT: Hämta geometri utifrån den första valda layouten (huvudleden)
+        chosen_base_layout = final_layouts[0] if final_layouts else main_line
+        centers_sample = get_layer_geometry_numeric(chosen_base_layout, x_numeric)
         max_radius = max((d/2.0) for _, _, d in centers_sample) if centers_sample else (target_value * 0.5)
         
-        # Beräkna geometri för diagram 2 (Enbart huvudleden) utifrån main_line
-        main_centers_v = get_layer_geometry_from_list(main_line, lengths2_numeric) if main_line else []
+        # Geometri för diagram 2 (Enbart huvudleden med 1 + v)
+        main_centers_v = get_layer_geometry_from_list(chosen_base_layout, lengths2_numeric)
         max_rad2 = max((d/2.0) for _, _, d in main_centers_v) if main_centers_v else max_radius
         
         # POSITIV OFFSET: Flyttar diagram 2 till höger om diagram 1
@@ -248,3 +248,47 @@ def render(math_data):
         for k, x_center, diameter in main_centers_v:
             radius = diameter / 2.0
             cx = x_center + radius * np.cos(theta_upper)
+            cy = radius * np.sin(theta_upper)
+            
+            x_bg2.extend(list(-cy + fig2_x_offset) + [None])
+            y_bg2.extend(list(cx + y_offset_fig2) + [None])
+
+        # Baslinje 2
+        target_value_v = sum(d for _, _, d in main_centers_v) if main_centers_v else target_value
+        x_bg2.extend([fig2_x_offset, fig2_x_offset, None])
+        y_bg2.extend([y_offset_fig2, y_offset_fig2 + target_value_v, None])
+        
+        fig.add_trace(go.Scatter(x=x_bg2, y=y_bg2, mode="lines", line=dict(color=line_color, width=2.5), hoverinfo="skip", showlegend=False))
+
+
+        # --- GEMENSAM SKALNING ---
+        y_max_bound = max(target_value, y_offset_fig2 + target_value_v)
+        y_min_bound = min(0.0, y_offset_fig2)
+        
+        y_min = y_min_bound - (y_max_bound - y_min_bound) * 0.05
+        y_max = y_max_bound + (y_max_bound - y_min_bound) * 0.05
+        
+        x_min = -(max_radius * 2.0) - (max_radius * 0.1)
+        x_max = fig2_x_offset + (max_radius * 0.1)
+
+        y_span = y_max - y_min
+        x_span = x_max - x_min
+        if y_span > x_span:
+            diff = (y_span - x_span) / 2.0
+            x_min -= diff
+            x_max += diff
+        else:
+            diff = (x_span - y_span) / 2.0
+            y_min -= diff
+            y_max += diff
+
+        fig.update_layout(
+            plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
+            margin=dict(l=10, r=10, t=10, b=10), height=400, dragmode=False,
+            xaxis=dict(visible=False, range=[x_min, x_max]),
+            yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
+        )
+
+        st.plotly_chart(fig, use_container_width=True, key=f"semicircles_combined_{n}")
+
+    st.markdown("<style>.modebar { display: none !important; }</style>", unsafe_allow_html=True)
