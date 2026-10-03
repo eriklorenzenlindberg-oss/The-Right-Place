@@ -186,27 +186,20 @@ def render(math_data):
         line_color, bg_color = "#FFFFFF", "rgba(0,0,0,0)"
         fig = go.Figure()
         x_lines, y_lines = [], []
-        
-        # theta_upper går från 0 till pi. 
-        # Genom att sätta sin på x och cos på y (eller tvärtom) ändrar vi orienteringen.
-        # Här använder vi np.sin(theta_upper) för X så att halvcirklarna buktar ut till höger (positivt x)
         theta_upper = np.linspace(0, np.pi, 40)
 
         # Rita den markerade kombinationen (Tjock linje)
         if 0 <= selected_idx < len(final_layouts):
             chosen_combo = final_layouts[selected_idx]
             chosen_centers = get_layer_geometry_numeric(chosen_combo, x_numeric)
-            for k, y_center, diameter in chosen_centers: # x_center blir nu y_center
+            for k, x_center, diameter in chosen_centers:
                 radius = diameter / 2.0
+                cx = x_center + radius * np.cos(theta_upper)
+                cy = radius * np.sin(theta_upper)
                 
-                # RECEPT FÖR VERTIKAL ORIENTERING:
-                # cx (utskjut på x-axeln) baseras på sinus så det blir en halvcirkel
-                # cy (position på baslinjen) baseras på cosinus utifrån det nya y-centret
-                cx = radius * np.sin(theta_upper)
-                cy = y_center + radius * np.cos(theta_upper)
-                
+                # ROTATION 90 GRADER: x_ny = -cy, y_ny = cx
                 fig.add_trace(go.Scatter(
-                    x=cx, y=cy, 
+                    x=-cy, y=cx, 
                     mode="lines", 
                     line=dict(color=line_color, width=2.5), 
                     hoverinfo="skip", 
@@ -218,19 +211,22 @@ def render(math_data):
         drawn_circles = set()
         for combo in final_layouts:
             centers = get_layer_geometry_numeric(combo, x_numeric)
-            for k, y_center, diameter in centers:
+            for k, x_center, diameter in centers:
                 radius = diameter / 2.0
                 all_radii.append(radius)
                 
-                circle_id = (k, round(y_center, 5))
+                circle_id = (k, round(x_center, 5))
                 if circle_id not in drawn_circles:
                     drawn_circles.add(circle_id)
-                    cx = radius * np.sin(theta_upper)
-                    cy = y_center + radius * np.cos(theta_upper)
-                    x_lines.extend(list(cx) + [None])
-                    y_lines.extend(list(cy) + [None])
+                    cx = x_center + radius * np.cos(theta_upper)
+                    cy = radius * np.sin(theta_upper)
+                    
+                    # ROTATION 90 GRADER: x_ny = -cy, y_ny = cx
+                    x_lines.extend(list(-cy) + [None])
+                    y_lines.extend(list(cx) + [None])
 
-        # Skapa den vertikala baslinjen (X är noll, Y sträcker sig från 0 till target_value)
+        # Ursprunglig baslinje: x=[0.0, target_value], y=[0.0, 0.0]
+        # Roterad 90 grader: x=[-0.0, -0.0], y=[0.0, target_value]
         x_lines.extend([0.0, 0.0, None])
         y_lines.extend([0.0, target_value, None])
 
@@ -242,23 +238,23 @@ def render(math_data):
             showlegend=False
         ))
 
-        # Geometrisk skalning 1:1 (Inverterad för vertikal layout)
-        max_actual_width = max(all_radii) if all_radii else (target_value * 0.5)
-        base_y_margin = target_value * 0.05
-        total_graph_height = target_value + (2 * base_y_margin)
-        required_x_space = total_graph_height * 0.5
+        # Geometrisk skalning 1:1 (Anpassad för den roterade layouten)
+        max_actual_height = max(all_radii) if all_radii else (target_value * 0.5)
+        base_x_margin = target_value * 0.05
+        total_graph_width = target_value + (2 * base_x_margin)
+        required_y_space = total_graph_width * 0.5
 
-        if max_actual_width > (required_x_space * 0.85):
-            required_x_space = max_actual_width / 0.80
-            total_y_span = required_x_space * 2.0
-            y_min = -(total_y_span - target_value) / 2.0
-            y_max = target_value + (total_y_span - target_value) / 2.0
+        if max_actual_height > (required_y_space * 0.85):
+            required_y_space = max_actual_height / 0.80
+            total_x_span = required_y_space * 2.0
+            y_min = -(total_x_span - target_value) / 2.0
+            y_max = target_value + (total_x_span - target_value) / 2.0
         else:
-            y_min, y_max = -base_y_margin, target_value + base_y_margin
+            y_min, y_max = -base_x_margin, target_value + base_x_margin
 
-        x_center_point = max_actual_width / 2.0
-        x_min = x_center_point - (required_x_space / 2.0)
-        x_max = x_center_point + (required_x_space / 2.0)
+        y_center_point = max_actual_height / 2.0
+        x_min = -(y_center_point + (required_y_space / 2.0))
+        x_max = -(y_center_point - (required_y_space / 2.0))
 
         fig.update_layout(
             plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
@@ -267,7 +263,7 @@ def render(math_data):
             yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
         )
 
-        # CSS-hack för att dölja hela verktygsraden
+        # CSS-hack tvingar webbläsaren att dölja hela verktygsraden
         st.markdown(
             """
             <style>
@@ -280,4 +276,3 @@ def render(math_data):
         )
         
         st.plotly_chart(fig, use_container_width=True, key="semicircles_plot_clean")
-
