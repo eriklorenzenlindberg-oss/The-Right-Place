@@ -224,12 +224,48 @@ def draw_single_rotated_plot(final_layouts, selected_idx, lengths_numeric, line_
     )
     return fig
 
+def draw_single_plot_lines(final_layouts, lengths_numeric, theta_upper, fig_x_offset):
+    """ 
+    Hjälpfunktion som genererar linjerna för ett enskilt diagram.
+    fig_x_offset flyttar hela diagrammet längs koordinatsystemet.
+    """
+    x_lines, y_lines = [], []
+    all_radii = []
+    
+    # Beräkna totala längden för baslinjen baserat på den första kombinationen (huvudleden)
+    first_combo_centers = get_layer_geometry_numeric_v2(final_layouts, lengths_numeric)
+    target_value = sum(c for c in first_combo_centers) if first_combo_centers else 1.0
+
+    # Rita alla unika cirklar i bakgrunden (Tunna linjer)
+    drawn_circles = set()
+    for combo in final_layouts:
+        centers = get_layer_geometry_numeric_v2(combo, lengths_numeric)
+        for k, x_center, diameter in centers:
+            radius = diameter / 2.0
+            all_radii.append(radius)
+            
+            circle_id = (k, round(x_center, 5))
+            if circle_id not in drawn_circles:
+                drawn_circles.add(circle_id)
+                cx = x_center + radius * np.cos(theta_upper)
+                cy = radius * np.sin(theta_upper)
+                
+                # 90 graders rotation samt förskjutning i sidled (fig_x_offset)
+                # Eftersom de är roterade ligger "sidled" nu på y-axeln!
+                x_lines.extend(list(-cy) + [None])
+                y_lines.extend(list(cx + fig_x_offset) + [None])
+
+    # Lägg till den roterade baslinjen (förskjuten i sidled längs y-axeln)
+    x_lines.extend([0.0, 0.0, None])
+    y_lines.extend([fig_x_offset, fig_x_offset + target_value, None])
+
+    return x_lines, y_lines, all_radii, target_value
+
 def render(math_data):
     n = math_data["n"]
     minimal_poly = math_data["minimal_poly"]
     x_numeric = math_data["x_numeric"]
     
-    # Hämta de förberäknade listorna med längder/diametrar från calculations.py
     lengths1_numeric = math_data.get("lengths1_numeric", [float(x_numeric**k) for k in range(n)])
     lengths2_numeric = math_data.get("lengths2_numeric", lengths1_numeric.copy())
     
@@ -244,8 +280,8 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # Explicit bredd: 4 enheter till varje diagram, 2 enheter till kontrollerna
-    col_plot1, col_plot2, col_controls = st.columns([4, 4, 2])
+    # PANEL-LAYOUT: Diagrammet till vänster, kontrollerna till höger
+    col_plot, col_controls = st.columns([8, 2])
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key=f"circles_overlap_{n}")
@@ -265,23 +301,67 @@ def render(math_data):
             key=f"circles_highlight_{n}_{max_overlap}"
         )
         selected_idx = combo_labels.index(selected_option)
-        
-        # FELSÖKNING: Visar om data skiljer sig (Ta bort denna rad sen om du vill)
-        st.write(f"**Info:** Diam 1 (Vänster): `{lengths1_numeric[0]:.3f}` | Diam 1 (Höger): `{lengths2_numeric[0]:.3f}`")
 
     line_color, bg_color = "#FFFFFF", "rgba(0,0,0,0)"
+    fig = go.Figure()
+    theta_upper = np.linspace(0, np.pi, 40)
 
-    # KOLUMN 1: Standarddiagrammet (Vänster)
-    with col_plot1:
-        st.caption("Standard (Halvcirkel 1 = 1)")
-        fig1 = draw_single_rotated_plot(final_layouts1, selected_idx, lengths1_numeric, line_color, bg_color)
-        st.plotly_chart(fig1, use_container_width=True, key=f"semicircles_plot_left_{n}")
+    # --- RITA DIAGRAM 1 (VÄNSTER) ---
+    # Startar på y_offset = 0.0
+    x_l1, y_l1, radii1, target_val1 = draw_single_plot_lines(final_layouts1, lengths1_numeric, theta_upper, 0.0)
+    
+    # --- RITA DIAGRAM 2 (HÖGER) ---
+    # Vi sätter ett mellanrum (gap) som är proportionellt mot den första figurens storlek
+    gap = target_val1 * 0.4
+    fig2_y_offset = target_val1 + gap
+    x_l2, y_l2, radii2, target_val2 = draw_single_plot_lines(final_layouts2, lengths2_numeric, theta_upper, fig2_y_offset)
 
-    # KOLUMN 2: Det modifierade diagrammet (Höger)
-    with col_plot2:
-        st.caption("Modifierad (Halvcirkel 1 = 1 + v)")
-        fig2 = draw_single_rotated_plot(final_layouts2, selected_idx, lengths2_numeric, line_color, bg_color)
-        st.plotly_chart(fig2, use_container_width=True, key=f"semicircles_plot_right_{n}")
+    # Lägg till alla bakgrundslinjer i samma Plotly-figur
+    fig.add_trace(go.Scatter(x=x_l1 + x_l2, y=y_l1 + y_l2, mode="lines", line=dict(color=line_color, width=0.7), hoverinfo="skip", showlegend=False))
+
+    # --- RITA DE MARKERADE (TJOCKA) LINJERNA FÖR BÅDA FIGURERNA ---
+    if 0 <= selected_idx < len(final_layouts1):
+        for fig_idx, (layouts, lengths, offset) in enumerate([(final_layouts1, lengths1_numeric, 0.0), (final_layouts2, lengths2_numeric, fig2_y_offset)]):
+            chosen_combo = layouts[selected_idx]
+            chosen_centers = get_layer_geometry_numeric_v2(chosen_combo, lengths)
+            for k, x_center, diameter in chosen_centers:
+                radius = diameter / 2.0
+                cx = x_center + radius * np.cos(theta_upper)
+                cy = radius * np.sin(theta_upper)
+                
+                fig.add_trace(go.Scatter(
+                    x=-cy, y=cx + offset, 
+                    mode="lines", 
+                    line=dict(color=line_color, width=2.5), 
+                    hoverinfo="skip", 
+                    showlegend=False
+                ))
+
+    # --- GEMENSAM SKALNING OCH GRÄNSER ---
+    all_radii = radii1 + radii2
+    max_actual_height = max(all_radii) if all_radii else (target_val1 * 0.5)
+    
+    # Det totala y-spannet sträcker sig från 0 till slutet av figur 2
+    total_y_end = fig2_y_offset + target_val2
+    margin_y = total_y_end * 0.05
+    
+    y_min = -margin_y
+    y_max = total_y_end + margin_y
+
+    # Centrera x-axeln (cirklarnas utskjut) geometriskt utifrån den maximala radien
+    x_center_point = max_actual_height / 2.0
+    # Beräkna hur mycket x-utrymme som behövs för att matcha höjden 1:1
+    required_x_space = (y_max - y_min) * 0.5 
+    
+    x_min = -(x_center_point + required_x_space)
+    x_max = -(x_center_point - required_x_space)
+
+    fig.update_layout(
+        plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
+        margin=dict(l=10, r=10, t=10, b=10), height=450, dragmode=False,
+        xaxis=dict(visible=False, range=[x_min, x_max]),
+        yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
+    )
 
     # CSS-hack för att dölja verktygsraden
     st.markdown(
@@ -294,3 +374,5 @@ def render(math_data):
         """,
         unsafe_allow_html=True
     )
+    
+    st.plotly_chart(fig, use_container_width=True, key=f"semicircles_combined_{n}")
