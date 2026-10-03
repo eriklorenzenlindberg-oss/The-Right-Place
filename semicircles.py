@@ -153,7 +153,7 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    col_plot, col_controls = st.columns([8, 2])
+    col_plot, col_controls = st.columns()
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key=f"circles_overlap_{n}")
@@ -177,17 +177,38 @@ def render(math_data):
         theta_upper = np.linspace(0, np.pi, 40)
         
         # Mät radien för diagram 1
-        chosen_main_line = sorted_matches[0] if sorted_matches else []
+        chosen_main_line = sorted_matches if sorted_matches else []
         centers_sample = get_layer_geometry_numeric(chosen_main_line, x_numeric)
         max_radius = max((d/2.0) for _, _, d in centers_sample) if centers_sample else (target_value * 0.5)
         
-        # Geometri för diagram 2 (Enbart huvudleden med 1 + v)
+        # Geometri för diagram 2 (Enbart huvudleden)
         main_centers_v = get_layer_geometry_from_list(chosen_main_line, lengths2_numeric)
         max_rad2 = max((d/2.0) for _, _, d in main_centers_v) if main_centers_v else max_radius
         
         # POSITIV OFFSET: Flyttar diagram 2 till höger om diagram 1
         gap = max_radius * 0.8
         fig2_x_offset = max_rad2 * 2.0 + gap
+
+        # --- BERÄKNA FÖRSKJUTNING I HÖJDLED (Y-AXELN) FÖR ATT LINJERA CIRKEL x ---
+        # Vi letar upp var cirkeln med potens k=1 (alltså x) börjar i båda diagrammen
+        y_offset_fig2 = 0.0
+        
+        # Hitta startpositionen (centrum minus radie, vilket blir bottenkanten) för k=1 i diagram 1
+        bottom_x_fig1 = 0.0
+        for k, x_center, diameter in centers_sample:
+            if k == 1:
+                bottom_x_fig1 = x_center - (diameter / 2.0)
+                break
+                
+        # Hitta startpositionen för k=1 i diagram 2
+        bottom_x_fig2 = 0.0
+        for k, x_center, diameter in main_centers_v:
+            if k == 1:
+                bottom_x_fig2 = x_center - (diameter / 2.0)
+                break
+        
+        # Skillnaden blir vår vertikala offset för diagram 2 så att de linjerar perfekt
+        y_offset_fig2 = bottom_x_fig1 - bottom_x_fig2
 
         # --------------------------------------------------
         # DIAGRAM 1: STANDARD (VÄNSTER)
@@ -224,7 +245,7 @@ def render(math_data):
 
 
         # --------------------------------------------------
-        # DIAGRAM 2: MODIFIERAD (HÖGER) - Enbart huvudleden (1 + v)
+        # DIAGRAM 2: MODIFIERAD (HÖGER) - Med höjdjustering
         # --------------------------------------------------
         x_bg2, y_bg2 = [], []
         
@@ -232,24 +253,26 @@ def render(math_data):
             radius = diameter / 2.0
             cx = x_center + radius * np.cos(theta_upper)
             cy = radius * np.sin(theta_upper)
-            # Här lägger vi till den positiva offseten för att skjuta det till höger
+            
+            # Vi lägger till y_offset_fig2 på y-axeln (cx) för att flytta hela hjulet i höjdled
             x_bg2.extend(list(-cy + fig2_x_offset) + [None])
-            y_bg2.extend(list(cx) + [None])
+            y_bg2.extend(list(cx + y_offset_fig2) + [None])
 
-        # Baslinje 2
+        # Baslinje 2 (Flyttas också med samma höjdjustering)
         target_value_v = sum(d for _, _, d in main_centers_v) if main_centers_v else target_value
         x_bg2.extend([fig2_x_offset, fig2_x_offset, None])
-        y_bg2.extend([0.0, target_value_v, None])
+        y_bg2.extend([y_offset_fig2, y_offset_fig2 + target_value_v, None])
         
         fig.add_trace(go.Scatter(x=x_bg2, y=y_bg2, mode="lines", line=dict(color=line_color, width=2.5), hoverinfo="skip", showlegend=False))
 
 
-        # --- GEMENSAM SKALNING (Anpassad för högerplacering) ---
-        y_max_bound = max(target_value, target_value_v)
-        y_min = -y_max_bound * 0.05
-        y_max = y_max_bound + (y_max_bound * 0.05)
+        # --- GEMENSAM SKALNING (Anpassad för höjdjusteringen) ---
+        y_max_bound = max(target_value, y_offset_fig2 + target_value_v)
+        y_min_bound = min(0.0, y_offset_fig2)
         
-        # X sträcker sig från diagram 1:s ytterkant (vänster) till diagram 2:s baslinje (höger)
+        y_min = y_min_bound - (y_max_bound - y_min_bound) * 0.05
+        y_max = y_max_bound + (y_max_bound - y_min_bound) * 0.05
+        
         x_min = -(max_radius * 2.0) - (max_radius * 0.1)
         x_max = fig2_x_offset + (max_radius * 0.1)
 
@@ -273,4 +296,4 @@ def render(math_data):
 
         st.plotly_chart(fig, use_container_width=True, key=f"semicircles_combined_{n}")
 
-    st.markdown("<style>.modebar { display: none !important; </style>", unsafe_allow_html=True)
+    st.markdown("<style>.modebar { display: none !important; }</style>", unsafe_allow_html=True)
