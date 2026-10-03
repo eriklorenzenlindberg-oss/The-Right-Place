@@ -188,20 +188,23 @@ def render(math_data):
         fig = go.Figure()
         theta_upper = np.linspace(0, np.pi, 40)
         
-        # Bestäm avståndet (mellanrummet) mellan diagrammen
-        gap = target_value * 0.4
-        fig2_offset = target_value + gap
+        # Bestäm det horisontella avståndet (mellanrummet) mellan diagrammen
+        # Vi räknar ut max_height för att veta hur mycket cirklarna buktar ut
+        centers_sample = get_layer_geometry_numeric(final_layouts[0], x_numeric)
+        max_radius_sample = max((d/2.0) for _, _, d in centers_sample) if centers_sample else (target_value * 0.5)
+        
+        gap = max_radius_sample * 0.8
+        fig2_x_offset = -(max_radius_sample * 2.0 + gap)
 
         # Listor för att samla alla bakgrundslinjer
         x_all_background, y_all_background = [], []
-        all_radii = []
 
         # --------------------------------------------------
         # STRIKT LOOP FÖR BÅDA DIAGRAMMEN (fig_idx 0 och 1)
         # --------------------------------------------------
         for fig_idx in range(2):
-            # Det andra diagrammet flyttas i koordinatsystemet
-            offset = 0.0 if fig_idx == 0 else fig2_offset
+            # Det andra diagrammet (fig_idx == 1) flyttas till vänster längs x-axeln
+            x_offset = 0.0 if fig_idx == 0 else fig2_x_offset
             
             # 1. Rita bakgrundslinjer för detta diagram
             drawn_circles = set()
@@ -209,7 +212,6 @@ def render(math_data):
                 centers = get_layer_geometry_numeric(combo, x_numeric)
                 for k, x_center, diameter in centers:
                     radius = diameter / 2.0
-                    all_radii.append(radius)
                     
                     circle_id = (k, round(x_center, 5))
                     if circle_id not in drawn_circles:
@@ -217,13 +219,13 @@ def render(math_data):
                         cx = x_center + radius * np.cos(theta_upper)
                         cy = radius * np.sin(theta_upper)
                         
-                        # 90-graders rotation: x_ny = -cy, y_ny = cx + offset
-                        x_all_background.extend(list(-cy) + [None])
-                        y_all_background.extend(list(cx + offset) + [None])
+                        # Horisontell förskjutning ligger nu på x-axeln (x_offset)
+                        x_all_background.extend(list(-cy + x_offset) + [None])
+                        y_all_background.extend(list(cx) + [None])
 
-            # Baslinjen för detta diagram
-            x_all_background.extend([0.0, 0.0, None])
-            y_all_background.extend([offset, offset + target_value, None])
+            # Baslinjen för detta diagram (Y går från 0 till target_value, X är fixerad vid x_offset)
+            x_all_background.extend([x_offset, x_offset, None])
+            y_all_background.extend([0.0, target_value, None])
 
             # 2. Rita den markerade (tjocka) linjen för detta diagram
             if 0 <= selected_idx < len(final_layouts):
@@ -235,14 +237,14 @@ def render(math_data):
                     cy = radius * np.sin(theta_upper)
                     
                     fig.add_trace(go.Scatter(
-                        x=-cy, y=cx + offset, 
+                        x=-cy + x_offset, y=cx, 
                         mode="lines", 
                         line=dict(color=line_color, width=2.5), 
                         hoverinfo="skip", 
                         showlegend=False
                     ))
 
-        # Lägg till alla bakgrundslinjer på en och samma gång
+        # Lägg till alla bakgrundslinjer samtidigt
         fig.add_trace(go.Scatter(
             x=x_all_background, y=y_all_background, 
             mode="lines", 
@@ -251,24 +253,30 @@ def render(math_data):
             showlegend=False
         ))
 
-        # --- GEMENSAM SKALNING BASERAD PÅ TOTALA OMFÅNGET ---
-        max_actual_height = max(all_radii) if all_radii else (target_value * 0.5)
-        
-        # Totala y-axeln sträcker sig över båda diagrammen plus mellanrummet
-        total_y_span = fig2_offset + target_value
-        margin_y = total_y_span * 0.05
-        y_min = -margin_y
-        y_max = total_y_span + margin_y
+        # --- GEMENSAM SKALNING BASERAD PÅ HORISONTELL PLACERING ---
+        # Y-axeln är identisk för båda (baslinjens längd)
+        y_min = -target_value * 0.05
+        y_max = target_value + (target_value * 0.05)
 
-        # Centrera x-axeln utifrån cirklarnas maximala utskjut
-        x_center_point = max_actual_height / 2.0
-        required_x_space = (y_max - y_min) * 0.5 
-        x_min = -(x_center_point + required_x_space)
-        x_max = -(x_center_point - required_x_space)
+        # X-axeln sträcker sig från det vänstra diagrammets utskjut till det högra diagrammets baslinje (0.0)
+        x_min = fig2_x_offset - (max_radius_sample * 1.1)
+        x_max = max_radius_sample * 0.1
+
+        # Justera ramarna så att det blir en perfekt kvadratisk 1:1-skalning utan förvridning
+        y_span = y_max - y_min
+        x_span = x_max - x_min
+        if y_span > x_span:
+            diff = (y_span - x_span) / 2.0
+            x_min -= diff
+            x_max += diff
+        else:
+            diff = (x_span - y_span) / 2.0
+            y_min -= diff
+            y_max += diff
 
         fig.update_layout(
             plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
-            margin=dict(l=10, r=10, t=10, b=10), height=450, dragmode=False,
+            margin=dict(l=10, r=10, t=10, b=10), height=400, dragmode=False,
             xaxis=dict(visible=False, range=[x_min, x_max]),
             yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
         )
@@ -283,3 +291,4 @@ def render(math_data):
         """,
         unsafe_allow_html=True
     )
+
