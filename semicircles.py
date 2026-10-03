@@ -152,88 +152,54 @@ def render(math_data):
         )
         selected_idx = combo_labels.index(selected_option)
 
-        with col_plot:
+    with col_plot:
         line_color, bg_color = "#FFFFFF", "rgba(0,0,0,0)"
         fig = go.Figure()
         theta_upper = np.linspace(0, np.pi, 40)
         x_background, y_background = [], []
         all_radii = []
 
-        # Vi mäter utskjutet på cirklarna för att beräkna ett bra mellanrum
-        centers_sample = get_layer_geometry_numeric(final_layouts, x_numeric)
-        max_radius = max((d/2.0) for _, _, d in centers_sample) if centers_sample else (target_value * 0.5)
-        
-        # fig2_x_offset flyttar det andra diagrammet till vänster längs x-axeln
-        gap = max_radius * 0.8
-        fig2_x_offset = -(max_radius * 2.0 + gap)
-
-        # LOOPA IGENOM BÅDA DIAGRAMMEN (0 = Vänster/Standard, 1 = Höger/Kopia)
-        for fig_idx in range(2):
-            x_offset = 0.0 if fig_idx == 0 else fig2_x_offset
-
-            # 1. Rita tunna bakgrundslinjer för detta diagram
-            drawn_circles = set()
-            for combo in final_layouts:
-                centers = get_layer_geometry_numeric(combo, x_numeric)
-                for k, x_center, diameter in centers:
-                    radius = diameter / 2.0
-                    all_radii.append(radius)
-                    
-                    circle_id = (k, round(x_center, 5))
-                    if circle_id not in drawn_circles:
-                        drawn_circles.add(circle_id)
-                        cx = x_center + radius * np.cos(theta_upper)
-                        cy = radius * np.sin(theta_upper)
-                        
-                        # Roterad 90 grader och förskjuten med x_offset
-                        x_background.extend(list(-cy + x_offset) + [None])
-                        y_background.extend(list(cx) + [None])
-
-            # Rita baslinjen för detta diagram
-            x_background.extend([x_offset, x_offset, None])
-            y_background.extend([0.0, target_value, None])
-
-            # 2. Rita den markerade tjocka linjen för detta diagram
-            if 0 <= selected_idx < len(final_layouts):
-                chosen_combo = final_layouts[selected_idx]
-                chosen_centers = get_layer_geometry_numeric(chosen_combo, x_numeric)
-                for k, x_center, diameter in chosen_centers:
-                    radius = diameter / 2.0
+        drawn_circles = set()
+        for combo in final_layouts:
+            centers = get_layer_geometry_numeric(combo, x_numeric)
+            for k, x_center, diameter in centers:
+                radius = diameter / 2.0
+                all_radii.append(radius)
+                circle_id = (k, round(x_center, 5))
+                if circle_id not in drawn_circles:
+                    drawn_circles.add(circle_id)
                     cx = x_center + radius * np.cos(theta_upper)
                     cy = radius * np.sin(theta_upper)
-                    
-                    fig.add_trace(go.Scatter(
-                        x=-cy + x_offset, y=cx, mode="lines", 
-                        line=dict(color=line_color, width=2.5), 
-                        hoverinfo="skip", showlegend=False
-                    ))
+                    x_background.extend(list(-cy) + [None])
+                    y_background.extend(list(cx) + [None])
 
-        # Skicka in alla samlade bakgrundslinjer samtidigt
+        x_background.extend([0.0, 0.0, None])
+        y_background.extend([0.0, target_value, None])
+
+        if 0 <= selected_idx < len(final_layouts):
+            chosen_combo = final_layouts[selected_idx]
+            chosen_centers = get_layer_geometry_numeric(chosen_combo, x_numeric)
+            for k, x_center, diameter in chosen_centers:
+                radius = diameter / 2.0
+                cx = x_center + radius * np.cos(theta_upper)
+                cy = radius * np.sin(theta_upper)
+                fig.add_trace(go.Scatter(
+                    x=-cy, y=cx, mode="lines", 
+                    line=dict(color=line_color, width=2.5), 
+                    hoverinfo="skip", showlegend=False
+                ))
+
         fig.add_trace(go.Scatter(
             x=x_background, y=y_background, mode="lines", 
             line=dict(color=line_color, width=0.7), 
             hoverinfo="skip", showlegend=False
         ))
 
-        # --- SYNKRONISERAD OCH EXAKT SKALNING ---
+        max_actual_height = max(all_radii) if all_radii else (target_value * 0.5)
         y_min = -target_value * 0.05
         y_max = target_value + (target_value * 0.05)
-        
-        # X-axeln spänner nu över BÅDA diagrammens bredd
-        x_min = fig2_x_offset - (max_radius * 1.1)
-        x_max = max_radius * 0.1
-
-        # Tvinga kvadratisk 1:1 proportionalitet
-        y_span = y_max - y_min
-        x_span = x_max - x_min
-        if y_span > x_span:
-            diff = (y_span - x_span) / 2.0
-            x_min -= diff
-            x_max += diff
-        else:
-            diff = (x_span - y_span) / 2.0
-            y_min -= diff
-            y_max += diff
+        x_min = -(max_actual_height + y_max * 0.5)
+        x_max = -(max_actual_height * 0.1)
 
         fig.update_layout(
             plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
@@ -242,4 +208,6 @@ def render(math_data):
             yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
         )
 
-        st.plotly_chart(fig, use_container_width=True, key=f"semicircles_combined_{n}")
+        st.plotly_chart(fig, use_container_width=True, key=f"single_plot_{n}")
+
+    st.markdown("<style>.modebar { display: none !important; }</style>", unsafe_allow_html=True)
