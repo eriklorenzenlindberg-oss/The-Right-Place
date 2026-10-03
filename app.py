@@ -151,7 +151,7 @@ else:
         poly_display = math_data["minimal_poly"].subs(n_sym, n)
         placeholder_x.markdown(f"$\\tiny x \\Rightarrow {sp.latex(poly_display)} = 0$")
        
-placeholder_v.markdown(f"$\\small v \\Rightarrow {sp.latex(math_data['v_simplified'])}$")
+placeholder_v.markdown(f"$\\footnotesize \\Rightarrow {sp.latex(math_data['v_simplified'])}$")
 
 
 # --------------------------------------------------
