@@ -153,7 +153,8 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    col_plot, col_controls = st.columns()
+    # KORRIGERAT: Lagt till kolumnbredderna [8, 2] i st.columns så det inte kraschar
+    col_plot, col_controls = st.columns([8, 2])
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key=f"circles_overlap_{n}")
@@ -190,24 +191,20 @@ def render(math_data):
         fig2_x_offset = max_rad2 * 2.0 + gap
 
         # --- BERÄKNA FÖRSKJUTNING I HÖJDLED (Y-AXELN) FÖR ATT LINJERA CIRKEL x ---
-        # Vi letar upp var cirkeln med potens k=1 (alltså x) börjar i båda diagrammen
         y_offset_fig2 = 0.0
         
-        # Hitta startpositionen (centrum minus radie, vilket blir bottenkanten) för k=1 i diagram 1
         bottom_x_fig1 = 0.0
         for k, x_center, diameter in centers_sample:
             if k == 1:
                 bottom_x_fig1 = x_center - (diameter / 2.0)
                 break
                 
-        # Hitta startpositionen för k=1 i diagram 2
         bottom_x_fig2 = 0.0
         for k, x_center, diameter in main_centers_v:
             if k == 1:
                 bottom_x_fig2 = x_center - (diameter / 2.0)
                 break
         
-        # Skillnaden blir vår vertikala offset för diagram 2 så att de linjerar perfekt
         y_offset_fig2 = bottom_x_fig1 - bottom_x_fig2
 
         # --------------------------------------------------
@@ -254,11 +251,10 @@ def render(math_data):
             cx = x_center + radius * np.cos(theta_upper)
             cy = radius * np.sin(theta_upper)
             
-            # Vi lägger till y_offset_fig2 på y-axeln (cx) för att flytta hela hjulet i höjdled
             x_bg2.extend(list(-cy + fig2_x_offset) + [None])
             y_bg2.extend(list(cx + y_offset_fig2) + [None])
 
-        # Baslinje 2 (Flyttas också med samma höjdjustering)
+        # Baslinje 2
         target_value_v = sum(d for _, _, d in main_centers_v) if main_centers_v else target_value
         x_bg2.extend([fig2_x_offset, fig2_x_offset, None])
         y_bg2.extend([y_offset_fig2, y_offset_fig2 + target_value_v, None])
@@ -266,7 +262,7 @@ def render(math_data):
         fig.add_trace(go.Scatter(x=x_bg2, y=y_bg2, mode="lines", line=dict(color=line_color, width=2.5), hoverinfo="skip", showlegend=False))
 
 
-        # --- GEMENSAM SKALNING (Anpassad för höjdjusteringen) ---
+        # --- GEMENSAM SKALNING ---
         y_max_bound = max(target_value, y_offset_fig2 + target_value_v)
         y_min_bound = min(0.0, y_offset_fig2)
         
