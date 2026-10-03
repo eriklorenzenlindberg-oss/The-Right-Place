@@ -230,8 +230,8 @@ def render(math_data):
     x_numeric = math_data["x_numeric"]
     
     # Hämta de förberäknade listorna med längder/diametrar från calculations.py
-    lengths1_numeric = math_data["lengths1_numeric"]
-    lengths2_numeric = math_data["lengths2_numeric"]
+    lengths1_numeric = math_data.get("lengths1_numeric", [float(x_numeric**k) for k in range(n)])
+    lengths2_numeric = math_data.get("lengths2_numeric", lengths1_numeric.copy())
     
     raw_matches = find_math_structures_logical(n, minimal_poly, x_numeric)
 
@@ -244,11 +244,11 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # NY LAYOUT: Tre kolumner (Vänster diagram, Höger diagram, Kontroller längst till höger)
-    col_plot1, col_plot2, col_controls = st.columns([4, 4, 3])
+    # Explicit bredd: 4 enheter till varje diagram, 2 enheter till kontrollerna
+    col_plot1, col_plot2, col_controls = st.columns([4, 4, 2])
 
     with col_controls:
-        max_overlap = st.checkbox("Overlap", value=True, key="circles_overlap")
+        max_overlap = st.checkbox("Overlap", value=True, key=f"circles_overlap_{n}")
         
         if max_overlap:
             final_layouts1 = evaluate_global_layout_numeric_v2(sorted_matches, lengths1_numeric)
@@ -259,3 +259,38 @@ def render(math_data):
 
         combo_labels = [" + ".join(get_math_label(k) for k in combo) for combo in final_layouts1]
         selected_option = st.radio(
+            "Select combination to highlight:",
+            options=combo_labels,
+            index=0,
+            key=f"circles_highlight_{n}_{max_overlap}"
+        )
+        selected_idx = combo_labels.index(selected_option)
+        
+        # FELSÖKNING: Visar om data skiljer sig (Ta bort denna rad sen om du vill)
+        st.write(f"**Info:** Diam 1 (Vänster): `{lengths1_numeric[0]:.3f}` | Diam 1 (Höger): `{lengths2_numeric[0]:.3f}`")
+
+    line_color, bg_color = "#FFFFFF", "rgba(0,0,0,0)"
+
+    # KOLUMN 1: Standarddiagrammet (Vänster)
+    with col_plot1:
+        st.caption("Standard (Halvcirkel 1 = 1)")
+        fig1 = draw_single_rotated_plot(final_layouts1, selected_idx, lengths1_numeric, line_color, bg_color)
+        st.plotly_chart(fig1, use_container_width=True, key=f"semicircles_plot_left_{n}")
+
+    # KOLUMN 2: Det modifierade diagrammet (Höger)
+    with col_plot2:
+        st.caption("Modifierad (Halvcirkel 1 = 1 + v)")
+        fig2 = draw_single_rotated_plot(final_layouts2, selected_idx, lengths2_numeric, line_color, bg_color)
+        st.plotly_chart(fig2, use_container_width=True, key=f"semicircles_plot_right_{n}")
+
+    # CSS-hack för att dölja verktygsraden
+    st.markdown(
+        """
+        <style>
+        .modebar {
+            display: none !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
