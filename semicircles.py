@@ -29,12 +29,16 @@ def find_math_structures_logical(n, minimal_poly, x_numeric):
     if minimal_poly is None:
         return [tuple(range(n))]
         
+    # Beräkna max tillåten potens baserat på din regel: x^k <= summan av huvudleden
     target_value = sum(float(x_numeric**m) for m in range(n))
     
+    # Vi loopar uppåt tills x^k passerar target_value för att hitta den exakta matematiska gränsen
     max_k = n
     while float(x_numeric**max_k) <= target_value:
         max_k += 1
     
+    # Vi lägger till en liten marginal (t.ex. +2) för säkerhets skull vid avrundningar, 
+    # men sätter ett golv på minst n+5 så små ekvationer inte stryps för tidigt.
     MAX_POWER = max(max_k + 2, n + 5)
     VECTOR_SIZE = MAX_POWER + 1
     
@@ -84,6 +88,8 @@ def find_math_structures_logical(n, minimal_poly, x_numeric):
                     
                 potenser = [idx for idx, v in enumerate(ny_vektor) if v == 1]
                 
+                # Här tillämpar vi din regel strängt under själva sökningen:
+                # Om kombinationen innehåller en potens som är större än vår geometriska maxgräns, utesluter vi den.
                 if potenser and max(potenser) > max_k:
                     continue
                     
@@ -97,13 +103,18 @@ def find_math_structures_logical(n, minimal_poly, x_numeric):
                         
     return sorted(list(giltiga_kombinationer), key=lambda c: (len(c), c))
 
+
 def evaluate_global_layout_numeric(sorted_matches, x_numeric):
-    """ Matchar permutationer mot en global databas av existerande centrum """
+    """ 
+    En stabil, numerisk ersättare till den gamla layout-loopen.
+    Matchar permutationer mot en global databas av existerande centrum.
+    """
     optimized_layouts = []
-    global_drawn_centers = set()
+    global_drawn_centers = set() # Sparar par av (potens, avrundat_centrum)
     
     for idx, combo_keys in enumerate(sorted_matches):
         if idx == 0:
+            # Huvudleden sätter baslinjen
             optimized_layouts.append(combo_keys)
             centers = get_layer_geometry_numeric(combo_keys, x_numeric)
             for k, x_center, _ in centers:
@@ -113,18 +124,20 @@ def evaluate_global_layout_numeric(sorted_matches, x_numeric):
         best_score = -1
         best_layout = tuple(sorted(list(combo_keys)))
         
+        # Testa permutationer för att hitta var vi återanvänder flest cirklar
         for perm in itertools.permutations(combo_keys):
             centers = get_layer_geometry_numeric(perm, x_numeric)
             score = 0
             for k, x_center, _ in centers:
                 if (k, round(x_center, 5)) in global_drawn_centers:
-                    score += 5
+                    score += 5  # Hög poäng för perfekt överlappning av exakt samma cirkel
             
             if score > best_score:
                 best_score = score
                 best_layout = perm
                 
         optimized_layouts.append(best_layout)
+        # Uppdatera den globala poolen med cirklarna från den valda layouten
         final_centers = get_layer_geometry_numeric(best_layout, x_numeric)
         for k, x_center, _ in final_centers:
             global_drawn_centers.add((k, round(x_center, 5)))
@@ -150,11 +163,10 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # Fast breddförhållande precis som i iso.py
-    col_plot, col_controls = st.columns([8, 2])
+    col_plot, col_controls = st.columns([6, 3])
 
     with col_controls:
-        max_overlap = st.checkbox("Overlap", value=True, key=f"circles_overlap_{n}")
+        max_overlap = st.checkbox("Overlap", value=True, key="circles_overlap")
         
         if max_overlap:
             final_layouts = evaluate_global_layout_numeric(sorted_matches, x_numeric)
@@ -171,88 +183,74 @@ def render(math_data):
         selected_idx = combo_labels.index(selected_option)
 
     with col_plot:
+        height=100,
         line_color, bg_color = "#FFFFFF", "rgba(0,0,0,0)"
         fig = go.Figure()
+        x_lines, y_lines = [], []
         theta_upper = np.linspace(0, np.pi, 40)
-        
-        # Beräkna hur mycket cirklarna buktar ut för att sätta ett horisontellt mellanrum
-        centers_sample = get_layer_geometry_numeric(final_layouts, x_numeric)
-        max_radius_sample = max((d/2.0) for _, _, d in centers_sample) if centers_sample else (target_value * 0.5)
-        
-        gap = max_radius_sample * 0.8
-        fig2_x_offset = -(max_radius_sample * 2.0 + gap)
 
-        x_background, y_background = [], []
+        # Rita den markerade kombinationen (Tjock linje)
+        if 0 <= selected_idx < len(final_layouts):
+            chosen_combo = final_layouts[selected_idx]
+            chosen_centers = get_layer_geometry_numeric(chosen_combo, x_numeric)
+            for k, x_center, diameter in chosen_centers:
+                radius = diameter / 2.0
+                cx = x_center + radius * np.cos(theta_upper)
+                cy = radius * np.sin(theta_upper)
+                
+                fig.add_trace(go.Scatter(
+                    x=cx, y=cy, 
+                    mode="lines", 
+                    line=dict(color=line_color, width=2.5), 
+                    hoverinfo="skip", 
+                    showlegend=False
+                ))
+
+                    # Rita alla unika cirklar i bakgrunden (Tunna linjer)
         all_radii = []
-
-        # LOOPA IGENOM BÅDA DIAGRAMMEN (0 = Vänster, 1 = Höger)
-        for fig_idx in range(2):
-            x_offset = 0.0 if fig_idx == 0 else fig2_x_offset
-
-            # 1. Rita tunna bakgrundslinjer
-            drawn_circles = set()
-            for combo in final_layouts:
-                centers = get_layer_geometry_numeric(combo, x_numeric)
-                for k, x_center, diameter in centers:
-                    radius = diameter / 2.0
-                    all_radii.append(radius)
-                    
-                    circle_id = (k, round(x_center, 5))
-                    if circle_id not in drawn_circles:
-                        drawn_circles.add(circle_id)
-                        cx = x_center + radius * np.cos(theta_upper)
-                        cy = radius * np.sin(theta_upper)
-                        
-                        # Roterad 90 grader horisontellt bredvid varandra
-                        x_background.extend(list(-cy + x_offset) + [None])
-                        y_background.extend(list(cx) + [None])
-
-            # Baslinje
-            x_background.extend([x_offset, x_offset, None])
-            y_background.extend([0.0, target_value, None])
-
-            # 2. Rita den markerade tjocka linjen
-            if 0 <= selected_idx < len(final_layouts):
-                chosen_combo = final_layouts[selected_idx]
-                chosen_centers = get_layer_geometry_numeric(chosen_combo, x_numeric)
-                for k, x_center, diameter in chosen_centers:
-                    radius = diameter / 2.0
+        drawn_circles = set()
+        for combo in final_layouts:
+            centers = get_layer_geometry_numeric(combo, x_numeric)
+            for k, x_center, diameter in centers:
+                radius = diameter / 2.0
+                all_radii.append(radius)
+                
+                circle_id = (k, round(x_center, 5))
+                if circle_id not in drawn_circles:
+                    drawn_circles.add(circle_id)
                     cx = x_center + radius * np.cos(theta_upper)
                     cy = radius * np.sin(theta_upper)
-                    
-                    fig.add_trace(go.Scatter(
-                        x=-cy + x_offset, y=cx, 
-                        mode="lines", 
-                        line=dict(color=line_color, width=2.5), 
-                        hoverinfo="skip", 
-                        showlegend=False
-                    ))
+                    x_lines.extend(list(cx) + [None])
+                    y_lines.extend(list(cy) + [None])
 
-        # Skicka in bakgrundslinjerna i figuren
+        x_lines.extend([0.0, target_value, None])
+        y_lines.extend([0.0, 0.0, None])
+
         fig.add_trace(go.Scatter(
-            x=x_background, y=y_background, 
+            x=x_lines, y=y_lines, 
             mode="lines", 
             line=dict(color=line_color, width=0.7), 
             hoverinfo="skip", 
             showlegend=False
         ))
 
-        # --- SKALNING OCH GRÄNSER ---
-        y_min = -target_value * 0.05
-        y_max = target_value + (target_value * 0.05)
-        x_min = fig2_x_offset - (max_radius_sample * 1.1)
-        x_max = max_radius_sample * 0.1
+        # Geometrisk skalning 1:1
+        max_actual_height = max(all_radii) if all_radii else (target_value * 0.5)
+        base_x_margin = target_value * 0.05
+        total_graph_width = target_value + (2 * base_x_margin)
+        required_y_space = total_graph_width * 0.5
 
-        y_span = y_max - y_min
-        x_span = x_max - x_min
-        if y_span > x_span:
-            diff = (y_span - x_span) / 2.0
-            x_min -= diff
-            x_max += diff
+        if max_actual_height > (required_y_space * 0.85):
+            required_y_space = max_actual_height / 0.80
+            total_x_span = required_y_space * 2.0
+            x_min = -(total_x_span - target_value) / 2.0
+            x_max = target_value + (total_x_span - target_value) / 2.0
         else:
-            diff = (x_span - y_span) / 2.0
-            y_min -= diff
-            y_max += diff
+            x_min, x_max = -base_x_margin, target_value + base_x_margin
+
+        y_center_point = max_actual_height / 2.0
+        y_min = y_center_point - (required_y_space / 2.0)
+        y_max = y_center_point + (required_y_space / 2.0)
 
         fig.update_layout(
             plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
@@ -261,11 +259,16 @@ def render(math_data):
             yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
         )
 
-        st.plotly_chart(fig, use_container_width=True, key=f"semicircles_combined_{n}")
-
-    st.markdown(
-        """
-        <style>
-        .modebar { display: none !important; }
-        </style>
-        """,
+        # NYTT: Detta CSS-hack tvingar webbläsaren att dölja hela verktygsraden
+        st.markdown(
+            """
+            <style>
+            .modebar {
+                display: none !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        st.plotly_chart(fig, use_container_width=True, key="semicircles_plot_clean")
