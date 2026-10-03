@@ -123,7 +123,7 @@ with b_kol:
     placeholder_x = st.empty()
 
     add_value_str = st.text_input(
-        "v (adds to side 1):", 
+        r"$v$ (adds to side 1):", 
         value="x^n-1"
     )
 
