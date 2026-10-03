@@ -162,8 +162,8 @@ def render(math_data):
         x_background, y_background = [], []
         all_radii = []
 
-        # Vi mäter utskjutet på cirklarna för att beräkna ett bra mellanrum
-        centers_sample = get_layer_geometry_numeric(final_layouts, x_numeric)
+        # KORRIGERAT: Vi skickar in final_layouts[0] istället för hela listan
+        centers_sample = get_layer_geometry_numeric(final_layouts[0], x_numeric) if final_layouts else []
         max_radius = max((d/2.0) for _, _, d in centers_sample) if centers_sample else (target_value * 0.5)
         
         gap = max_radius * 0.8
