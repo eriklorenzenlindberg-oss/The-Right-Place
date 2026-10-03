@@ -13,6 +13,7 @@ def get_math_label(power):
     return f"x{''.join(superscripts.get(c, c) for c in str(power_int))}"
 
 def get_layer_geometry_numeric(combo, x_numeric):
+    """ Beräknar geometri och centrum baserat på flyttalsvärden """
     centers = []
     current_x = 0.0
     for k in combo:
@@ -23,6 +24,7 @@ def get_layer_geometry_numeric(combo, x_numeric):
     return centers
 
 def find_math_structures_logical(n, minimal_poly, x_numeric):
+    """ Sökning som dynamiskt sätter gränsen baserat på summan av huvudleden """
     x = sp.Symbol("x")
     if minimal_poly is None:
         return [tuple(range(n))]
@@ -89,6 +91,7 @@ def find_math_structures_logical(n, minimal_poly, x_numeric):
     return sorted(list(giltiga_kombinationer), key=lambda c: (len(c), c))
 
 def evaluate_global_layout_numeric(sorted_matches, x_numeric):
+    """ Matchar permutationer mot en global databas av existerande centrum """
     optimized_layouts = []
     global_drawn_centers = set()
     for idx, combo_keys in enumerate(sorted_matches):
@@ -133,8 +136,8 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # Korrekt anrop med kolumnbredder angivna
-    col_plot, col_controls = st.columns([4, 1])
+    # Sidopanels-layout
+    col_plot, col_controls = st.columns([8, 2])
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key=f"circles_overlap_{n}")
@@ -152,7 +155,7 @@ def render(math_data):
         )
         selected_idx = combo_labels.index(selected_option)
 
-        with col_plot:
+    with col_plot:
         line_color, bg_color = "#FFFFFF", "rgba(0,0,0,0)"
         fig = go.Figure()
         theta_upper = np.linspace(0, np.pi, 40)
@@ -163,11 +166,10 @@ def render(math_data):
         centers_sample = get_layer_geometry_numeric(final_layouts, x_numeric)
         max_radius = max((d/2.0) for _, _, d in centers_sample) if centers_sample else (target_value * 0.5)
         
-        # fig2_x_offset flyttar det andra diagrammet till vänster längs x-axeln
         gap = max_radius * 0.8
         fig2_x_offset = -(max_radius * 2.0 + gap)
 
-        # LOOPA IGENOM BÅDA DIAGRAMMEN (0 = Vänster/Standard, 1 = Höger/Kopia)
+        # LOOPA IGENOM BÅDA DIAGRAMMEN (0 = Vänster, 1 = Höger)
         for fig_idx in range(2):
             x_offset = 0.0 if fig_idx == 0 else fig2_x_offset
 
@@ -185,11 +187,10 @@ def render(math_data):
                         cx = x_center + radius * np.cos(theta_upper)
                         cy = radius * np.sin(theta_upper)
                         
-                        # Roterad 90 grader och förskjuten med x_offset
                         x_background.extend(list(-cy + x_offset) + [None])
                         y_background.extend(list(cx) + [None])
 
-            # Rita baslinjen för detta diagram
+            # Baslinje
             x_background.extend([x_offset, x_offset, None])
             y_background.extend([0.0, target_value, None])
 
@@ -215,15 +216,12 @@ def render(math_data):
             hoverinfo="skip", showlegend=False
         ))
 
-        # --- SYNKRONISERAD OCH EXAKT SKALNING ---
+        # --- SYNKRONISERAD SKALNING ---
         y_min = -target_value * 0.05
         y_max = target_value + (target_value * 0.05)
-        
-        # X-axeln spänner nu över BÅDA diagrammens bredd
         x_min = fig2_x_offset - (max_radius * 1.1)
         x_max = max_radius * 0.1
 
-        # Tvinga kvadratisk 1:1 proportionalitet
         y_span = y_max - y_min
         x_span = x_max - x_min
         if y_span > x_span:
@@ -244,5 +242,11 @@ def render(math_data):
 
         st.plotly_chart(fig, use_container_width=True, key=f"semicircles_combined_{n}")
 
-
-    st.markdown("<style>.modebar { display: none !important; }</style>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <style>
+        .modebar { display: none !important; }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
