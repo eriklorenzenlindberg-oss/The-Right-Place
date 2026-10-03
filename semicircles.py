@@ -153,7 +153,7 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # KORRIGERAT: Lagt till kolumnbredderna [8, 2] i st.columns så det inte kraschar
+    # Sidopanels-layout med kolumnbredder angivna
     col_plot, col_controls = st.columns([8, 2])
 
     with col_controls:
@@ -177,13 +177,12 @@ def render(math_data):
         fig = go.Figure()
         theta_upper = np.linspace(0, np.pi, 40)
         
-        # Mät radien för diagram 1
-        chosen_main_line = sorted_matches if sorted_matches else []
-        centers_sample = get_layer_geometry_numeric(chosen_main_line, x_numeric)
+        # KORRIGERING: Mät radien för diagram 1 utifrån den enskilda kombinationen main_line
+        centers_sample = get_layer_geometry_numeric(main_line, x_numeric) if main_line else []
         max_radius = max((d/2.0) for _, _, d in centers_sample) if centers_sample else (target_value * 0.5)
         
-        # Geometri för diagram 2 (Enbart huvudleden)
-        main_centers_v = get_layer_geometry_from_list(chosen_main_line, lengths2_numeric)
+        # KORRIGERING: Beräkna geometri för diagram 2 (Enbart huvudleden) utifrån main_line
+        main_centers_v = get_layer_geometry_from_list(main_line, lengths2_numeric) if main_line else []
         max_rad2 = max((d/2.0) for _, _, d in main_centers_v) if main_centers_v else max_radius
         
         # POSITIV OFFSET: Flyttar diagram 2 till höger om diagram 1
