@@ -23,20 +23,6 @@ def get_layer_geometry_numeric(combo, x_numeric):
         current_x += diameter
     return centers
 
-def get_layer_geometry_from_list(combo, lengths_numeric):
-    """ Beräknar geometri baserat på en färdig lista med diametrar (för 1 + v) """
-    centers = []
-    current_x = 0.0
-    for k in combo:
-        if k < len(lengths_numeric):
-            diameter = float(lengths_numeric[k])
-        else:
-            diameter = 1.0
-        radius = diameter / 2.0
-        centers.append((k, current_x + radius, diameter))
-        current_x += diameter
-    return centers
-
 def find_math_structures_logical(n, minimal_poly, x_numeric):
     """ Sökning som dynamiskt sätter gränsen baserat på summan av huvudleden """
     x = sp.Symbol("x")
@@ -137,10 +123,6 @@ def render(math_data):
     minimal_poly = math_data["minimal_poly"]
     x_numeric = math_data["x_numeric"]
     
-    # Hämta de förberäknade listorna från calculations.py
-    lengths1_numeric = math_data.get("lengths1_numeric", [float(x_numeric**k) for k in range(n)])
-    lengths2_numeric = math_data.get("lengths2_numeric", lengths1_numeric.copy())
-    
     raw_matches = find_math_structures_logical(n, minimal_poly, x_numeric)
     if not raw_matches or len(raw_matches) == 0:
         st.info("The main line is missing from the data.")
@@ -180,7 +162,7 @@ def render(math_data):
         x_background, y_background = [], []
         all_radii = []
 
-        # Beräkna maxradie för figur 1 för att sätta ett horisontellt mellanrum
+        # KORRIGERAT: Vi skickar in final_layouts[0] istället för hela listan
         centers_sample = get_layer_geometry_numeric(final_layouts[0], x_numeric) if final_layouts else []
         max_radius = max((d/2.0) for _, _, d in centers_sample) if centers_sample else (target_value * 0.5)
         
@@ -190,17 +172,11 @@ def render(math_data):
         # LOOPA IGENOM BÅDA DIAGRAMMEN (0 = Vänster, 1 = Höger)
         for fig_idx in range(2):
             x_offset = 0.0 if fig_idx == 0 else fig2_x_offset
-            
-            # Välj rätt geometrifunktion och datakälla baserat på vilket diagram som ritas
-            if fig_idx == 0:
-                def get_geom(combo): return get_layer_geometry_numeric(combo, x_numeric)
-            else:
-                def get_geom(combo): return get_layer_geometry_from_list(combo, lengths2_numeric)
 
             # 1. Rita tunna bakgrundslinjer för detta diagram
             drawn_circles = set()
             for combo in final_layouts:
-                centers = get_geom(combo)
+                centers = get_layer_geometry_numeric(combo, x_numeric)
                 for k, x_center, diameter in centers:
                     radius = diameter / 2.0
                     all_radii.append(radius)
@@ -214,18 +190,14 @@ def render(math_data):
                         x_background.extend(list(-cy + x_offset) + [None])
                         y_background.extend(list(cx) + [None])
 
-            # Beräkna den specifika baslinjelängden för just detta diagram
-            first_combo_centers = get_geom(final_layouts[0]) if final_layouts else []
-            current_target = sum(d for _, _, d in first_combo_centers) if first_combo_centers else target_value
-
             # Baslinje
             x_background.extend([x_offset, x_offset, None])
-            y_background.extend([0.0, current_target, None])
+            y_background.extend([0.0, target_value, None])
 
             # 2. Rita den markerade tjocka linjen för detta diagram
             if 0 <= selected_idx < len(final_layouts):
                 chosen_combo = final_layouts[selected_idx]
-                chosen_centers = get_geom(chosen_combo)
+                chosen_centers = get_layer_geometry_numeric(chosen_combo, x_numeric)
                 for k, x_center, diameter in chosen_centers:
                     radius = diameter / 2.0
                     cx = x_center + radius * np.cos(theta_upper)
@@ -244,5 +216,37 @@ def render(math_data):
             hoverinfo="skip", showlegend=False
         ))
 
-        # --- SYNKRONISERAD OCH DYNAMISK SKALNING ---
-        max_actual_rad = max(all_radii) if all_radii else max_radius
+        # --- SYNKRONISERAD SKALNING ---
+        y_min = -target_value * 0.05
+        y_max = target_value + (target_value * 0.05)
+        x_min = fig2_x_offset - (max_radius * 1.1)
+        x_max = max_radius * 0.1
+
+        y_span = y_max - y_min
+        x_span = x_max - x_min
+        if y_span > x_span:
+            diff = (y_span - x_span) / 2.0
+            x_min -= diff
+            x_max += diff
+        else:
+            diff = (x_span - y_span) / 2.0
+            y_min -= diff
+            y_max += diff
+
+        fig.update_layout(
+            plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
+            margin=dict(l=10, r=10, t=10, b=10), height=400, dragmode=False,
+            xaxis=dict(visible=False, range=[x_min, x_max]),
+            yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
+        )
+
+        st.plotly_chart(fig, use_container_width=True, key=f"semicircles_combined_{n}")
+
+    st.markdown(
+        """
+        <style>
+        .modebar { display: none !important; }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
