@@ -121,7 +121,8 @@ def evaluate_global_layout_from_list(sorted_matches, lengths_numeric):
         best_layout = tuple(sorted(list(combo_keys)))
         
         for perm in itertools.permutations(combo_keys):
-            centers = get_layer_geometry_numeric_or_list(perm, lengths_numeric) if 'get_layer_geometry_numeric_or_list' in globals() else get_layer_geometry_from_list(perm, lengths_numeric)
+            # KORRIGERING: Använd enbart den stabila get_layer_geometry_from_list funktionen
+            centers = get_layer_geometry_from_list(perm, lengths_numeric)
             score = 0
             for k, x_center, _ in centers:
                 if (k, round(x_center, 5)) in global_drawn_centers:
@@ -137,6 +138,7 @@ def evaluate_global_layout_from_list(sorted_matches, lengths_numeric):
             global_drawn_centers.add((k, round(x_center, 5)))
             
     return optimized_layouts
+
 
 def draw_one_vertical_plot(fig, final_layouts, lengths_numeric, x_offset, selected_idx, line_color):
     """ Ritar ett enskilt vertikalt roterat diagram inuti en delad figur """
