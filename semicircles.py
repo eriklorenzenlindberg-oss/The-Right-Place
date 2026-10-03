@@ -163,8 +163,8 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    # DELA UPP I TRE KOLUMNER: Två för diagrammen och en för kontrollerna längst till höger
-    col_plot1, col_plot2, col_controls = st.columns()
+    # KORRIGERAT: Vi skickar in siffran 3 för att skapa tre kolumner
+    col_plot1, col_plot2, col_controls = st.columns(3)
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key="circles_overlap")
