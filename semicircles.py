@@ -216,7 +216,7 @@ def render(math_data):
     sorted_matches = [main_line] + hidden_lines
 
     # Kontrollpanelen till höger, diagrammen till vänster
-    col_plot, col_controls = st.columns()
+    col_plot, col_controls = st.columns([8, 2])
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key=f"circles_overlap_{n}")
