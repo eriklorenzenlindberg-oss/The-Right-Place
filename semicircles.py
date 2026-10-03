@@ -274,4 +274,3 @@ def render(math_data):
         st.plotly_chart(fig, use_container_width=True, key=f"semicircles_combined_{n}")
 
     st.markdown("<style>.modebar { display: none !important; </style>", unsafe_allow_html=True)
-
