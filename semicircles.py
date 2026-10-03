@@ -153,7 +153,7 @@ def render(math_data):
     hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
     sorted_matches = [main_line] + hidden_lines
 
-    col_plot, col_controls = st.columns([6, 3])
+    col_plot, col_controls = st.columns([8, 2])
 
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key=f"circles_overlap_{n}")
@@ -176,15 +176,21 @@ def render(math_data):
         fig = go.Figure()
         theta_upper = np.linspace(0, np.pi, 40)
         
-        # KORRIGERING: Vi skickar in sorted_matches[0] (huvudleden) för att mäta radien korrekt
-        centers_sample = get_layer_geometry_numeric(sorted_matches[0], x_numeric) if sorted_matches else []
+        # Mät radien för diagram 1
+        chosen_main_line = sorted_matches[0] if sorted_matches else []
+        centers_sample = get_layer_geometry_numeric(chosen_main_line, x_numeric)
         max_radius = max((d/2.0) for _, _, d in centers_sample) if centers_sample else (target_value * 0.5)
         
+        # Geometri för diagram 2 (Enbart huvudleden med 1 + v)
+        main_centers_v = get_layer_geometry_from_list(chosen_main_line, lengths2_numeric)
+        max_rad2 = max((d/2.0) for _, _, d in main_centers_v) if main_centers_v else max_radius
+        
+        # POSITIV OFFSET: Flyttar diagram 2 till höger om diagram 1
         gap = max_radius * 0.8
-        fig2_x_offset = -(max_radius * 2.0 + gap)
+        fig2_x_offset = max_rad2 * 2.0 + gap
 
         # --------------------------------------------------
-        # DIAGRAM 1: STANDARD (VÄNSTER) - Visar allt
+        # DIAGRAM 1: STANDARD (VÄNSTER)
         # --------------------------------------------------
         x_bg1, y_bg1 = [], []
         drawn_circles = set()
@@ -222,13 +228,11 @@ def render(math_data):
         # --------------------------------------------------
         x_bg2, y_bg2 = [], []
         
-        # Beräkna geometri för ENBART huvudleden (index 0) med modifierade diametrar
-        main_centers_v = get_layer_geometry_from_list(sorted_matches[0], lengths2_numeric) if sorted_matches else []
-        
         for k, x_center, diameter in main_centers_v:
             radius = diameter / 2.0
             cx = x_center + radius * np.cos(theta_upper)
             cy = radius * np.sin(theta_upper)
+            # Här lägger vi till den positiva offseten för att skjuta det till höger
             x_bg2.extend(list(-cy + fig2_x_offset) + [None])
             y_bg2.extend(list(cx) + [None])
 
@@ -240,14 +244,14 @@ def render(math_data):
         fig.add_trace(go.Scatter(x=x_bg2, y=y_bg2, mode="lines", line=dict(color=line_color, width=2.5), hoverinfo="skip", showlegend=False))
 
 
-        # --- GEMENSAM SKALNING ---
+        # --- GEMENSAM SKALNING (Anpassad för högerplacering) ---
         y_max_bound = max(target_value, target_value_v)
         y_min = -y_max_bound * 0.05
         y_max = y_max_bound + (y_max_bound * 0.05)
         
-        max_rad2 = max((d/2.0) for _, _, d in main_centers_v) if main_centers_v else max_radius
-        x_min = fig2_x_offset - (max_rad2 * 1.1)
-        x_max = max_radius * 0.1
+        # X sträcker sig från diagram 1:s ytterkant (vänster) till diagram 2:s baslinje (höger)
+        x_min = -(max_radius * 2.0) - (max_radius * 0.1)
+        x_max = fig2_x_offset + (max_radius * 0.1)
 
         y_span = y_max - y_min
         x_span = x_max - x_min
@@ -269,4 +273,5 @@ def render(math_data):
 
         st.plotly_chart(fig, use_container_width=True, key=f"semicircles_combined_{n}")
 
-    st.markdown("<style>.modebar { display: none !important; }</style>", unsafe_allow_html=True)
+    st.markdown("<style>.modebar { display: none !important; </style>", unsafe_allow_html=True)
+
