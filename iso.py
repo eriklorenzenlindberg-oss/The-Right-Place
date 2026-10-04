@@ -9,13 +9,13 @@ from scipy.spatial import ConvexHull
 # TEXTFORMATERING FÖR MATEMATISKA TEXTER
 # --------------------------------------------------
 
-def format_label(power, is_fig2=False):
+def format_label(power, is_fig2=False, v_str="v"):
     """
-    Genererar snygga matematiska strängar med HTML-sup-taggar.
-    Om det är Figur 2 och indexet är 0, märk kanten med '1 + v' istället för '1'.
+    Genererar snygga matematiska strängar.
+    Om det är Figur 2 och power == 0, byt ut 'v' mot det faktiska värdet.
     """
     if is_fig2 and power == 0:
-        return "1 + v"
+        return f"1 + {v_str}"  # Här spottar den ut t.ex. "1 + a"
 
     if power == 0:
         return "1"
@@ -23,6 +23,7 @@ def format_label(power, is_fig2=False):
         return "x"
     else:
         return f"x<sup>{power}</sup>"
+
 
 
 # --------------------------------------------------
