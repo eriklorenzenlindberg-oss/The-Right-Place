@@ -283,6 +283,7 @@ def render(math_data):
             y_max += diff
 
         fig.update_layout(
+            height=290,
             plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
             margin=dict(l=10, r=10, t=10, b=10), height=400, dragmode=False,
             xaxis=dict(visible=False, range=[x_min, x_max]),
