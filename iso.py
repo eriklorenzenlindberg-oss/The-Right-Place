@@ -9,13 +9,13 @@ from scipy.spatial import ConvexHull
 # TEXTFORMATERING FÖR MATEMATISKA TEXTER
 # --------------------------------------------------
 
-def format_label(power, is_fig2=False, v_str="v"):
+def format_label(power, is_fig2=False):
     """
-    Genererar snygga matematiska strängar.
-    Om det är Figur 2 och power == 0, byt ut 'v' mot det faktiska värdet.
+    Genererar snygga matematiska strängar med HTML-sup-taggar.
+    Om det är Figur 2 och indexet är 0, märk kanten med '1 + v' istället för '1'.
     """
     if is_fig2 and power == 0:
-        return f"1 + {v_str}"  # Här spottar den ut t.ex. "1 + a"
+        return "1 + v"
 
     if power == 0:
         return "1"
@@ -23,7 +23,6 @@ def format_label(power, is_fig2=False, v_str="v"):
         return "x"
     else:
         return f"x<sup>{power}</sup>"
-
 
 
 # --------------------------------------------------
@@ -95,11 +94,6 @@ def render(math_data):
     n = math_data["n"]
     lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
-    
-    # --- NYTT: Gör om det förenklade v-värdet till en ren textsträng ---
-    # Om v_simplified är ett tal eller en symbol (t.ex. 'a'), blir v_str = "a"
-    v_str = str(math_data["v_simplified"]) 
-
 
     # --- AUTOMATISKA DESIGNVAL ---
     # Linjetjockleken blir 0.3 upp till n=7, därefter 0.1
@@ -258,7 +252,7 @@ def render(math_data):
                     fig.add_annotation(
                         x=anno_pos[0],
                         y=anno_pos[1],
-                        label_text = format_label(dim_k, is_fig2=is_fig2, v_str=v_str),
+                        text=format_label(dim_k, is_fig2=is_fig2),
                         showarrow=False,
                         font=dict(color=line_color, size=10),
                         xref=x_ref_target,
