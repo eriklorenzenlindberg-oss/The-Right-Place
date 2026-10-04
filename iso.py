@@ -95,6 +95,11 @@ def render(math_data):
     n = math_data["n"]
     lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
+    
+    # --- NYTT: Gör om det förenklade v-värdet till en ren textsträng ---
+    # Om v_simplified är ett tal eller en symbol (t.ex. 'a'), blir v_str = "a"
+    v_str = str(math_data["v_simplified"]) 
+
 
     # --- AUTOMATISKA DESIGNVAL ---
     # Linjetjockleken blir 0.3 upp till n=7, därefter 0.1
@@ -253,7 +258,7 @@ def render(math_data):
                     fig.add_annotation(
                         x=anno_pos[0],
                         y=anno_pos[1],
-                        text=format_label(dim_k, is_fig2=is_fig2),
+                        label_text = format_label(dim_k, is_fig2=is_fig2, v_str=v_str),
                         showarrow=False,
                         font=dict(color=line_color, size=10),
                         xref=x_ref_target,
