@@ -93,6 +93,8 @@ def get_math_data(n, eq_input, add_value_str):
         minimal_poly = sp.expand(minimal_poly)
 
     # 6. Skapa pooler för geometrin
+    circle_pool = {}
+    circle_pool_symbolic = {}
     for k in range(40):
         circle_pool[k] = float(x_numeric**k)
         circle_pool_symbolic[k] = x_sym**k
