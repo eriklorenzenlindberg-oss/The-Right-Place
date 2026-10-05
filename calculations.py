@@ -37,24 +37,21 @@ def get_math_data(n, eq_input, add_value_str):
     eq_input = eq_input.replace("^", "**").strip()
     add_value_str = add_value_str.replace("^", "**").strip()
 
-    # Ta enbart bort explicit "v =" från v-rutan
+    # Ta bort explicit "v =" eller "v=" från v-rutan om det finns
     if add_value_str.startswith("v"):
         add_value_str = add_value_str.lstrip("v").lstrip("=").strip()
+    # Ta bort ett eventuellt inledande "x =" från x-rutan så att det inte krockar
+    if eq_input.startswith("x"):
+        eq_input = eq_input.lstrip("x").lstrip("=").strip()
 
-    # 2. STENSÄKER INMATNINGSKOLL
+    # 2. HELT IMPLICIT "x =" LOGIK
     if "=" in eq_input:
-        # Om det finns ett likhetstecken (t.ex. 1+x=x^n eller x=x^n-1) tar vi alltid Vänsterled - Högerled
+        # Undantag: Om användaren ändå skrev ett likhetstecken (t.ex. 1+x=x^n)
         left_str, right_str = eq_input.split("=")
         raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
     else:
-        # Om likhetstecken saknas helt
-        parsed_expr = sp.sympify(eq_input)
-        if parsed_expr.has(x_sym):
-            # T.ex. "x^n - x - 1" -> Detta är redan ett polynom som ska vara lika med 0
-            raw_expr = parsed_expr
-        else:
-            # T.ex. "2**(1/2)" -> Detta saknar x, så det betyder implicit x = 2**(1/2) -> x - 2**(1/2) = 0
-            raw_expr = x_sym - parsed_expr
+        # Standard: Allt i rutan är vad x är lika med (t.ex. x = x^n - 1)
+        raw_expr = x_sym - sp.sympify(eq_input)
 
     # 3. Kontrollera om n/2-substitution krävs
     has_fraction_exponent = "n/2" in eq_input or "n / 2" in eq_input
@@ -69,7 +66,7 @@ def get_math_data(n, eq_input, add_value_str):
         num, denom = sp.together(raw_expr).as_numer_denom()
         var_sym = x_sym
 
-    # STRUKTURPOLYNOM: Det polynom som användaren faktiskt menat, med n insatt
+    # STRUKTURPOLYNOM: Det polynom som definierar x, med n insatt
     structure_poly = sp.expand(num).subs(n_sym, n)
 
     # 4. Hitta den stabila numeriska roten
@@ -96,8 +93,6 @@ def get_math_data(n, eq_input, add_value_str):
         minimal_poly = sp.expand(minimal_poly)
 
     # 6. Skapa pooler för geometrin
-    circle_pool = {}
-    circle_pool_symbolic = {}
     for k in range(40):
         circle_pool[k] = float(x_numeric**k)
         circle_pool_symbolic[k] = x_sym**k
@@ -138,7 +133,7 @@ def get_math_data(n, eq_input, add_value_str):
 
     lengths1_numeric = [float(x_numeric**k) for k in range(n)]
     lengths2_numeric = lengths1_numeric.copy()
-    lengths2_numeric[0] = 1.0 + add_value_numeric   
+    lengths2_numeric = 1.0 + add_value_numeric   
 
     return {
         "n": n,
