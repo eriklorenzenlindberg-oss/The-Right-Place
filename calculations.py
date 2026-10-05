@@ -43,77 +43,67 @@ def get_math_data(n, eq_input, add_value_str):
     if add_value_str.startswith("v"):
         add_value_str = add_value_str.lstrip("v").lstrip("=").strip()
 
-    is_equation = "=" in eq_input
-    has_fraction_exponent = "n/2" in eq_input or "n / 2" in eq_input
-    use_substitution = is_equation and has_fraction_exponent and (n % 2 != 0)
-
-    circle_pool = {}
-    circle_pool_symbolic = {}
-
-    if is_equation:
-        # Skapa det råa uttrycket baserat på inmatningen
-        if use_substitution:
-            y_sym = sp.Symbol("y")
-            eq_input_substituted = eq_input.replace("x**(n/2)", "y**n").replace("x**(n / 2)", "y**n").replace("x", "y**2")
-            left_str, right_str = eq_input_substituted.split("=")
-            raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
-            var_sym = y_sym
-        else:
-            left_str, right_str = eq_input.split("=")
-            raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
-            var_sym = x_sym
-
-        # Multiplicera bort eventuella nämnare (t.ex. x-1) så att det blir ett rent polynom
-        num, denom = sp.together(raw_expr).as_numer_denom()
-        
-        # STRUKTURPOLYNOM: Det ursprungliga polynomet med n insatt (t.ex. x^5 - x^4 - 1)
-        structure_poly = sp.expand(num).subs(n_sym, n)
-
-        # Hitta den numeriska gissningen som vi vet fungerar stabilt
-        approx_root = find_numeric_root(structure_poly, var_sym)
-        
-        # MINIMALPOLYNOM: Hitta det sanna minimalpolynomet HELT UTAN flyttalsavrundningar
-        try:
-            all_exact_roots = sp.real_roots(structure_poly)
-            exact_root = min(all_exact_roots, key=lambda r: abs(float(r.evalf()) - approx_root))
-            raw_min_poly = sp.minpoly(exact_root, var_sym)
-            
-            if use_substitution:
-                minimal_poly = sp.expand(raw_min_poly).subs(y_sym, sp.sqrt(x_sym))
-            else:
-                minimal_poly = sp.expand(raw_min_poly)
-                
-        except Exception:
-            if use_substitution:
-                minimal_poly = sp.expand(structure_poly).subs(y_sym, sp.sqrt(x_sym))
-            else:
-                minimal_poly = sp.expand(structure_poly)
-
-        # Sätt det stabila flyttalsvärdet för x
-        x_numeric = approx_root if not use_substitution else approx_root ** 2
-
+    # 2. SMART INMATNINGSKOLL: Harmoniserar implicit och explicit inmatning till ett rått uttryck
+    if "=" in eq_input:
+        left_str, right_str = eq_input.split("=")
+        raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
     else:
-        # Implicit spår (om likhetstecken saknas, t.ex. x = 2**(1/2))
-        try:
-            explicit_expr = sp.sympify(eq_input)
-            explicit_evaluated = explicit_expr.subs(n_sym, n)
-            x_numeric = float(explicit_evaluated.evalf())
-        except Exception:
-            x_numeric = 1.2
+        parsed_expr = sp.sympify(eq_input)
+        # Om uttrycket redan innehåller x (t.ex. x^n - x - 1), är det ett polynom som ska vara = 0
+        if parsed_expr.has(x_sym):
+            raw_expr = parsed_expr
+        else:
+            # Om x saknas (t.ex. 2**(1/2)), betyder det implicit: x = uttryck -> x - uttryck = 0
+            raw_expr = x_sym - parsed_expr
+
+    # 3. Kontrollera om n/2-substitution krävs
+    has_fraction_exponent = "n/2" in eq_input or "n / 2" in eq_input
+    use_substitution = has_fraction_exponent and (n % 2 != 0)
+
+    if use_substitution:
+        y_sym = sp.Symbol("y")
+        # Gör substitutionen på det harmoniserade råa uttrycket
+        raw_expr_subs = raw_expr.subs(x_sym, y_sym**2).subs(x_sym**(n_sym/2), y_sym**n)
+        num, denom = sp.together(raw_expr_subs).as_numer_denom()
+        var_sym = y_sym
+    else:
+        num, denom = sp.together(raw_expr).as_numer_denom()
+        var_sym = x_sym
+
+    # STRUKTURPOLYNOM: Det polynom som användaren faktiskt matat in/menat, med n insatt (t.ex. x^5 - x^4 - 1)
+    structure_poly = sp.expand(num).subs(n_sym, n)
+
+    # 4. Hitta den stabila numeriska roten
+    approx_root = find_numeric_root(structure_poly, var_sym)
+    x_numeric = approx_root if not use_substitution else approx_root ** 2
+
+    # 5. MINIMALPOLYNOM: Det sanna irreducibla polynomet för semicircles.py
+    try:
+        all_exact_roots = sp.real_roots(structure_poly)
+        exact_root = min(all_exact_roots, key=lambda r: abs(float(r.evalf()) - approx_root))
+        raw_min_poly = sp.minpoly(exact_root, var_sym)
         
-        # Skapa ett låtsas-strukturpolynom baserat på värdet för att undvika krascher i resten av logiken
-        structure_poly = x_sym - x_numeric
-        minimal_poly = None
+        if use_substitution:
+            minimal_poly = sp.expand(raw_min_poly).subs(y_sym, sp.sqrt(x_sym))
+        else:
+            minimal_poly = sp.expand(raw_min_poly)
+    except Exception:
+        if use_substitution:
+            minimal_poly = sp.expand(structure_poly).subs(y_sym, sp.sqrt(x_sym))
+        else:
+            minimal_poly = sp.expand(structure_poly)
 
     if minimal_poly is not None:
         minimal_poly = sp.expand(minimal_poly)
 
-    # Skapa pooler för geometrin
+    # 6. Skapa pooler för geometrin
+    circle_pool = {}
+    circle_pool_symbolic = {}
     for k in range(40):
         circle_pool[k] = float(x_numeric**k)
         circle_pool_symbolic[k] = x_sym**k
 
-    # Tolka v-uttrycket
+    # 7. Tolka v-uttrycket
     try:
         add_expr = sp.sympify(add_value_str)
     except Exception:
@@ -125,21 +115,21 @@ def get_math_data(n, eq_input, add_value_str):
     except Exception:
         add_value_numeric = float(x_numeric)
 
-    # FÖRENKLING AV V: Använder structure_poly om det är en ekvation för att få x^4 istället för x^2 + x
+    # 8. FÖRENKLING AV V: Vi använder structure_poly istället för minimal_poly
+    # Detta gör att x^5 - 1 blir x^4 istället för x^2 + x
     simplified_v_expr = add_expr_evaluated
-    if is_equation and structure_poly is not None:
-        try:
-            if use_substitution:
-                y_sym = sp.Symbol("y")
-                v_in_y = sp.expand(add_expr_evaluated).subs(x_sym, y_sym**2)
-                rem_in_y = sp.rem(v_in_y, structure_poly, y_sym)
-                simplified_v_expr = sp.expand(rem_in_y).subs(y_sym, sp.sqrt(x_sym))
-            else:
-                simplified_v_expr = sp.rem(sp.expand(add_expr_evaluated), sp.expand(structure_poly), x_sym)
-        except Exception:
-            pass
+    try:
+        if use_substitution:
+            y_sym = sp.Symbol("y")
+            v_in_y = sp.expand(add_expr_evaluated).subs(x_sym, y_sym**2)
+            rem_in_y = sp.rem(v_in_y, structure_poly, y_sym)
+            simplified_v_expr = sp.expand(rem_in_y).subs(y_sym, sp.sqrt(x_sym))
+        else:
+            simplified_v_expr = sp.rem(sp.expand(add_expr_evaluated), sp.expand(structure_poly), x_sym)
+    except Exception:
+        pass
 
-    # AGGRESSIV HELTALSREDUCERING: Tvinga till heltal om uttrycket numeriskt är ett heltal
+    # 9. HELTALSREDUCERING: Tvinga till rent heltal om uttrycket numeriskt är ett heltal
     try:
         v_num_eval = float(simplified_v_expr.subs(x_sym, x_numeric).evalf())
         if abs(v_num_eval - round(v_num_eval)) < 1e-7:
@@ -154,11 +144,11 @@ def get_math_data(n, eq_input, add_value_str):
     return {
         "n": n,
         "x_numeric": x_numeric,
-        "x_symbolic": None if is_equation else x_numeric,
-        "is_equation": is_equation,
-        "minimal_poly": minimal_poly,       # Skickas till semicircles.py (bevarar dolda mönster)
-        "structure_poly": structure_poly,   # Det ursprungliga polynomet
-        "v_simplified": simplified_v_expr,  # Den rena förenklingen (t.ex. x^4)
+        "x_symbolic": None,
+        "is_equation": True,  # Sätts till True eftersom alla inmatningar nu hanteras som ekvationer
+        "minimal_poly": minimal_poly,
+        "structure_poly": structure_poly,
+        "v_simplified": simplified_v_expr,
         "circle_pool": circle_pool,
         "circle_pool_symbolic": circle_pool_symbolic,
         "lengths1_numeric": lengths1_numeric,  
