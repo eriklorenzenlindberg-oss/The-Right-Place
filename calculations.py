@@ -135,7 +135,7 @@ def get_math_data(n, eq_input, add_value_str):
 
     lengths1_numeric = [float(x_numeric**k) for k in range(n)]
     lengths2_numeric = lengths1_numeric.copy()
-    lengths2_numeric = 1.0 + add_value_numeric   
+    lengths2_numeric[0] = 1.0 + add_value_numeric   
 
     return {
         "n": n,
