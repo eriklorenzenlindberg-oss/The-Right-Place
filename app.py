@@ -108,7 +108,7 @@ a_kol, b_kol = st.columns([4, 1])
 # --------------------------------------------------
 with b_kol:
     n = st.number_input(
-        r"$n \text{ (dimensions):}$", 
+        r"$n \text{ (dimensions)=}$", 
         min_value=2, 
         max_value=15, 
         value=4, 
@@ -116,14 +116,14 @@ with b_kol:
     )
 
     eq_input = st.text_input(
-        r"$x \text{ (ratio):}$", 
+        r"$x \text{ (ratio)=}$", 
         value="1+x=x^n"
     )
 
     placeholder_x = st.empty()
 
     add_value_str = st.text_input(
-        r"$v \text{ (adds to side 1):}$", 
+        r"$v \text{ (adds to side 1)=}$", 
         value="x^n-1"
     )
 
