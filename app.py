@@ -117,7 +117,7 @@ with b_kol:
 
     eq_input = st.text_input(
         r"$x \text{ (ratio)=}$", 
-        value="2"
+        value="1+x=x^n"
     )
 
     placeholder_x = st.empty()
