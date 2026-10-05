@@ -1,33 +1,3 @@
-import sympy as sp
-import streamlit as st
-
-def find_numeric_root(expr, x_sym):
-    try:
-        f_num = sp.lambdify(x_sym, expr, "numpy")
-    except Exception:
-        f_num = lambda v: float(expr.subs(x_sym, v).evalf())
-    
-    steps = [0.001, 0.01, 0.1, 0.3, 0.5, 0.8, 1.0, 1.2, 1.5, 2.0, 3.0, 5.0, 10.0, 25.0, 50.0, 100.0]
-    best_guess = 1.2
-    
-    for i in range(len(steps) - 1):
-        try:
-            if f_num(steps[i]) * f_num(steps[i+1]) < 0:
-                best_guess = (steps[i] + steps[i+1]) / 2
-                break
-        except Exception:
-            pass
-
-    for guess in [best_guess, 1.2, 1.0, 0.5, 2.0]:
-        try:
-            root = sp.nsolve(expr, x_sym, guess, verify=False)
-            c = complex(root)
-            if abs(c.imag) < 1e-7 and c.real > 0:
-                return float(c.real)
-        except Exception:
-            continue
-    return 1.2
-
 @st.cache_data
 def get_math_data(n, eq_input, add_value_str):
     x_sym = sp.Symbol("x")
@@ -37,19 +7,19 @@ def get_math_data(n, eq_input, add_value_str):
     eq_input = eq_input.replace("^", "**").strip()
     add_value_str = add_value_str.replace("^", "**").strip()
 
-    # Avgör om det är en ekvation eller ett implicit uttryck
-if "=" in eq_input:
-    left_str, right_str = eq_input.split("=")
-    raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
-else:
-    parsed_expr = sp.sympify(eq_input)
-    # SMART KOLL: Om uttrycket redan innehåller symbolen x, är det ett polynom som ska vara = 0
-    if parsed_expr.has(x_sym):
-        raw_expr = parsed_expr
-    else:
-        # Om x saknas (t.ex. 2**(1/2)), betyder det x = uttryck
-        raw_expr = x_sym - parsed_expr
+    # Ta bort eventuella "x =" eller "x=" om användaren skrivit det explicit
+    if eq_input.startswith("x"):
+        eq_input = eq_input.lstrip("x").lstrip("=").strip()
+    if add_value_str.startswith("v"):
+        add_value_str = add_value_str.lstrip("v").lstrip("=").strip()
 
+    # Avgör om det är en implicit definition (uttryck) eller explicit (ekvation)
+    # Om det saknas "=" antar vi att användaren menar "x = uttryck" vilket blir "x - uttryck = 0"
+    if "=" in eq_input:
+        left_str, right_str = eq_input.split("=")
+        raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
+    else:
+        raw_expr = x_sym - sp.sympify(eq_input)
 
     # Hantera n/2 substitutionen om den behövs
     has_fraction_exponent = "n/2" in eq_input or "n / 2" in eq_input
@@ -152,4 +122,3 @@ else:
         "lengths1_numeric": lengths1_numeric,  
         "lengths2_numeric": lengths2_numeric   
     }
-
