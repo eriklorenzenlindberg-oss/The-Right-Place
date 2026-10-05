@@ -18,7 +18,7 @@ def find_numeric_root(expr, x_sym):
         except Exception:
             pass
 
-    for guess in [best_guess, 1.2, 1.0, 0.5, 2.0]:
+    for guess in [best_guess, 1.0, 1.2, 0.5, 2.0]:
         try:
             root = sp.nsolve(expr, x_sym, guess, verify=False)
             c = complex(root)
@@ -33,36 +33,35 @@ def get_math_data(n, eq_input, add_value_str):
     x_sym = sp.Symbol("x")
     n_sym = sp.Symbol("n")
 
-    # 1. Standardisera syntax (ersätt ^ med **)
+    # 1. Standardisera syntax
     eq_input = eq_input.replace("^", "**").strip()
     add_value_str = add_value_str.replace("^", "**").strip()
 
-    # Ta bort eventuella "x =" eller "x=" om användaren råkat skriva det explicit i rutan
-    if eq_input.startswith("x"):
-        eq_input = eq_input.lstrip("x").lstrip("=").strip()
+    # Ta enbart bort explicit "v =" från v-rutan
     if add_value_str.startswith("v"):
         add_value_str = add_value_str.lstrip("v").lstrip("=").strip()
 
-    # 2. SMART INMATNINGSKOLL: Harmoniserar implicit och explicit inmatning till ett rått uttryck
+    # 2. STENSÄKER INMATNINGSKOLL
     if "=" in eq_input:
+        # Om det finns ett likhetstecken (t.ex. 1+x=x^n eller x=x^n-1) tar vi alltid Vänsterled - Högerled
         left_str, right_str = eq_input.split("=")
         raw_expr = sp.sympify(left_str) - sp.sympify(right_str)
     else:
+        # Om likhetstecken saknas helt
         parsed_expr = sp.sympify(eq_input)
-        # Om uttrycket redan innehåller x (t.ex. x^n - x - 1), är det ett polynom som ska vara = 0
         if parsed_expr.has(x_sym):
+            # T.ex. "x^n - x - 1" -> Detta är redan ett polynom som ska vara lika med 0
             raw_expr = parsed_expr
         else:
-            # Om x saknas (t.ex. 2**(1/2)), betyder det implicit: x = uttryck -> x - uttryck = 0
+            # T.ex. "2**(1/2)" -> Detta saknar x, så det betyder implicit x = 2**(1/2) -> x - 2**(1/2) = 0
             raw_expr = x_sym - parsed_expr
 
     # 3. Kontrollera om n/2-substitution krävs
     has_fraction_exponent = "n/2" in eq_input or "n / 2" in eq_input
-    use_substitution = has_fraction_exponent and (n % 2 != 0)
+    use_substitution = ("=" in eq_input) and has_fraction_exponent and (n % 2 != 0)
 
     if use_substitution:
         y_sym = sp.Symbol("y")
-        # Gör substitutionen på det harmoniserade råa uttrycket
         raw_expr_subs = raw_expr.subs(x_sym, y_sym**2).subs(x_sym**(n_sym/2), y_sym**n)
         num, denom = sp.together(raw_expr_subs).as_numer_denom()
         var_sym = y_sym
@@ -70,7 +69,7 @@ def get_math_data(n, eq_input, add_value_str):
         num, denom = sp.together(raw_expr).as_numer_denom()
         var_sym = x_sym
 
-    # STRUKTURPOLYNOM: Det polynom som användaren faktiskt matat in/menat, med n insatt (t.ex. x^5 - x^4 - 1)
+    # STRUKTURPOLYNOM: Det polynom som användaren faktiskt menat, med n insatt
     structure_poly = sp.expand(num).subs(n_sym, n)
 
     # 4. Hitta den stabila numeriska roten
@@ -116,18 +115,18 @@ def get_math_data(n, eq_input, add_value_str):
         add_value_numeric = float(x_numeric)
 
     # 8. FÖRENKLING AV V: Vi använder structure_poly istället för minimal_poly
-    # Detta gör att x^5 - 1 blir x^4 istället för x^2 + x
     simplified_v_expr = add_expr_evaluated
-    try:
-        if use_substitution:
-            y_sym = sp.Symbol("y")
-            v_in_y = sp.expand(add_expr_evaluated).subs(x_sym, y_sym**2)
-            rem_in_y = sp.rem(v_in_y, structure_poly, y_sym)
-            simplified_v_expr = sp.expand(rem_in_y).subs(y_sym, sp.sqrt(x_sym))
-        else:
-            simplified_v_expr = sp.rem(sp.expand(add_expr_evaluated), sp.expand(structure_poly), x_sym)
-    except Exception:
-        pass
+    if structure_poly is not None:
+        try:
+            if use_substitution:
+                y_sym = sp.Symbol("y")
+                v_in_y = sp.expand(add_expr_evaluated).subs(x_sym, y_sym**2)
+                rem_in_y = sp.rem(v_in_y, structure_poly, y_sym)
+                simplified_v_expr = sp.expand(rem_in_y).subs(y_sym, sp.sqrt(x_sym))
+            else:
+                simplified_v_expr = sp.rem(sp.expand(add_expr_evaluated), sp.expand(structure_poly), x_sym)
+        except Exception:
+            pass
 
     # 9. HELTALSREDUCERING: Tvinga till rent heltal om uttrycket numeriskt är ett heltal
     try:
@@ -145,7 +144,7 @@ def get_math_data(n, eq_input, add_value_str):
         "n": n,
         "x_numeric": x_numeric,
         "x_symbolic": None,
-        "is_equation": True,  # Sätts till True eftersom alla inmatningar nu hanteras som ekvationer
+        "is_equation": True,
         "minimal_poly": minimal_poly,
         "structure_poly": structure_poly,
         "v_simplified": simplified_v_expr,
