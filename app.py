@@ -36,7 +36,7 @@ st.markdown(
     }
     /* Gör st.subheader mindre och tar bort onödigt tomrum */
     h2 {
-        font-size: 1.5rem !important; /* Standard är runt 2rem, ändra efter smak */
+        font-size: 1.0rem !important; /* Standard är runt 2rem, ändra efter smak */
         margin-top: 0rem !important;
         padding-top: 0rem !important;
     }
