@@ -9,7 +9,7 @@ import sympy as sp
 # 1. SÄTT SIDAN TILL BREDBILD
 st.set_page_config(layout="wide")
 
-# --- CSS-HACK FÖR HELA APPEN ---
+# --- CSS-HACK FÖR HELA APPEN (Rensad från trasig rubrik-CSS) ---
 st.markdown(
     """
     <style>
@@ -22,15 +22,10 @@ st.markdown(
         color: #0041BA !important;
         background-color: #FFFFFF !important;
     }
-    /* Minskar utrymmet längst upp på sidan */
+    /* Minskar utrymmet längst upp på sidan så appen flyttas upp */
     .block-container {
-        padding-top: 1rem;
+        padding-top: 1.5rem;
         padding-bottom: 0rem;
-    }
-    /* Minskar utrymmet runt rubriken */
-    h1 {
-        margin-top: 0rem;
-        padding-top: 0rem;
     }
     </style>
     """,
@@ -98,8 +93,8 @@ with st.expander("Visualizing generalizations of the golden rectangle and self-s
         unsafe_allow_html=True
     )
 
-# SKAPA KOLUMNERNA (A = 1/5 av bredden, B = 4/5 av bredden)
-a_kol, b_kol = st.columns([1, 4])
+# SKAPA KOLUMNERNA
+a_kol, b_kol = st.columns()
 
 # --------------------------------------------------
 # KOLUMN A: HUVUDPARAMETRAR & RULLGARDINSMENY (Vänster)
@@ -127,12 +122,13 @@ with a_kol:
 
     placeholder_v = st.empty()
 
-    # NYTT: Lägger till lite luft och sätter in rullgardinsmenyn längst ned här
+    # Lägger till lite luft och sätter in rullgardinsmenyn längst ned här
     st.markdown("<br>", unsafe_allow_html=True)
     valt_diagram = st.selectbox(
         "k-face:",
         options=["n-face", "1-faces", "2-faces", "3-faces"],
-        key="main_navigation_select"
+        key="main_navigation_select",
+        label_visibility="collapsed" 
     )
 
 
@@ -164,7 +160,6 @@ placeholder_v.markdown(f"$\\footnotesize \\Rightarrow {sp.latex(math_data['v_sim
 # KOLUMN B: DIAGRAM (Höger)
 # --------------------------------------------------
 with b_kol:
-    # Den här logiken läser nu av det du väljer i rullgardinsmenyn
     if valt_diagram == "n-face":
         iso.render(math_data)
 
