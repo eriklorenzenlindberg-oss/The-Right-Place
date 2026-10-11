@@ -108,14 +108,14 @@ with st.expander("Visualizing generalizations of the golden rectangle and self-s
         unsafe_allow_html=True
     )
 
-# RÄTTAT: Radioknapparna ligger nu längst ut till vänster (utanför expandern)
-valt_diagram = st.radio(
+# BYTT FRÅN st.radio TILL st.selectbox
+valt_diagram = st.selectbox(
     "k-face:",
     options=["n-face", "1-faces", "2-faces", "3-faces"],
-    key="main_navigation_radio",
-    horizontal=True,
-    label_visibility="collapsed" 
+    key="main_navigation_radio", # Du kan behålla samma key
+    label_visibility="collapsed"  # Döljer "k-face:" texten precis som innan
 )
+
 
 # RÄTTAT: Tog bort det extra kommatecknet efter b_kol
 a_kol, b_kol = st.columns([1, 4])
@@ -146,6 +146,14 @@ with a_kol:
     )
 
     placeholder_v = st.empty()
+
+st.markdown("<br>", unsafe_allow_html=True) # Valfritt: Lägger till lite luft ovanför menyn
+    
+    valt_diagram = st.selectbox(
+        "Välj diagram (k-face):",
+        options=["n-face", "1-faces", "2-faces", "3-faces"],
+        key="main_navigation_select"
+    )
 
 
 # --------------------------------------------------
