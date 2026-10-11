@@ -34,9 +34,10 @@ st.markdown(
     .block-container {
         padding-top: 1rem;
     }
-    /* Gör st.subheader mindre och tar bort onödigt tomrum */
-    h2 {
-        font-size: 0.5rem !important; /* Standard är runt 2rem, ändra efter smak */
+    
+    /* Targeterar Streamlits rubrik-komponent specifikt */
+    [data-testid="stHeading"] h2 {
+        font-size: 0.5rem !important;
         margin-top: 0rem !important;
         padding-top: 0rem !important;
     }
