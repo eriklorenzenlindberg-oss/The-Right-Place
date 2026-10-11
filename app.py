@@ -132,8 +132,7 @@ with a_kol:
     valt_diagram = st.selectbox(
         "k-face:",
         options=["n-face", "1-faces", "2-faces", "3-faces"],
-        key="main_navigation_select",
-        label_visibility="collapsed" 
+        key="main_navigation_select"
     )
 
 
