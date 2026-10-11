@@ -9,7 +9,6 @@ import sympy as sp
 # 1. SÄTT SIDAN TILL BREDBILD
 st.set_page_config(layout="wide")
 
-# --- CSS-HACK FÖR HELA APPEN (Rensad från trasig rubrik-CSS) ---
 # --- CSS-HACK FÖR HELA APPEN ---
 st.markdown(
     """
@@ -25,15 +24,15 @@ st.markdown(
         background-color: #FFFFFF !important;
     }
 
-    /* KORRIGERAT: Tvingar blå text och vit bakgrund i själva rullgardinsmenyn (selectbox) */
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] {
+    /* TRICKS FÖR RULLGARDINSMENYN:
+       Vi använder den unika klassen som genereras av din selectbox 'key' */
+    .st-key-main_navigation_select div {
         color: #0041BA !important;
-        background-color: #FFFFFF !important;
     }
     
-    /* Säkerställer att texten inuti det valda fältet också blir blå */
-    div[data-testid="stSelectbox"] [data-baseweb="select"] div {
-        color: #0041BA !important;
+    /* Tvingar även bakgrunden på själva val-rutan att vara vit */
+    .st-key-main_navigation_select [data-baseweb="select"] {
+        background-color: #FFFFFF !important;
     }
 
     /* Minskar utrymmet längst upp på sidan så appen flyttas upp */
@@ -45,6 +44,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 # --- HUVUDLAYOUT ---
