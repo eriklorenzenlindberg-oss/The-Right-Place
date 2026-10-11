@@ -25,10 +25,15 @@ st.markdown(
         background-color: #FFFFFF !important;
     }
 
-    /* NYTT: Gör texten blå och bakgrunden vit inuti rullgardinsmenyn (selectbox) */
-    div[data-baseweb="select"] div {
+    /* KORRIGERAT: Tvingar blå text och vit bakgrund i själva rullgardinsmenyn (selectbox) */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] {
         color: #0041BA !important;
         background-color: #FFFFFF !important;
+    }
+    
+    /* Säkerställer att texten inuti det valda fältet också blir blå */
+    div[data-testid="stSelectbox"] [data-baseweb="select"] div {
+        color: #0041BA !important;
     }
 
     /* Minskar utrymmet längst upp på sidan så appen flyttas upp */
