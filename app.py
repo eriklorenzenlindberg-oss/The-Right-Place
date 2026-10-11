@@ -9,7 +9,7 @@ import sympy as sp
 # 1. SÄTT SIDAN TILL BREDBILD
 st.set_page_config(layout="wide")
 
-# --- NYTT: HÄR LÄGGER DU CSS-HACKET FÖR HELA APPEN ---
+# --- CSS-HACK FÖR HELA APPEN ---
 st.markdown(
     """
     <style>
@@ -22,20 +22,12 @@ st.markdown(
         color: #0041BA !important;
         background-color: #FFFFFF !important;
     }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    """
-    <style>
     /* Minskar utrymmet längst upp på sidan */
     .block-container {
         padding-top: 1rem;
         padding-bottom: 0rem;
     }
-    /* Om du använder st.title och vill minska dess eget utrymme */
+    /* Minskar utrymmet runt rubriken */
     h1 {
         margin-top: 0rem;
         padding-top: 0rem;
@@ -45,9 +37,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
-
-# --- HUVUDLAYOUT
+# --- HUVUDLAYOUT ---
 st.subheader("The Right Place")
 
 with st.expander("Visualizing generalizations of the golden rectangle and self-similarity in n-dimensional space"):
@@ -108,21 +98,11 @@ with st.expander("Visualizing generalizations of the golden rectangle and self-s
         unsafe_allow_html=True
     )
 
-# BYTT FRÅN st.radio TILL st.selectbox
-valt_diagram = st.selectbox(
-    "k-face:",
-    options=["n-face", "1-faces", "2-faces", "3-faces"],
-    key="main_navigation_radio", # Du kan behålla samma key
-    label_visibility="collapsed"  # Döljer "k-face:" texten precis som innan
-)
-
-
-# RÄTTAT: Tog bort det extra kommatecknet efter b_kol
+# SKAPA KOLUMNERNA (A = 1/5 av bredden, B = 4/5 av bredden)
 a_kol, b_kol = st.columns([1, 4])
 
-
 # --------------------------------------------------
-# KOLUMN B: HUVUDPARAMETRAR (n, x, v) -> Ligger till höger
+# KOLUMN A: HUVUDPARAMETRAR & RULLGARDINSMENY (Vänster)
 # --------------------------------------------------
 with a_kol:
     n = st.number_input(
@@ -147,12 +127,13 @@ with a_kol:
 
     placeholder_v = st.empty()
 
-st.markdown("<br>", unsafe_allow_html=True) # Valfritt: Lägger till lite luft ovanför menyn
-    
+    # NYTT: Lägger till lite luft och sätter in rullgardinsmenyn längst ned här
+    st.markdown("<br>", unsafe_allow_html=True)
     valt_diagram = st.selectbox(
-        "Välj diagram (k-face):",
+        "k-face:",
         options=["n-face", "1-faces", "2-faces", "3-faces"],
-        key="main_navigation_select"
+        key="main_navigation_select",
+        label_visibility="collapsed" 
     )
 
 
@@ -181,10 +162,10 @@ placeholder_v.markdown(f"$\\footnotesize \\Rightarrow {sp.latex(math_data['v_sim
 
 
 # --------------------------------------------------
-# KOLUMN A: DIAGRAM -> Ligger till vänster (tar upp 4/5 delar)
+# KOLUMN B: DIAGRAM (Höger)
 # --------------------------------------------------
 with b_kol:
-    # ÄKTA LAZY LOADING
+    # Den här logiken läser nu av det du väljer i rullgardinsmenyn
     if valt_diagram == "n-face":
         iso.render(math_data)
 
