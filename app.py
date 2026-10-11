@@ -110,12 +110,12 @@ with st.expander("Visualizing generalizations of the golden rectangle and self-s
     )
 
 # SKAPA KOLUMNERNA
-a_kol, b_kol = st.columns([1, 4])
+a_kol, b_kol = st.columns([4, 1])
 
 # --------------------------------------------------
 # KOLUMN A: HUVUDPARAMETRAR & RULLGARDINSMENY (Vänster)
 # --------------------------------------------------
-with a_kol:
+with b_kol:
     n = st.number_input(
         r"$n \text{ (dimensions)=}$", 
         min_value=2, 
@@ -174,7 +174,7 @@ placeholder_v.markdown(f"$\\footnotesize \\Rightarrow {sp.latex(math_data['v_sim
 # --------------------------------------------------
 # KOLUMN B: DIAGRAM (Höger)
 # --------------------------------------------------
-with b_kol:
+with a_kol:
     if valt_diagram == "n-face":
         iso.render(math_data)
 
