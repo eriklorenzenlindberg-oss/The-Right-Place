@@ -33,13 +33,12 @@ st.markdown(
     /* Minskar utrymmet längst upp på sidan */
     .block-container {
         padding-top: 1rem;
+        padding-bottom: 0rem;
     }
-    
-    /* Targeterar Streamlits rubrik-komponent specifikt */
-    [data-testid="stHeading"] h2 {
-        font-size: 0.5rem !important;
-        margin-top: 0rem !important;
-        padding-top: 0rem !important;
+    /* Om du använder st.title och vill minska dess eget utrymme */
+    h1 {
+        margin-top: 0rem;
+        padding-top: 0rem;
     }
     </style>
     """,
