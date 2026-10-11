@@ -118,13 +118,13 @@ valt_diagram = st.radio(
 )
 
 # RÄTTAT: Tog bort det extra kommatecknet efter b_kol
-a_kol, b_kol = st.columns([4, 1])
+a_kol, b_kol = st.columns([1, 4])
 
 
 # --------------------------------------------------
 # KOLUMN B: HUVUDPARAMETRAR (n, x, v) -> Ligger till höger
 # --------------------------------------------------
-with b_kol:
+with a_kol:
     n = st.number_input(
         r"$n \text{ (dimensions)=}$", 
         min_value=2, 
@@ -175,7 +175,7 @@ placeholder_v.markdown(f"$\\footnotesize \\Rightarrow {sp.latex(math_data['v_sim
 # --------------------------------------------------
 # KOLUMN A: DIAGRAM -> Ligger till vänster (tar upp 4/5 delar)
 # --------------------------------------------------
-with a_kol:
+with b_kol:
     # ÄKTA LAZY LOADING
     if valt_diagram == "n-face":
         iso.render(math_data)
