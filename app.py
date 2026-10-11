@@ -10,6 +10,7 @@ import sympy as sp
 st.set_page_config(layout="wide")
 
 # --- CSS-HACK FÖR HELA APPEN (Rensad från trasig rubrik-CSS) ---
+# --- CSS-HACK FÖR HELA APPEN ---
 st.markdown(
     """
     <style>
@@ -17,11 +18,19 @@ st.markdown(
     .modebar {
         display: none !important;
     }
-    /* Gör bakgrunden vit och texten svart i alla nummer- och textfält */
+    
+    /* Gör bakgrunden vit och texten blå i alla nummer- och textfält */
     .stTextInput input, .stNumberInput input {
         color: #0041BA !important;
         background-color: #FFFFFF !important;
     }
+
+    /* NYTT: Gör texten blå och bakgrunden vit inuti rullgardinsmenyn (selectbox) */
+    div[data-baseweb="select"] div {
+        color: #0041BA !important;
+        background-color: #FFFFFF !important;
+    }
+
     /* Minskar utrymmet längst upp på sidan så appen flyttas upp */
     .block-container {
         padding-top: 1.5rem;
@@ -31,6 +40,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 # --- HUVUDLAYOUT ---
 st.subheader("The Right Place")
