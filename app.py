@@ -24,13 +24,13 @@ st.markdown(
         background-color: #FFFFFF !important;
     }
 
-    /* TRICKS FÖR RULLGARDINSMENYN:
-       Vi använder den unika klassen som genereras av din selectbox 'key' */
-    .st-key-main_navigation_select div {
+    /* 🎯 DEN ULTIMATA LÖSNINGEN FÖR RULLGARDINEN:
+       Detta tvingar ABSOLUT ALLT (märkt med *) inuti menyn att bli blått */
+    .st-key-main_navigation_select * {
         color: #0041BA !important;
     }
     
-    /* Tvingar även bakgrunden på själva val-rutan att vara vit */
+    /* Säkerställer att bakgrunden inuti rutan förblir vit */
     .st-key-main_navigation_select [data-baseweb="select"] {
         background-color: #FFFFFF !important;
     }
@@ -44,6 +44,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
