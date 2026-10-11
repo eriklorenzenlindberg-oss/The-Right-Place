@@ -27,6 +27,24 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+st.markdown(
+    """
+    <style>
+    /* Minskar utrymmet längst upp på sidan */
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 0rem;
+    }
+    /* Om du använder st.title och vill minska dess eget utrymme */
+    h1 {
+        margin-top: 0rem;
+        padding-top: 0rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 
 
 # --- HUVUDLAYOUT
