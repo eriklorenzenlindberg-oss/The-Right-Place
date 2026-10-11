@@ -33,12 +33,12 @@ st.markdown(
     /* Minskar utrymmet längst upp på sidan */
     .block-container {
         padding-top: 1rem;
-        padding-bottom: 0rem;
     }
-    /* Om du använder st.title och vill minska dess eget utrymme */
-    h1 {
-        margin-top: 0rem;
-        padding-top: 0rem;
+    /* Gör st.subheader mindre och tar bort onödigt tomrum */
+    h2 {
+        font-size: 1.5rem !important; /* Standard är runt 2rem, ändra efter smak */
+        margin-top: 0rem !important;
+        padding-top: 0rem !important;
     }
     </style>
     """,
