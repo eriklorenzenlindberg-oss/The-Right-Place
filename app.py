@@ -116,46 +116,54 @@ a_kol, b_kol = st.columns([4, 1])
 # KOLUMN A: HUVUDPARAMETRAR & RULLGARDINSMENY (Vänster)
 # --------------------------------------------------
 with b_kol:
-
     st.markdown(
-    """
-    <style>
-        /* 1. Justera bredden på själva behållarna */
+        """
+        <style>
+        /* 1. Sätt bredden på alla komponenter */
         div[data-testid="stTextInput"], 
         div[data-testid="stNumberInput"], 
         div[data-testid="stSelectbox"] {
             max-width: 180px;
         }
         
-        /* 2. Tvinga höjden på text- och nummerfält */
-        div[data-testid="stTextInput"] input, 
-        div[data-testid="stNumberInput"] input {
-            padding: 2px 10px !important;
-            font-size: 0.70rem !important;
-            min-height: 25px !important; 
-            height: 25px !important;
-            line-height: 1 !important;
+        /* 2. Krymp behållaren runt TEXT- och NUMMERFÄLT */
+        div[data-testid="stTextInput"] div[data-baseweb="input"],
+        div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+            height: 28px !important;
+            min-height: 28px !important;
         }
         
-        /* 3. Tvinga höjden på rullgardinsmenyn (selectbox) */
+        /* Justera texten och padding inuti text-/nummerfält */
+        div[data-testid="stTextInput"] input, 
+        div[data-testid="stNumberInput"] input {
+            padding-top: 0px !important;
+            padding-bottom: 0px !important;
+            height: 28px !important;
+            font-size: 0.80rem !important;
+        }
+        
+        /* 3. Krymp själva RULLGARDINSMENYN (Selectbox) */
         div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-            min-height: 25px !important;
-            height: 25px !important;
-            padding: 0px 10px !important;
+            height: 28px !important;
+            min-height: 28px !important;
+            padding-top: 0px !important;
+            padding-bottom: 0px !important;
+            display: flex;
+            align-items: center;
         }
         
         /* Justera textstorleken inuti rullgardinsmenyn */
         div[data-testid="stSelectbox"] div[data-baseweb="select"] span {
-            font-size: 0.70rem !important;
+            font-size: 0.80rem !important;
         }
         
-        /* 4. Gör ledtexterna (labels) ovanför rutorna små */
+        /* 4. Minska avståndet och storleken på LaTeX/Labels ovanför */
         div[data-testid="stTextInput"] label, 
         div[data-testid="stNumberInput"] label, 
         div[data-testid="stSelectbox"] label {
-            font-size: 0.70rem !important;
-            margin-bottom: 2px !important;
-            min-height: auto !important;
+            font-size: 0.80rem !important;
+            margin-bottom: 0px !important;
+            padding-bottom: 2px !important;
         }
         </style>
         """,
