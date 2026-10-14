@@ -129,7 +129,7 @@ with b_kol:
         value="1+x=x^n"
     )
 
-    placeholder_x = st.empty()
+    
 
     add_value_str = st.text_input(
         r"$v \text{ (adds to side 1)=}$", 
@@ -145,6 +145,8 @@ with b_kol:
         options=["n-face", "1-faces", "2-faces", "3-faces"],
         key="main_navigation_select"
     )
+
+    placeholder_x = st.empty()
 
 
 # --------------------------------------------------
