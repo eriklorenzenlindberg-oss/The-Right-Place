@@ -90,7 +90,7 @@ st.markdown(
 # --- HUVUDLAYOUT ---
 st.subheader("The Right Place")
 
-with st.expander("Visualizing generalizations of the golden rectangle and self-similarity in n-dimensional space"):
+with st.expander("About"):
     st.markdown(
         """<small>
         Any rectangle that is not a square can be extended in one dimension without deformation.
