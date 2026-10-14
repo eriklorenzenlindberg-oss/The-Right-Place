@@ -38,8 +38,8 @@ st.markdown(
     /* 2. Tvinga höjden på behållaren runt TEXT- och NUMMERFÄLT */
     div[data-testid="stTextInput"] div[data-baseweb="input"],
     div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-        height: 28px !important;
-        min-height: 28px !important;
+        height: 20px !important;
+        min-height: 20px !important;
     }
     
     /* 3. Textfärg, bakgrund, padding och höjd inuti text-/nummerfält */
@@ -49,7 +49,7 @@ st.markdown(
         background-color: #FFFFFF !important;
         padding-top: 0px !important;
         padding-bottom: 0px !important;
-        height: 28px !important;
+        height: 20px !important;
         font-size: 0.80rem !important;
     }
     
