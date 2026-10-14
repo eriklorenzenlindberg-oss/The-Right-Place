@@ -134,7 +134,7 @@ with b_kol:
         padding: 5px 10px;
         font-size: 0.70rem;
         min-height: 35px; /* Tvingar rullgardin och rutor till samma höjd */
-        height: 35px;
+        height: 30px;
     }
     
     /* Gör ledtexterna (labels) ovanför rutorna lika små */
