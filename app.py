@@ -161,7 +161,7 @@ with b_kol:
         """,
         unsafe_allow_html=True
     )
-)
+
     n = st.number_input(
         r"$n \text{ (dimensions)=}$", 
         min_value=2, 
