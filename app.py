@@ -116,6 +116,38 @@ a_kol, b_kol = st.columns([4, 1])
 # KOLUMN A: HUVUDPARAMETRAR & RULLGARDINSMENY (Vänster)
 # --------------------------------------------------
 with b_kol:
+
+    st.markdown(
+    """
+    <style>
+    /* Anpassa bredden för alla fält (justera pixlar efter behov) */
+    div[data-testid="stTextInput"], 
+    div[data-testid="stNumberInput"], 
+    div[data-testid="stSelectbox"] {
+        max-width: 180px;
+    }
+    
+    /* Krymp höjden och texten inuti fälten så de matchar varandra */
+    div[data-testid="stTextInput"] input, 
+    div[data-testid="stNumberInput"] input, 
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] {
+        padding: 5px 10px;
+        font-size: 0.85rem;
+        min-height: 35px; /* Tvingar rullgardin och rutor till samma höjd */
+        height: 35px;
+    }
+    
+    /* Gör ledtexterna (labels) ovanför rutorna lika små */
+    div[data-testid="stTextInput"] label, 
+    div[data-testid="stNumberInput"] label, 
+    div[data-testid="stSelectbox"] label {
+        font-size: 0.85rem;
+        margin-bottom: 2px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
     n = st.number_input(
         r"$n \text{ (dimensions)=}$", 
         min_value=2, 
