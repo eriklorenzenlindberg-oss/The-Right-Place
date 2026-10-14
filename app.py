@@ -136,7 +136,7 @@ with b_kol:
         value="x^n-1"
     )
 
-    placeholder_v = st.empty()
+    
 
     # Lägger till lite luft och sätter in rullgardinsmenyn längst ned här
     st.markdown("<br>", unsafe_allow_html=True)
@@ -147,6 +147,8 @@ with b_kol:
     )
 
     placeholder_x = st.empty()
+    
+    placeholder_v = st.empty()
 
 
 # --------------------------------------------------
