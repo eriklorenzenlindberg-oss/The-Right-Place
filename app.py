@@ -149,7 +149,7 @@ with st.expander("Visualizing generalizations of the golden rectangle and self-s
     )
 
 # SKAPA KOLUMNERNA
-a_kol, b_kol = st.columns()
+a_kol, b_kol = st.columns([4, 1])
 
 # --------------------------------------------------
 # KOLUMN B: HUVUDPARAMETRAR & RULLGARDINSMENY (Höger)
