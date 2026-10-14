@@ -9,7 +9,7 @@ import sympy as sp
 # 1. SÄTT SIDAN TILL BREDBILD
 st.set_page_config(layout="wide")
 
-# --- CSS-HACK FÖR HELA APPEN (ANPASSAT FÖR LATEX & RUTSTORLEKAR) ---
+# --- CSS-HACK FÖR HELA APPEN (ALLT SAMLAT PÅ ETT STÄLLE) ---
 st.markdown(
     """
     <style>
@@ -25,62 +25,58 @@ st.markdown(
     }
 
     /* ========================================================
-       KRAFTFULLT CSS-HACK FÖR ATT TAVINGA NER HÖJDEN (ÄVEN MED LATEX)
+       GLOBAL STYLING FÖR INPUT-RUTOR & RULLGARDIN (BREDD & HÖJD)
        ======================================================== */
     
-    /* 1. Sätt maxbredden på alla inmatningsrutor globalt */
+    /* 1. Sätt bredden på alla inmatningskomponenter */
     div[data-testid="stTextInput"], 
     div[data-testid="stNumberInput"], 
     div[data-testid="stSelectbox"] {
         max-width: 180px !important;
     }
     
-    /* 2. Tvinga höjden på själva inmatningsramarna (både fält och rullgardin) */
-    div[data-baseweb="base-input"],
-    div[data-baseweb="select"] {
-        height: 26px !important;
-        min-height: 26px !important;
+    /* 2. Tvinga höjden på behållaren runt TEXT- och NUMMERFÄLT */
+    div[data-testid="stTextInput"] div[data-baseweb="input"],
+    div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+        height: 28px !important;
+        min-height: 28px !important;
     }
     
-    /* 3. Justera texten, färgen, bakgrunden och nollställ padding inuti fälten */
+    /* 3. Textfärg, bakgrund, padding och höjd inuti text-/nummerfält */
     div[data-testid="stTextInput"] input, 
     div[data-testid="stNumberInput"] input {
         color: #0041BA !important;
         background-color: #FFFFFF !important;
-        height: 26px !important;
-        padding: 0px 8px !important;
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
+        height: 28px !important;
         font-size: 0.80rem !important;
-        line-height: 26px !important;
     }
     
-    /* 4. Tvinga rullgardinsmenyns (selectbox) innerdel till samma höjd */
-    div[data-baseweb="select"] > div {
-        height: 26px !important;
-        min-height: 26px !important;
-        padding: 0px 8px !important;
-        display: flex !important;
-        align-items: center !important;
+    /* 4. Krymp själva RULLGARDINSMENYN (Selectbox-ramen) */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        height: 28px !important;
+        min-height: 28px !important;
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
+        display: flex;
+        align-items: center;
         background-color: #FFFFFF !important;
     }
     
-    /* 5. Sätt blå färg och rätt textstorlek på texten i rullgardinen */
+    /* 5. Färg och textstorlek inuti rullgardinsmenyn */
     .st-key-main_navigation_select * {
         color: #0041BA !important;
         font-size: 0.80rem !important;
     }
     
-    /* 6. Minska LaTeX-textens/ledtextens storlek och ta bort tomrummet under den */
+    /* 6. Minska avståndet och storleken på LaTeX/Labels ovanför fälten */
     div[data-testid="stTextInput"] label, 
     div[data-testid="stNumberInput"] label, 
     div[data-testid="stSelectbox"] label {
-        margin-bottom: -4px !important;
-        padding-bottom: 0px !important;
-    }
-    
-    /* Krymp själva LaTeX-matematikblocken ovanför rutorna så de matchar */
-    div[data-testid="stTextInput"] label data-testid="stMarkdown",
-    div[data-testid="stNumberInput"] label data-testid="stMarkdown" {
         font-size: 0.80rem !important;
+        margin-bottom: 0px !important;
+        padding-bottom: 2px !important;
     }
     </style>
     """,
@@ -90,7 +86,7 @@ st.markdown(
 # --- HUVUDLAYOUT ---
 st.subheader("The Right Place")
 
-with st.expander("About"):
+with st.expander("Visualizing generalizations of the golden rectangle and self-similarity in n-dimensional space"):
     st.markdown(
         """<small>
         Any rectangle that is not a square can be extended in one dimension without deformation.
