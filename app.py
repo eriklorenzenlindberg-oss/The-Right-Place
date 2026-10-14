@@ -170,9 +170,9 @@ else:
     if math_data["minimal_poly"] is not None:
         n_sym = sp.Symbol("n")
         poly_display = math_data["minimal_poly"].subs(n_sym, n)
-        placeholder_x.markdown(f"$\\footnotesize \\x Rightarrow {sp.latex(poly_display)} = 0$")
+        placeholder_x.markdown(f"$\\footnotesize \\Rightarrow {sp.latex(poly_display)} = 0$")
        
-placeholder_v.markdown(f"$\\footnotesize \\v Rightarrow {sp.latex(math_data['v_simplified'])}$")
+placeholder_v.markdown(f"$\\footnotesize \\Rightarrow {sp.latex(math_data['v_simplified'])}$")
 
 
 # --------------------------------------------------
