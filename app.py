@@ -133,8 +133,8 @@ with b_kol:
     div[data-testid="stSelectbox"] div[data-baseweb="select"] {
         padding: 5px 10px;
         font-size: 0.70rem;
-        min-height: 35px; /* Tvingar rullgardin och rutor till samma höjd */
-        height: 30px;
+        min-height: 25px; /* Tvingar rullgardin och rutor till samma höjd */
+        height: 25px;
     }
     
     /* Gör ledtexterna (labels) ovanför rutorna lika små */
