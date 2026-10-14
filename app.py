@@ -9,7 +9,7 @@ import sympy as sp
 # 1. SÄTT SIDAN TILL BREDBILD
 st.set_page_config(layout="wide")
 
-# --- CSS-HACK FÖR HELA APPEN ---
+# --- CSS-HACK FÖR HELA APPEN (ALLT SAMLAT PÅ ETT STÄLLE) ---
 st.markdown(
     """
     <style>
@@ -18,35 +18,70 @@ st.markdown(
         display: none !important;
     }
     
-    /* Gör bakgrunden vit och texten blå i alla nummer- och textfält */
-    .stTextInput input, .stNumberInput input {
-        color: #0041BA !important;
-        background-color: #FFFFFF !important;
-    }
-
-    /* 🎯 DEN ULTIMATA LÖSNINGEN FÖR RULLGARDINEN:
-       Detta tvingar ABSOLUT ALLT (märkt med *) inuti menyn att bli blått */
-    .st-key-main_navigation_select * {
-        color: #0041BA !important;
-    }
-    
-    /* Säkerställer att bakgrunden inuti rutan förblir vit */
-    .st-key-main_navigation_select [data-baseweb="select"] {
-        background-color: #FFFFFF !important;
-    }
-
     /* Minskar utrymmet längst upp på sidan så appen flyttas upp */
     .block-container {
         padding-top: 1.5rem;
         padding-bottom: 0rem;
     }
+
+    /* ========================================================
+       GLOBAL STYLING FÖR INPUT-RUTOR & RULLGARDIN (BREDD & HÖJD)
+       ======================================================== */
+    
+    /* 1. Sätt bredden på alla inmatningskomponenter */
+    div[data-testid="stTextInput"], 
+    div[data-testid="stNumberInput"], 
+    div[data-testid="stSelectbox"] {
+        max-width: 180px !important;
+    }
+    
+    /* 2. Tvinga höjden på behållaren runt TEXT- och NUMMERFÄLT */
+    div[data-testid="stTextInput"] div[data-baseweb="input"],
+    div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+        height: 28px !important;
+        min-height: 28px !important;
+    }
+    
+    /* 3. Textfärg, bakgrund, padding och höjd inuti text-/nummerfält */
+    div[data-testid="stTextInput"] input, 
+    div[data-testid="stNumberInput"] input {
+        color: #0041BA !important;
+        background-color: #FFFFFF !important;
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
+        height: 28px !important;
+        font-size: 0.80rem !important;
+    }
+    
+    /* 4. Krymp själva RULLGARDINSMENYN (Selectbox-ramen) */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        height: 28px !important;
+        min-height: 28px !important;
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
+        display: flex;
+        align-items: center;
+        background-color: #FFFFFF !important;
+    }
+    
+    /* 5. Färg och textstorlek inuti rullgardinsmenyn */
+    .st-key-main_navigation_select * {
+        color: #0041BA !important;
+        font-size: 0.80rem !important;
+    }
+    
+    /* 6. Minska avståndet och storleken på LaTeX/Labels ovanför fälten */
+    div[data-testid="stTextInput"] label, 
+    div[data-testid="stNumberInput"] label, 
+    div[data-testid="stSelectbox"] label {
+        font-size: 0.80rem !important;
+        margin-bottom: 0px !important;
+        padding-bottom: 2px !important;
+    }
     </style>
     """,
     unsafe_allow_html=True
 )
-
-
-
 
 # --- HUVUDLAYOUT ---
 st.subheader("The Right Place")
@@ -113,63 +148,9 @@ with st.expander("Visualizing generalizations of the golden rectangle and self-s
 a_kol, b_kol = st.columns([4, 1])
 
 # --------------------------------------------------
-# KOLUMN A: HUVUDPARAMETRAR & RULLGARDINSMENY (Vänster)
+# KOLUMN B: HUVUDPARAMETRAR & RULLGARDINSMENY (Höger)
 # --------------------------------------------------
 with b_kol:
-    st.markdown(
-        """
-        <style>
-        /* 1. Sätt bredden på alla komponenter */
-        div[data-testid="stTextInput"], 
-        div[data-testid="stNumberInput"], 
-        div[data-testid="stSelectbox"] {
-            max-width: 180px;
-        }
-        
-        /* 2. Krymp behållaren runt TEXT- och NUMMERFÄLT */
-        div[data-testid="stTextInput"] div[data-baseweb="input"],
-        div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-            height: 28px !important;
-            min-height: 28px !important;
-        }
-        
-        /* Justera texten och padding inuti text-/nummerfält */
-        div[data-testid="stTextInput"] input, 
-        div[data-testid="stNumberInput"] input {
-            padding-top: 0px !important;
-            padding-bottom: 0px !important;
-            height: 28px !important;
-            font-size: 0.80rem !important;
-        }
-        
-        /* 3. Krymp själva RULLGARDINSMENYN (Selectbox) */
-        div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-            height: 28px !important;
-            min-height: 28px !important;
-            padding-top: 0px !important;
-            padding-bottom: 0px !important;
-            display: flex;
-            align-items: center;
-        }
-        
-        /* Justera textstorleken inuti rullgardinsmenyn */
-        div[data-testid="stSelectbox"] div[data-baseweb="select"] span {
-            font-size: 0.80rem !important;
-        }
-        
-        /* 4. Minska avståndet och storleken på LaTeX/Labels ovanför */
-        div[data-testid="stTextInput"] label, 
-        div[data-testid="stNumberInput"] label, 
-        div[data-testid="stSelectbox"] label {
-            font-size: 0.80rem !important;
-            margin-bottom: 0px !important;
-            padding-bottom: 2px !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
     n = st.number_input(
         r"$n \text{ (dimensions)=}$", 
         min_value=2, 
@@ -183,15 +164,10 @@ with b_kol:
         value="1+x=x^n"
     )
 
-    
-
     add_value_str = st.text_input(
         r"$v \text{ (adds to side 1)=}$", 
         value="x^n-1"
     )
-
-    
-
     
     valt_diagram = st.selectbox(
         "k-face:",
@@ -200,7 +176,6 @@ with b_kol:
     )
 
     placeholder_x = st.empty()
-    
     placeholder_v = st.empty()
 
 
@@ -229,7 +204,7 @@ placeholder_v.markdown(f"$\\footnotesize \\Rightarrow {sp.latex(math_data['v_sim
 
 
 # --------------------------------------------------
-# KOLUMN B: DIAGRAM (Höger)
+# KOLUMN A: DIAGRAM (Vänster)
 # --------------------------------------------------
 with a_kol:
     if valt_diagram == "n-face":
