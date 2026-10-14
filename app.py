@@ -120,33 +120,47 @@ with b_kol:
     st.markdown(
     """
     <style>
-    /* Anpassa bredden för alla fält (justera pixlar efter behov) */
-    div[data-testid="stTextInput"], 
-    div[data-testid="stNumberInput"], 
-    div[data-testid="stSelectbox"] {
-        max-width: 180px;
-    }
-    
-    /* Krymp höjden och texten inuti fälten så de matchar varandra */
-    div[data-testid="stTextInput"] input, 
-    div[data-testid="stNumberInput"] input, 
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] {
-        padding: 5px 10px;
-        font-size: 0.70rem;
-        min-height: 25px; /* Tvingar rullgardin och rutor till samma höjd */
-        height: 25px;
-    }
-    
-    /* Gör ledtexterna (labels) ovanför rutorna lika små */
-    div[data-testid="stTextInput"] label, 
-    div[data-testid="stNumberInput"] label, 
-    div[data-testid="stSelectbox"] label {
-        font-size: 0.70rem;
-        margin-bottom: 2px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
+        /* 1. Justera bredden på själva behållarna */
+        div[data-testid="stTextInput"], 
+        div[data-testid="stNumberInput"], 
+        div[data-testid="stSelectbox"] {
+            max-width: 180px;
+        }
+        
+        /* 2. Tvinga höjden på text- och nummerfält */
+        div[data-testid="stTextInput"] input, 
+        div[data-testid="stNumberInput"] input {
+            padding: 2px 10px !important;
+            font-size: 0.70rem !important;
+            min-height: 25px !important; 
+            height: 25px !important;
+            line-height: 1 !important;
+        }
+        
+        /* 3. Tvinga höjden på rullgardinsmenyn (selectbox) */
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+            min-height: 25px !important;
+            height: 25px !important;
+            padding: 0px 10px !important;
+        }
+        
+        /* Justera textstorleken inuti rullgardinsmenyn */
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] span {
+            font-size: 0.70rem !important;
+        }
+        
+        /* 4. Gör ledtexterna (labels) ovanför rutorna små */
+        div[data-testid="stTextInput"] label, 
+        div[data-testid="stNumberInput"] label, 
+        div[data-testid="stSelectbox"] label {
+            font-size: 0.70rem !important;
+            margin-bottom: 2px !important;
+            min-height: auto !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 )
     n = st.number_input(
         r"$n \text{ (dimensions)=}$", 
@@ -170,7 +184,6 @@ with b_kol:
 
     
 
-    # Lägger till lite luft och sätter in rullgardinsmenyn längst ned här
     
     valt_diagram = st.selectbox(
         "k-face:",
