@@ -132,7 +132,7 @@ with b_kol:
     div[data-testid="stNumberInput"] input, 
     div[data-testid="stSelectbox"] div[data-baseweb="select"] {
         padding: 5px 10px;
-        font-size: 0.85rem;
+        font-size: 0.60rem;
         min-height: 35px; /* Tvingar rullgardin och rutor till samma höjd */
         height: 35px;
     }
@@ -141,7 +141,7 @@ with b_kol:
     div[data-testid="stTextInput"] label, 
     div[data-testid="stNumberInput"] label, 
     div[data-testid="stSelectbox"] label {
-        font-size: 0.85rem;
+        font-size: 0.60rem;
         margin-bottom: 2px;
     }
     </style>
