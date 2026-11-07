@@ -64,11 +64,14 @@ def _parse(text, what):
 
 def _build_raw_expr(eq_input):
     """
-    Gör om inmatningen till ett uttryck som ska vara = 0.
+    Rutan har rubriken "x =", så det som skrivs är värdet på x.
+    Uttrycket görs om till något som ska vara = 0:
+      "x^n-1"     ->  x - (x**n - 1)    (x = x^n - 1, dvs 1 + x = x^n)
+      "2^(1/2)"   ->  x - 2**(1/2)
+      "1.5"       ->  x - 3/2
+    Skriver man ett fullständigt likhetstecken tolkas det som en ekvation:
       "1+x=x^n"   ->  1 + x - x**n
-      "x^n-x-1"   ->  uttrycket självt (innehåller x)
-      "2^(1/2)"   ->  x - 2**(1/2)      (saknar x: tolkas som x = uttryck)
-      "x=2^(1/2)" ->  x - 2**(1/2)
+      "x^n-x-1=0" ->  x**n - x - 1
     """
     text = eq_input.strip()
     if text.count("=") > 1:
@@ -78,8 +81,7 @@ def _build_raw_expr(eq_input):
         return _parse(left, "the left side of the equation") - _parse(
             right, "the right side of the equation"
         )
-    parsed = _parse(text, "x")
-    return parsed if parsed.has(x_sym) else x_sym - parsed
+    return x_sym - _parse(text, "x")
 
 
 def _root_power(expr):
@@ -196,7 +198,9 @@ def get_math_data(n, eq_input, add_value_str):
     num, _ = sp.together(raw_expr).as_numer_denom()
     structure_poly = sp.expand(num)
     if not structure_poly.has(var):
-        raise InputError("The equation must contain x.")
+        raise InputError(
+            "These settings do not determine x (the equation does not depend on x)."
+        )
     try:
         sp.Poly(structure_poly, var)
     except sp.PolynomialError:
