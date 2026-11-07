@@ -51,7 +51,7 @@ def _parse(text, what):
                 f"Numbers larger than {MAX_NUMBER} are not allowed (in {what})."
             )
     try:
-        expr = sp.sympify(text, locals={"x": x_sym, "n": n_sym})
+        expr = sp.sympify(text, locals={"x": x_sym, "n": n_sym}, rational=True)
     except Exception:
         raise InputError(
             f"Could not interpret the expression for {what}: '{text}'. "
@@ -135,6 +135,20 @@ def find_numeric_root(expr, var):
 # --------------------------------------------------
 # EXAKT MINIMALPOLYNOM (ren matematik)
 # --------------------------------------------------
+def _to_integer_poly(expr):
+    """Skalar ett polynom med bråkkoefficienter till ett primitivt heltalspolynom
+    (x - 3/2 blir 2*x - 3). Polynom med t.ex. sqrt(2) som koefficient lämnas orörda."""
+    try:
+        poly = sp.Poly(expr, x_sym)
+        if not (poly.domain.is_QQ or poly.domain.is_ZZ):
+            return sp.expand(expr)
+        _, poly = poly.clear_denoms()
+        _, poly = poly.primitive()
+        return poly.as_expr()
+    except Exception:
+        return sp.expand(expr)
+
+
 def _minimal_poly(structure_poly, var, approx_root, d):
     """
     Returnerar ett polynom i x (heltalskoefficienter) som x är rot till.
@@ -150,14 +164,14 @@ def _minimal_poly(structure_poly, var, approx_root, d):
             roots = sp.solve(structure_poly, var)
         root = min(roots, key=lambda r: abs(complex(sp.N(r)) - approx_root))
         # Minimalpolynomet för x självt (x = root**d), inte för y
-        return sp.expand(sp.minpoly(root ** d, x_sym))
+        return _to_integer_poly(sp.minpoly(root ** d, x_sym))
     except Exception:
         pass
 
     if d == 1:
-        return sp.expand(structure_poly)
+        return _to_integer_poly(structure_poly)
     # x = y**d: resultanten eliminerar y och ger ett polynom i x
-    return sp.expand(sp.resultant(structure_poly, x_sym - var ** d, var))
+    return _to_integer_poly(sp.resultant(structure_poly, x_sym - var ** d, var))
 
 
 # --------------------------------------------------
