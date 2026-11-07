@@ -207,7 +207,15 @@ def get_math_data(n, eq_input, add_value_str):
 
     # 4. NUMERISK ROT (approximation, bara för ritning)
     approx_root = find_numeric_root(structure_poly, var)
+    # Om roten ligger inom avrundningsfel från 1: kontrollera exakt om x = 1 är en rot
+    if abs(approx_root - 1.0) < 1e-9 and structure_poly.subs(var, 1) == 0:
+        approx_root = 1.0
     x_numeric = approx_root ** d
+    if x_numeric < 1.0:
+        raise InputError(
+            "x must be greater than or equal to 1 "
+            f"(these settings give x \u2248 {x_numeric:.4f})."
+        )
 
     # 5. MINIMALPOLYNOM (exakt, används av semicircles.py)
     minimal_poly = _minimal_poly(structure_poly, var, approx_root, d)
