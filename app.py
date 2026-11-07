@@ -161,7 +161,7 @@ with b_kol:
 
     eq_input = st.text_input(
         r"$x \text{ (ratio)=}$", 
-        value="1+x=x^n"
+        value="x^n-1"
     )
 
     add_value_str = st.text_input(
