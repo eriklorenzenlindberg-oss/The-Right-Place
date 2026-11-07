@@ -182,24 +182,18 @@ with b_kol:
 # --------------------------------------------------
 # 2. KÖR BERÄKNINGARNA (Grundmatematiken)
 # --------------------------------------------------
-math_data = calc.get_math_data(
-    n,
-    eq_input,
-    add_value_str
-)
-
+try:
+    math_data = calc.get_math_data(n, eq_input, add_value_str)
+except calc.InputError as e:
+    placeholder_x.error(str(e))
+    st.stop()
 
 # --------------------------------------------------
 # 3. FYLL I PLATSHÅLLARNA MED RESULTATEN
 # --------------------------------------------------
-if not math_data["is_equation"]:
-    placeholder_x.markdown(f"$\\small x = {sp.latex(math_data['x_symbolic'])}$")
-else:
-    if math_data["minimal_poly"] is not None:
-        n_sym = sp.Symbol("n")
-        poly_display = math_data["minimal_poly"].subs(n_sym, n)
-        placeholder_x.markdown(f"$\\footnotesize \\Rightarrow {sp.latex(poly_display)} = 0$")
-       
+placeholder_x.markdown(
+    f"$\\footnotesize \\Rightarrow {sp.latex(math_data['minimal_poly'])} = 0$"
+)
 placeholder_v.markdown(f"$\\footnotesize \\Rightarrow {sp.latex(math_data['v_simplified'])}$")
 
 
