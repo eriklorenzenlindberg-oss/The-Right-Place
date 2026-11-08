@@ -1,278 +1,498 @@
-import itertools
+from collections import deque
+from fractions import Fraction
+from math import gcd
+
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 import sympy as sp
-from collections import deque
 
+X = sp.Symbol("x")
+
+# Högsta antal element i en kombination för att pröva alla ordningar exakt (2^m steg).
+# Längre kombinationer får en girig placering.
+DP_LIMIT = 10
+# Övre gräns för antal tillstånd i sökningen efter kombinationer.
+MAX_STATES = 3000
+
+
+# ==================================================
+# ETIKETTER
+# ==================================================
 def get_math_label(power):
-    if power == 0: return "1"
-    if power == 1: return "x"
-    power_int = int(power)
-    superscripts = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}
-    return f"x{''.join(superscripts.get(c, c) for c in str(power_int))}"
+    if power == 0:
+        return "1"
+    if power == 1:
+        return "x"
+    superscripts = {'0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+                    '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹'}
+    return "x" + "".join(superscripts.get(c, c) for c in str(int(power)))
 
-def get_layer_geometry_numeric(combo, x_numeric):
-    """ Beräknar geometri och centrum baserat på flyttalsvärden """
-    centers = []
-    current_x = 0.0
-    for k in combo:
-        diameter = float(x_numeric**k)
-        radius = diameter / 2.0
-        centers.append((k, current_x + radius, diameter))
-        current_x += diameter
-    return centers
 
-def get_layer_geometry_from_list(combo, lengths_numeric):
-    """ Beräknar geometri baserat på en färdig lista med diametrar (för 1 + v) """
-    centers = []
-    current_x = 0.0
-    for k in combo:
-        if k < len(lengths_numeric):
-            diameter = float(lengths_numeric[k])
-        else:
-            diameter = 1.0
-        radius = diameter / 2.0
-        centers.append((k, current_x + radius, diameter))
-        current_x += diameter
-    return centers
+# ==================================================
+# EXAKT MATEMATIK
+# Allt i det här avsnittet räknar med heltal och bråk, aldrig med flyttal
+# (förutom den övre gränsen max_k, som bara begränsar hur långt vi söker).
+# ==================================================
+def _integer_coeffs(minimal_poly):
+    """Stigande heltalskoefficienter för minimalpolynomet, eller None om det inte
+    är ett polynom i x med rationella koefficienter."""
+    try:
+        coeffs = sp.Poly(sp.expand(minimal_poly), X).all_coeffs()[::-1]
+        if not coeffs or not all(c.is_Rational for c in coeffs):
+            return None
+        denominators = [int(sp.Rational(c).q) for c in coeffs]
+        scale = sp.ilcm(*denominators) if denominators else 1
+        ints = [int(c * scale) for c in coeffs]
+        if len(ints) < 2 or ints[-1] == 0:
+            return None
+        return tuple(ints)
+    except Exception:
+        return None
 
-def find_math_structures_logical(n, minimal_poly, x_numeric):
-    """ Sökning som dynamiskt sätter gränsen baserat på summan av huvudleden """
-    x = sp.Symbol("x")
-    if minimal_poly is None:
-        return [tuple(range(n))]
-        
-    target_value = sum(float(x_numeric**m) for m in range(n))
-    max_k = n
-    while float(x_numeric**max_k) <= target_value:
+
+def _poly_coeffs(expr):
+    """Stigande rationella koefficienter (Fraction) för expr som polynom i x, eller None."""
+    try:
+        expr = sp.expand(expr)
+        if not expr.free_symbols <= {X}:
+            return None
+        coeffs = sp.Poly(expr, X).all_coeffs()[::-1]
+        if not all(c.is_Rational for c in coeffs):
+            return None
+        return [Fraction(int(sp.Rational(c).p), int(sp.Rational(c).q)) for c in coeffs]
+    except Exception:
+        return None
+
+
+class NumberField:
+    """
+    Exakt räkning i Q(alpha), där alpha är en rot till heltalspolynomet P.
+    Ett element är en tuple av d bråk (koefficienter för 1, alpha, ..., alpha^(d-1)).
+    Två längder (eller positioner) är exakt lika om och bara om deras tupler är lika.
+
+    För snabb jämförelse packas varje element till ett enda heltal (en "kod").
+    Koderna adderas som vanliga heltal, och två koder är lika om och bara om
+    elementen är exakt lika.
+    """
+
+    def __init__(self, p_coeffs, kmax):
+        self.d = len(p_coeffs) - 1
+        lead = Fraction(p_coeffs[-1])
+        # alpha^d = sum(rel[i] * alpha^i)
+        self.rel = [-Fraction(c) / lead for c in p_coeffs[:-1]]
+        self.kmax = kmax
+        self._powers = [self.reduce([1])]
+        for _ in range(kmax):
+            self._powers.append(self.reduce([Fraction(0)] + list(self._powers[-1])))
+        self._D = None
+
+    def reduce(self, coeffs):
+        c = [Fraction(v) for v in coeffs]
+        if len(c) < self.d:
+            c += [Fraction(0)] * (self.d - len(c))
+        for m in range(len(c) - 1, self.d - 1, -1):
+            t = c[m]
+            if t:
+                c[m] = Fraction(0)
+                for i, r in enumerate(self.rel):
+                    c[m - self.d + i] += t * r
+        return tuple(c[:self.d])
+
+    def power(self, k):
+        return self._powers[k]
+
+    def finalize(self, extra_vectors=()):
+        """Väljer nämnare och bas för koderna. Måste anropas innan code()/pcode()."""
+        vectors = list(self._powers) + [v for v in extra_vectors if v is not None]
+        D = 1
+        for vec in vectors:
+            for f in vec:
+                D = D * f.denominator // gcd(D, f.denominator)
+        max_abs = max([abs(int(f * D)) for vec in vectors for f in vec] + [1])
+        # Basen är större än två gånger största möjliga summa, så koderna är entydiga
+        bits = (2 * (self.kmax + 3) * max_abs).bit_length() + 1
+        self._D = D
+        self._base_powers = [1 << (bits * i) for i in range(self.d)]
+        self._pcodes = [self.code(vec) for vec in self._powers]
+
+    def code(self, vec):
+        return sum(int(f * self._D) * bp for f, bp in zip(vec, self._base_powers))
+
+    def pcode(self, k):
+        return self._pcodes[k]
+
+
+@st.cache_data
+def _search_combinations(start_vector, p_coeffs, x_numeric):
+    """
+    Hittar alla kombinationer av olika potenser av x (varje potens högst en gång)
+    vars summa exakt är lika med talet som start_vector beskriver.
+
+    Metod: start_vector är koefficienterna för talet som ett polynom i x. Polynomet
+    P * x^k är exakt noll, så vi får lägga till och dra ifrån det hur som helst. Varje
+    vektor vi når med bara 0:or och 1:or är en giltig kombination.
+
+    Returnerar (kombinationer, komplett). komplett = False om sökningen avbröts av
+    tillståndsgränsen, så att det kan finnas fler kombinationer.
+    """
+    deg = len(p_coeffs) - 1
+    target = sum(c * x_numeric ** k for k, c in enumerate(start_vector))
+
+    # Ingen term kan vara större än summan. Detta är bara en sökgräns.
+    max_k = 0
+    while x_numeric ** max_k <= target * (1 + 1e-9) and max_k < 300:
         max_k += 1
-    
-    MAX_POWER = max(max_k + 2, n + 5)
-    VECTOR_SIZE = MAX_POWER + 1
-    
-    P_x = sp.expand(minimal_poly)
-    huvudled_vektor = [0] * VECTOR_SIZE
-    for i in range(n):
-        if i < VECTOR_SIZE:
-            huvudled_vektor[i] = 1
-            
-    regler_vektorer = []
-    for k in range(VECTOR_SIZE):
-        regel = sp.expand(P_x * x**k)
-        vektor = [0] * VECTOR_SIZE
-        giltig = True
-        
-        for p in range(VECTOR_SIZE):
-            c = regel.coeff(x, p)
-            if c != 0:
-                vektor[p] = int(c)
-                
-        for p in range(VECTOR_SIZE, VECTOR_SIZE + 10):
-            if regel.coeff(x, p) != 0:
-                giltig = False
-                break
-        if giltig and any(v != 0 for v in vektor):
-            regler_vektorer.append(vektor)
+    complete = max_k < 300
 
-    giltiga_kombinationer = set()
-    besökta = set()
-    start_tuple = tuple(huvudled_vektor)
-    kö = deque([start_tuple])
-    besökta.add(start_tuple)
-    giltiga_kombinationer.add(tuple(range(n)))
-    
-    while kö:
-        aktuell = kö.popleft()
-        for reg_vek in regler_vektorer:
-            for tecken in [1, -1]:
-                ny_vektor = [a + tecken * b for a, b in zip(aktuell, reg_vek)]
-                if any(v < 0 for v in ny_vektor):
-                    continue
-                ny_tuple = tuple(ny_vektor)
-                if ny_tuple in besökta:
-                    continue
-                potenser = [idx for idx, v in enumerate(ny_vektor) if v == 1]
-                if potenser and max(potenser) > max_k:
-                    continue
-                if sum(ny_vektor) == len(potenser) and len(potenser) > 0:
-                    giltiga_kombinationer.add(tuple(sorted(potenser)))
-                if max(ny_vektor) <= 2:
-                    if len(besökta) < 3000:
-                        besökta.add(ny_tuple)
-                        kö.append(ny_tuple)
-                        
-    return sorted(list(giltiga_kombinationer), key=lambda c: (len(c), c))
+    size = max(max_k, len(start_vector) - 1) + deg + 1
+    rules = []
+    for k in range(size - deg):
+        rule = [0] * size
+        for i, c in enumerate(p_coeffs):
+            rule[i + k] = c
+        rules.append(rule)
 
-def evaluate_global_layout_numeric(sorted_matches, x_numeric):
-    """ Matchar permutationer mot en global databas av existerande centrum """
-    optimized_layouts = []
-    global_drawn_centers = set()
-    for idx, combo_keys in enumerate(sorted_matches):
-        if idx == 0:
-            optimized_layouts.append(combo_keys)
-            centers = get_layer_geometry_numeric(combo_keys, x_numeric)
-            for k, x_center, _ in centers:
-                global_drawn_centers.add((k, round(x_center, 5)))
-            continue
-        best_score = -1
-        best_layout = tuple(sorted(list(combo_keys)))
-        for perm in itertools.permutations(combo_keys):
-            centers = get_layer_geometry_numeric(perm, x_numeric)
-            score = 0
-            for k, x_center, _ in centers:
-                if (k, round(x_center, 5)) in global_drawn_centers:
-                    score += 5
-            if score > best_score:
-                best_score = score
-                best_layout = perm
-        optimized_layouts.append(best_layout)
-        final_centers = get_layer_geometry_numeric(best_layout, x_numeric)
-        for k, x_center, _ in final_centers:
-            global_drawn_centers.add((k, round(x_center, 5)))
-    return optimized_layouts
+    start = tuple(list(start_vector) + [0] * (size - len(start_vector)))
 
+    def is_combination(vec):
+        return any(vec) and all(v in (0, 1) for v in vec)
+
+    def too_high(vec):
+        return any(vec[i] for i in range(max_k + 1, size))
+
+    combos = set()
+    if is_combination(start):
+        combos.add(tuple(i for i, v in enumerate(start) if v))
+
+    seen = {start}
+    queue = deque([start])
+    while queue:
+        current = queue.popleft()
+        for rule in rules:
+            for sign in (1, -1):
+                new = tuple(a + sign * b for a, b in zip(current, rule))
+                if new in seen or min(new) < 0 or too_high(new):
+                    continue
+                if is_combination(new):
+                    combos.add(tuple(i for i, v in enumerate(new) if v))
+                # Vi går bara vidare från vektorer med små poster (heuristik).
+                if max(new) <= 2:
+                    if len(seen) < MAX_STATES:
+                        seen.add(new)
+                        queue.append(new)
+                    else:
+                        complete = False
+
+    return sorted(combos, key=lambda c: (len(c), c)), complete
+
+
+def _best_order(combo, field, drawn):
+    """
+    Ordnar potenserna i en kombination så att så många cirklar som möjligt
+    sammanfaller exakt med redan ritade cirklar (samma diameter och samma startpunkt).
+    """
+    ks = sorted(combo)
+    m = len(ks)
+    vecs = [field.pcode(k) for k in ks]
+
+    if m <= DP_LIMIT:
+        size = 1 << m
+        pos = [0] * size
+        for mask in range(1, size):
+            low = (mask & -mask).bit_length() - 1
+            pos[mask] = pos[mask & (mask - 1)] + vecs[low]
+        score = [-1] * size
+        last = [0] * size
+        prev = [0] * size
+        score[0] = 0
+        for mask in range(size):
+            for j in range(m):
+                if mask >> j & 1:
+                    continue
+                new_mask = mask | (1 << j)
+                gain = 1 if (vecs[j], pos[mask]) in drawn else 0
+                if score[mask] + gain > score[new_mask]:
+                    score[new_mask] = score[mask] + gain
+                    last[new_mask] = j
+                    prev[new_mask] = mask
+        order, mask = [], size - 1
+        while mask:
+            order.append(ks[last[mask]])
+            mask = prev[mask]
+        return tuple(reversed(order))
+
+    # Giriga placeringen för långa kombinationer
+    remaining = list(ks)
+    order, pos = [], 0
+    while remaining:
+        choice = next((k for k in remaining if (field.pcode(k), pos) in drawn), remaining[0])
+        order.append(choice)
+        remaining.remove(choice)
+        pos += field.pcode(choice)
+    return tuple(order)
+
+
+def _optimize_layouts(combos, field, seed_keys):
+    """Ger en ordning för varje kombination så att cirklarna överlappar maximalt."""
+    drawn = set(seed_keys)
+    layouts = []
+    for combo in combos:
+        order = _best_order(combo, field, drawn)
+        layouts.append(order)
+        pos = 0
+        for k in order:
+            drawn.add((field.pcode(k), pos))
+            pos += field.pcode(k)
+    return layouts
+
+
+# ==================================================
+# CIRKLAR (nyckel för exakt jämförelse + siffror för ritning)
+# ==================================================
+def _pure_circles(order, field, x_numeric, tag):
+    """Cirklar för en kombination av rena potenser av x."""
+    circles, start = [], 0.0
+    pos = 0
+    for idx, k in enumerate(order):
+        diameter = float(x_numeric ** k)
+        if field:
+            dv = field.pcode(k)
+            key = (dv, pos)
+            pos += dv
+        else:
+            key = (tag, "u", idx)
+        circles.append((key, start, diameter))
+        start += diameter
+    return circles
+
+
+def _main2_circles(n, lengths2, field, d1_code):
+    """Huvudledet i figur 2: första cirkeln har diametern 1 + v."""
+    circles, start = [], 0.0
+    pos = 0 if (field and d1_code is not None) else None
+    for idx in range(n):
+        diameter = float(lengths2[idx])
+        dv = d1_code if idx == 0 else (field.pcode(idx) if field else None)
+        if pos is not None and dv is not None:
+            key = (dv, pos)
+            pos += dv
+        else:
+            key = ("fig2", "u", idx)
+            pos = None
+        circles.append((key, start, diameter))
+        start += diameter
+    return circles
+
+
+def _semicircle_xy(start, diameter, x_shift, y_shift, theta):
+    radius = diameter / 2.0
+    along = start + radius + radius * np.cos(theta)
+    across = radius * np.sin(theta)
+    return -across + x_shift, along + y_shift
+
+
+def _t2_start_vector(v_exact, n):
+    """Heltalskoefficienter för (1 + v) + x + ... + x^(n-1), eller None."""
+    if v_exact is None:
+        return None
+    coeffs = _poly_coeffs(1 + v_exact + sum(X ** k for k in range(1, n)))
+    if coeffs is None or any(c.denominator != 1 or c < 0 for c in coeffs):
+        return None
+    return tuple(int(c) for c in coeffs)
+
+
+# ==================================================
+# RENDER
+# ==================================================
 def render(math_data):
     n = math_data["n"]
-    minimal_poly = math_data["minimal_poly"]
     x_numeric = math_data["x_numeric"]
-    
-    lengths1_numeric = math_data.get("lengths1_numeric", [float(x_numeric**k) for k in range(n)])
-    lengths2_numeric = math_data.get("lengths2_numeric", lengths1_numeric.copy())
-    
-    raw_matches = find_math_structures_logical(n, minimal_poly, x_numeric)
-    if not raw_matches or len(raw_matches) == 0:
-        st.info("The main line is missing from the data.")
-        return
+    lengths1 = math_data["lengths1_numeric"]
+    lengths2 = math_data["lengths2_numeric"]
+    v_exact = math_data.get("v_exact")
 
-    target_value = sum(float(x_numeric**m) for m in range(n))
-    if target_value == 0: target_value = 1.0
+    # --- EXAKT DEL: vilka kombinationer finns? ---
+    p_coeffs = _integer_coeffs(math_data["minimal_poly"])
+    can_search = p_coeffs is not None and x_numeric > 1.0
 
-    unique_combos = set(tuple(sorted(list(combo))) for combo in raw_matches)
-    main_line = max(unique_combos, key=len)
-    hidden_lines = sorted(list(unique_combos - {main_line}), key=lambda c: (len(c), c))
-    sorted_matches = [main_line] + hidden_lines
+    main1 = tuple(range(n))
+    combos1, complete1 = [main1], True
+    if can_search:
+        combos1, complete1 = _search_combinations(tuple([1] * n), p_coeffs, x_numeric)
+        if main1 not in combos1:
+            combos1 = [main1] + list(combos1)
+    hidden1 = [c for c in combos1 if c != main1]
 
+    # Figur 2: samma sökning, men från (1 + v) + x + ... + x^(n-1)
+    combos2, complete2 = [], True
+    t2 = _t2_start_vector(v_exact, n)
+    if can_search and t2 is not None:
+        combos2, complete2 = _search_combinations(t2, p_coeffs, x_numeric)
+
+    # Exakt talkropp för jämförelse av längder och positioner
+    field, d1_vec, d1_code = None, None, None
+    if p_coeffs is not None:
+        biggest = max([k for c in list(combos1) + list(combos2) for k in c] + [n, 80])
+        field = NumberField(p_coeffs, kmax=biggest + 1)
+        one_plus_v = _poly_coeffs(1 + v_exact) if v_exact is not None else None
+        if one_plus_v is not None:
+            d1_vec = field.reduce(one_plus_v)
+        field.finalize([d1_vec])
+        if d1_vec is not None:
+            d1_code = field.code(d1_vec)
+
+    # Är huvudledet i figur 2 (med 1 + v) bara en annan ordning av rena potenser?
+    main2_equiv = None
+    if field is not None and d1_vec is not None:
+        for j in range(0, 80):
+            if field.power(j) == d1_vec:
+                if j not in range(1, n):
+                    main2_equiv = tuple(sorted([j] + list(range(1, n))))
+                break
+    # Är hela figur 2 exakt figur 1 multiplicerad med x^m? (Kontrolleras exakt.)
+    # Då är varje kombination i figur 1, med alla exponenter ökade med m, också en
+    # giltig kombination i figur 2.
+    shift = None
+    if field is not None and can_search and v_exact is not None:
+        t2_coeffs = _poly_coeffs(1 + v_exact + sum(X ** k for k in range(1, n)))
+        if t2_coeffs is not None:
+            t2_vec = field.reduce(t2_coeffs)
+            for m in range(1, 50):
+                if field.reduce([0] * m + [1] * n) == t2_vec:
+                    shift = m
+                    break
+    if shift is not None:
+        combos2 = sorted(
+            set(combos2) | {tuple(k + shift for k in c) for c in combos1},
+            key=lambda c: (len(c), c),
+        )
+    hidden2 = [c for c in combos2 if c != main2_equiv]
+
+    # --- KONTROLLER ---
     col_plot, col_controls = st.columns([8, 2])
-
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key=f"circles_overlap_{n}")
-        if max_overlap:
-            final_layouts = evaluate_global_layout_numeric(sorted_matches, x_numeric)
-        else:
-            final_layouts = sorted_matches
 
-        combo_labels = [" + ".join(get_math_label(k) for k in combo) for combo in final_layouts]
-        selected_option = st.radio(
+    # --- ORDNING OCH CIRKLAR ---
+    main1_circles = _pure_circles(main1, field, x_numeric, "fig1")
+    main2_circles = _main2_circles(n, lengths2, field, d1_code)
+
+    if max_overlap and field is not None:
+        order1 = _optimize_layouts(hidden1, field, [c[0] for c in main1_circles])
+        order2 = _optimize_layouts(hidden2, field, [c[0] for c in main2_circles])
+    else:
+        order1, order2 = list(hidden1), list(hidden2)
+
+    circles1_by_layout = [main1_circles] + [
+        _pure_circles(o, field, x_numeric, "fig1") for o in order1
+    ]
+    circles2_by_layout = [main2_circles] + [
+        _pure_circles(o, field, x_numeric, "fig2") for o in order2
+    ]
+    circles2_by_combo = {
+        tuple(sorted(o)): circ for o, circ in zip(order2, circles2_by_layout[1:])
+    }
+
+    def label_of(order):
+        return " + ".join(get_math_label(k) for k in order)
+
+    # Alternativ i listan: (etikett, markering i figur 1, markering i figur 2)
+    entries = [(label_of(main1), main1_circles, main2_circles)]
+    linked = set()
+    for order, circles in zip(order1, circles1_by_layout[1:]):
+        counterpart = None
+        if shift is not None:
+            wanted = tuple(sorted(k + shift for k in order))
+            if wanted == main2_equiv:
+                counterpart = main2_circles
+                linked.add(wanted)
+            elif wanted in circles2_by_combo:
+                counterpart = circles2_by_combo[wanted]
+                linked.add(wanted)
+        entries.append((label_of(order), circles, counterpart))
+    # Kombinationer som bara finns i figur 2
+    for order, circles in zip(order2, circles2_by_layout[1:]):
+        if tuple(sorted(order)) not in linked:
+            entries.append(("Fig. 2: " + label_of(order), None, circles))
+
+    with col_controls:
+        combo_labels = [e[0] for e in entries]
+        chooser = st.radio if len(combo_labels) <= 15 else st.selectbox
+        selected_option = chooser(
             "Select combination to highlight:",
             options=combo_labels,
             index=0,
-            key=f"circles_highlight_{n}_{max_overlap}"
+            key=f"circles_highlight_{n}_{max_overlap}",
         )
         selected_idx = combo_labels.index(selected_option)
+        highlight1, highlight2 = entries[selected_idx][1], entries[selected_idx][2]
+
+        if not (complete1 and complete2):
+            st.caption("The search was limited, so more combinations may exist.")
 
     with col_plot:
         line_color, bg_color = "#FFFFFF", "rgba(0,0,0,0)"
+        theta = np.linspace(0, np.pi, 40)
+
+        total1 = float(sum(lengths1))
+        total2 = float(sum(lengths2))
+
+        max_r1 = max(d for layout in circles1_by_layout for _, _, d in layout) / 2.0
+        max_r2 = max(d for layout in circles2_by_layout for _, _, d in layout) / 2.0
+        gap = 0.4 * max(max_r1, max_r2)
+        fig2_x_offset = max_r2 + gap
+
+        # Höjdjustering: cirkeln x ska ligga på samma höjd i båda figurerna
+        y_offset2 = float(lengths1[0]) - float(lengths2[0])
+
+        def trace_coords(layouts, x_shift, y_shift, baseline_len):
+            xs, ys, drawn = [], [], set()
+            for layout in layouts:
+                for key, start, diameter in layout:
+                    if key in drawn:
+                        continue
+                    drawn.add(key)
+                    cx, cy = _semicircle_xy(start, diameter, x_shift, y_shift, theta)
+                    xs.extend(list(cx) + [None])
+                    ys.extend(list(cy) + [None])
+            xs.extend([x_shift, x_shift, None])
+            ys.extend([y_shift, y_shift + baseline_len, None])
+            return xs, ys
+
         fig = go.Figure()
-        theta_upper = np.linspace(0, np.pi, 40)
-        
-        # SÄKERT UTGÅNGSPUNKT: Hämta geometri utifrån den första valda layouten (huvudleden)
-        chosen_base_layout = final_layouts[0] if final_layouts else main_line
-        centers_sample = get_layer_geometry_numeric(chosen_base_layout, x_numeric)
-        max_radius = max((d/2.0) for _, _, d in centers_sample) if centers_sample else (target_value * 0.5)
-        
-        # Geometri för diagram 2 (Enbart huvudleden med 1 + v)
-        main_centers_v = get_layer_geometry_from_list(chosen_base_layout, lengths2_numeric)
-        max_rad2 = max((d/2.0) for _, _, d in main_centers_v) if main_centers_v else max_radius
-        
-        # POSITIV OFFSET: Flyttar diagram 2 till höger om diagram 1
-        gap = max_radius * 0.8
-        fig2_x_offset = max_rad2 * 2.0 + gap
 
-        # --- BERÄKNA FÖRSKJUTNING I HÖJDLED (Y-AXELN) FÖR ATT LINJERA CIRKEL x ---
-        y_offset_fig2 = 0.0
-        
-        bottom_x_fig1 = 0.0
-        for k, x_center, diameter in centers_sample:
-            if k == 1:
-                bottom_x_fig1 = x_center - (diameter / 2.0)
-                break
-                
-        bottom_x_fig2 = 0.0
-        for k, x_center, diameter in main_centers_v:
-            if k == 1:
-                bottom_x_fig2 = x_center - (diameter / 2.0)
-                break
-        
-        y_offset_fig2 = bottom_x_fig1 - bottom_x_fig2
+        # Underliggande (tunna) cirklar
+        for layouts, x_shift, y_shift, total in (
+            (circles1_by_layout, 0.0, 0.0, total1),
+            (circles2_by_layout, fig2_x_offset, y_offset2, total2),
+        ):
+            xs, ys = trace_coords(layouts, x_shift, y_shift, total)
+            fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines",
+                                     line=dict(color=line_color, width=0.7),
+                                     hoverinfo="skip", showlegend=False))
 
-        # --------------------------------------------------
-        # DIAGRAM 1: STANDARD (VÄNSTER)
-        # --------------------------------------------------
-        x_bg1, y_bg1 = [], []
-        drawn_circles = set()
-        for combo in final_layouts:
-            centers = get_layer_geometry_numeric(combo, x_numeric)
-            for k, x_center, diameter in centers:
-                radius = diameter / 2.0
-                circle_id = (k, round(x_center, 5))
-                if circle_id not in drawn_circles:
-                    drawn_circles.add(circle_id)
-                    cx = x_center + radius * np.cos(theta_upper)
-                    cy = radius * np.sin(theta_upper)
-                    x_bg1.extend(list(-cy) + [None])
-                    y_bg1.extend(list(cx) + [None])
-
-        # Baslinje 1
-        x_bg1.extend([0.0, 0.0, None])
-        y_bg1.extend([0.0, target_value, None])
-        
-        fig.add_trace(go.Scatter(x=x_bg1, y=y_bg1, mode="lines", line=dict(color=line_color, width=0.7), hoverinfo="skip", showlegend=False))
-
-        # Markera vald kombination i Diagram 1
-        if 0 <= selected_idx < len(final_layouts):
-            chosen_combo = final_layouts[selected_idx]
-            chosen_centers = get_layer_geometry_numeric(chosen_combo, x_numeric)
-            for k, x_center, diameter in chosen_centers:
-                radius = diameter / 2.0
-                cx = x_center + radius * np.cos(theta_upper)
-                cy = radius * np.sin(theta_upper)
-                fig.add_trace(go.Scatter(x=-cy, y=cx, mode="lines", line=dict(color=line_color, width=2.5), hoverinfo="skip", showlegend=False))
-
-
-        # --------------------------------------------------
-        # DIAGRAM 2: MODIFIERAD (HÖGER) - Med höjdjustering
-        # --------------------------------------------------
-        x_bg2, y_bg2 = [], []
-        
-        for k, x_center, diameter in main_centers_v:
-            radius = diameter / 2.0
-            cx = x_center + radius * np.cos(theta_upper)
-            cy = radius * np.sin(theta_upper)
-            
-            x_bg2.extend(list(-cy + fig2_x_offset) + [None])
-            y_bg2.extend(list(cx + y_offset_fig2) + [None])
-
-        # Baslinje 2
-        target_value_v = sum(d for _, _, d in main_centers_v) if main_centers_v else target_value
-        x_bg2.extend([fig2_x_offset, fig2_x_offset, None])
-        y_bg2.extend([y_offset_fig2, y_offset_fig2 + target_value_v, None])
-        
-        fig.add_trace(go.Scatter(x=x_bg2, y=y_bg2, mode="lines", line=dict(color=line_color, width=2.5), hoverinfo="skip", showlegend=False))
-
+        # Markerad kombination (tjock) i båda figurerna
+        for circles, x_shift, y_shift in (
+            (highlight1, 0.0, 0.0),
+            (highlight2, fig2_x_offset, y_offset2),
+        ):
+            for _, start, diameter in (circles or []):
+                cx, cy = _semicircle_xy(start, diameter, x_shift, y_shift, theta)
+                fig.add_trace(go.Scatter(x=cx, y=cy, mode="lines",
+                                         line=dict(color=line_color, width=2.5),
+                                         hoverinfo="skip", showlegend=False))
 
         # --- GEMENSAM SKALNING ---
-        y_max_bound = max(target_value, y_offset_fig2 + target_value_v)
-        y_min_bound = min(0.0, y_offset_fig2)
-        
-        y_min = y_min_bound - (y_max_bound - y_min_bound) * 0.05
-        y_max = y_max_bound + (y_max_bound - y_min_bound) * 0.05
-        
-        x_min = -(max_radius * 2.0) - (max_radius * 0.1)
-        x_max = fig2_x_offset + (max_radius * 0.1)
+        y_max_bound = max(total1, y_offset2 + total2)
+        y_min_bound = min(0.0, y_offset2)
+        pad = (y_max_bound - y_min_bound) * 0.05
+        y_min, y_max = y_min_bound - pad, y_max_bound + pad
 
-        y_span = y_max - y_min
-        x_span = x_max - x_min
+        x_min = -max_r1 * 1.1
+        x_max = fig2_x_offset + max_r1 * 0.1
+
+        y_span, x_span = y_max - y_min, x_max - x_min
         if y_span > x_span:
             diff = (y_span - x_span) / 2.0
             x_min -= diff
@@ -285,10 +505,11 @@ def render(math_data):
         fig.update_layout(
             plot_bgcolor=bg_color, paper_bgcolor=bg_color, showlegend=False,
             margin=dict(l=10, r=10, t=10, b=10), height=290, dragmode=False,
-            xaxis=dict(visible=False, range=[x_min, x_max]),
-            yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=[y_min, y_max])
+            xaxis=dict(visible=False, range=[x_min, x_max], fixedrange=True),
+            yaxis=dict(visible=False, scaleanchor="x", scaleratio=1,
+                       range=[y_min, y_max], fixedrange=True),
         )
 
-        st.plotly_chart(fig, use_container_width=True, key=f"semicircles_combined_{n}")
-
-    st.markdown("<style>.modebar { display: none !important; }</style>", unsafe_allow_html=True)
+        st.plotly_chart(fig, use_container_width=True,
+                        config={'displayModeBar': False, 'scrollZoom': False},
+                        key=f"semicircles_combined_{n}")
