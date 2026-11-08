@@ -78,6 +78,14 @@ st.markdown(
         margin-bottom: 0px !important;
         padding-bottom: 2px !important;
     }
+
+    /* 7. Hjälptext (tooltip vid frågetecknet): blå text, samma blå som i fälten */
+    div[data-testid="stTooltipContent"],
+    div[data-testid="stTooltipContent"] *,
+    div[data-baseweb="tooltip"] * {
+        color: #0041BA !important;
+    }
+    
     </style>
     """,
     unsafe_allow_html=True
