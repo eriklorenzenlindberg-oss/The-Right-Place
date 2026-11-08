@@ -162,6 +162,8 @@ with b_kol:
     eq_input = st.text_input(
         r"$x \text{ (ratio)=}$", 
         value="x^n-1"
+        help="Enter a value or expression for x, e.g. x^n-1 or 2^(1/2). "
+             "You can also enter a full equation, e.g. 1+x=x^n."
     )
 
     add_value_str = st.text_input(
