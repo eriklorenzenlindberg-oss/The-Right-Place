@@ -271,7 +271,7 @@ def _main2_circles(n, lengths2, field, d1_code, rearranged=False):
     """
     Huvudledet i figur 2: första cirkeln har diametern 1 + v.
     Med rearranged=True ordnas cirklarna i storleksordning, som i figur 1.
-    Returnerar (cirklar, startpunkt för cirkeln x).
+    Returnerar (cirklar, startpunkt för cirkeln x, ordning av sidorna).
     """
     order = sorted(range(n), key=lambda i: lengths2[i]) if rearranged else list(range(n))
     circles, start, start_of_x = [], 0.0, 0.0
@@ -289,7 +289,7 @@ def _main2_circles(n, lengths2, field, d1_code, rearranged=False):
             start_of_x = start
         circles.append((key, start, diameter))
         start += diameter
-    return circles, start_of_x
+    return circles, start_of_x, order
 
 
 def _semicircle_xy(start, diameter, x_shift, y_shift, theta):
@@ -392,7 +392,7 @@ def render(math_data):
 
     # --- ORDNING OCH CIRKLAR ---
     main1_circles = _pure_circles(main1, field, x_numeric, "fig1")
-    main2_circles, x_start2 = _main2_circles(n, lengths2, field, d1_code, rearrange2)
+    main2_circles, x_start2, main2_order = _main2_circles(n, lengths2, field, d1_code, rearrange2)
 
     if max_overlap and field is not None:
         order1 = _optimize_layouts(hidden1, field, [c[0] for c in main1_circles])
@@ -409,16 +409,50 @@ def render(math_data):
     def label_of(order):
         return " + ".join(get_math_label(k) for k in order)
 
+    # Motsvarighet i figur 2 för varje alternativ i listan (när huvudledet är geometriskt
+    # är figur 2 figur 1 förstorad med x, eller identisk med figur 1 om v = 0).
+    layouts1 = [main1] + order1
+    circles2_by_combo = {
+        tuple(sorted(o)): (circ, o) for o, circ in zip(order2, circles2_by_layout[1:])
+    }
+    main2_label = " + ".join("(1 + v)" if i == 0 else get_math_label(i) for i in main2_order)
+    counter_shift = 0 if (is_geometric and main2_equiv[0] == 0) else 1
+    counterparts = []  # (cirklar i figur 2, etikett) eller (None, None)
+    for i, order in enumerate(layouts1):
+        match = (None, None)
+        if i == 0:
+            match = (main2_circles, main2_label)
+        elif is_geometric:
+            wanted = tuple(sorted(k + counter_shift for k in order))
+            if wanted == main2_equiv:
+                match = (main2_circles, main2_label)
+            elif wanted in circles2_by_combo:
+                circ, o = circles2_by_combo[wanted]
+                match = (circ, label_of(o))
+        counterparts.append(match)
+
     with col_controls:
-        combo_labels = [label_of(o) for o in [main1] + order1]
+        st.caption("Highlight in:")
+        highlight_fig1 = st.checkbox("Fig. 1", value=True, key=f"circles_hl_fig1_{n}")
+        highlight_fig2 = st.checkbox("Fig. 2", value=False, key=f"circles_hl_fig2_{n}")
+
+        # Etiketterna beskriver figuren man markerar i (figur 1 om båda är ibockade)
+        if highlight_fig2 and not highlight_fig1:
+            combo_labels = [
+                cp[1] if cp[1] else f"{label_of(o)} (not in fig. 2)"
+                for o, cp in zip(layouts1, counterparts)
+            ]
+        else:
+            combo_labels = [label_of(o) for o in layouts1]
+
         chooser = st.radio if len(combo_labels) <= 15 else st.selectbox
-        selected_option = chooser(
-            "Select combination to highlight:",
-            options=combo_labels,
+        selected_idx = chooser(
+            "Select combination:",
+            options=list(range(len(combo_labels))),
             index=0,
+            format_func=lambda i: combo_labels[i],
             key=f"circles_highlight_{n}_{max_overlap}",
         )
-        selected_idx = combo_labels.index(selected_option)
 
         if not (complete1 and complete2):
             st.caption("The search was limited, so more combinations may exist.")
@@ -458,27 +492,32 @@ def render(math_data):
         # Underliggande (tunna) cirklar
         for layouts, x_shift, y_shift, total, with_baseline in (
             (circles1_by_layout, 0.0, 0.0, total1, True),
-            (circles2_by_layout, fig2_x_offset, y_offset2, total2, False),
+            (circles2_by_layout, fig2_x_offset, y_offset2, total2, True),
         ):
             xs, ys = trace_coords(layouts, x_shift, y_shift, total, with_baseline)
             fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines",
                                      line=dict(color=line_color, width=0.7),
                                      hoverinfo="skip", showlegend=False))
 
-        # Tjocka linjer: vald kombination i figur 1, och huvudledet (med 1 + v) i figur 2
-        for circles, x_shift, y_shift in (
-            (circles1_by_layout[selected_idx], 0.0, 0.0),
-            (main2_circles, fig2_x_offset, y_offset2),
-        ):
+        # Tjocka linjer: bara i de figurer som är ibockade under "Highlight in"
+        highlight2 = counterparts[selected_idx][0] if highlight_fig2 else None
+        thick = []
+        if highlight_fig1:
+            thick.append((circles1_by_layout[selected_idx], 0.0, 0.0))
+        if highlight2 is not None:
+            thick.append((highlight2, fig2_x_offset, y_offset2))
+        for circles, x_shift, y_shift in thick:
             for _, start, diameter in circles:
                 cx, cy = _semicircle_xy(start, diameter, x_shift, y_shift, theta)
                 fig.add_trace(go.Scatter(x=cx, y=cy, mode="lines",
                                          line=dict(color=line_color, width=2.5),
                                          hoverinfo="skip", showlegend=False))
-        fig.add_trace(go.Scatter(
-            x=[fig2_x_offset, fig2_x_offset], y=[y_offset2, y_offset2 + total2],
-            mode="lines", line=dict(color=line_color, width=2.5),
-            hoverinfo="skip", showlegend=False))
+        # Baslinjen i figur 2 blir tjock när huvudledet där är markerat
+        if highlight2 is main2_circles:
+            fig.add_trace(go.Scatter(
+                x=[fig2_x_offset, fig2_x_offset], y=[y_offset2, y_offset2 + total2],
+                mode="lines", line=dict(color=line_color, width=2.5),
+                hoverinfo="skip", showlegend=False))
 
         # --- GEMENSAM SKALNING ---
         # Gränserna räknas ut för båda lägena av figur 2 (med och utan "Rearrange"),
