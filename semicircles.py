@@ -267,11 +267,16 @@ def _pure_circles(order, field, x_numeric, tag):
     return circles
 
 
-def _main2_circles(n, lengths2, field, d1_code):
-    """Huvudledet i figur 2: första cirkeln har diametern 1 + v."""
-    circles, start = [], 0.0
+def _main2_circles(n, lengths2, field, d1_code, rearranged=False):
+    """
+    Huvudledet i figur 2: första cirkeln har diametern 1 + v.
+    Med rearranged=True ordnas cirklarna i storleksordning, som i figur 1.
+    Returnerar (cirklar, startpunkt för cirkeln x).
+    """
+    order = sorted(range(n), key=lambda i: lengths2[i]) if rearranged else list(range(n))
+    circles, start, start_of_x = [], 0.0, 0.0
     pos = 0 if (field and d1_code is not None) else None
-    for idx in range(n):
+    for idx in order:
         diameter = float(lengths2[idx])
         dv = d1_code if idx == 0 else (field.pcode(idx) if field else None)
         if pos is not None and dv is not None:
@@ -280,9 +285,11 @@ def _main2_circles(n, lengths2, field, d1_code):
         else:
             key = ("fig2", "u", idx)
             pos = None
+        if idx == 1:
+            start_of_x = start
         circles.append((key, start, diameter))
         start += diameter
-    return circles
+    return circles, start_of_x
 
 
 def _semicircle_xy(start, diameter, x_shift, y_shift, theta):
@@ -375,10 +382,11 @@ def render(math_data):
     col_plot, col_controls = st.columns([8, 2])
     with col_controls:
         max_overlap = st.checkbox("Overlap", value=True, key=f"circles_overlap_{n}")
+        rearrange2 = st.checkbox("Rearrange fig. 2", value=False, key=f"circles_rearrange_{n}")
 
     # --- ORDNING OCH CIRKLAR ---
     main1_circles = _pure_circles(main1, field, x_numeric, "fig1")
-    main2_circles = _main2_circles(n, lengths2, field, d1_code)
+    main2_circles, x_start2 = _main2_circles(n, lengths2, field, d1_code, rearrange2)
 
     if max_overlap and field is not None:
         order1 = _optimize_layouts(hidden1, field, [c[0] for c in main1_circles])
@@ -422,7 +430,7 @@ def render(math_data):
         fig2_x_offset = max_r2 + gap
 
         # Höjdjustering: cirkeln x ska ligga på samma höjd i båda figurerna
-        y_offset2 = float(lengths1[0]) - float(lengths2[0])
+        y_offset2 = float(lengths1[0]) - x_start2
 
         def trace_coords(layouts, x_shift, y_shift, baseline_len, with_baseline=True):
             xs, ys, drawn = [], [], set()
