@@ -432,12 +432,15 @@ def render(math_data):
         counterparts.append(match)
 
     with col_controls:
-        st.caption("Highlight in:")
-        highlight_fig1 = st.checkbox("Fig. 1", value=True, key=f"circles_hl_fig1_{n}")
-        highlight_fig2 = st.checkbox("Fig. 2", value=False, key=f"circles_hl_fig2_{n}")
+        highlight_target = st.radio(
+            "Highlight in:", ["Fig. 1", "Fig. 2"], index=0,
+            horizontal=True, key=f"circles_hl_target_{n}",
+        )
+        highlight_fig1 = highlight_target == "Fig. 1"
+        highlight_fig2 = highlight_target == "Fig. 2"
 
-        # Etiketterna beskriver figuren man markerar i (figur 1 om båda är ibockade)
-        if highlight_fig2 and not highlight_fig1:
+        # Etiketterna beskriver figuren man markerar i
+        if highlight_fig2:
             combo_labels = [
                 cp[1] if cp[1] else f"{label_of(o)} (not in fig. 2)"
                 for o, cp in zip(layouts1, counterparts)
