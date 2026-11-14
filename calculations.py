@@ -276,6 +276,7 @@ def get_math_data(n, eq_input, add_value_str):
         "minimal_poly": minimal_poly,
         "structure_poly": structure_poly,
         "v_simplified": simplified_v_expr,
+        "v_exact": add_expr,  # v som exakt uttryck i x (n insatt), före förenkling
         "circle_pool": circle_pool,
         "circle_pool_symbolic": circle_pool_symbolic,
         "lengths1_numeric": lengths1_numeric,
