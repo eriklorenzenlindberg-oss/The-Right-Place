@@ -475,8 +475,14 @@ def render(math_data):
             hoverinfo="skip", showlegend=False))
 
         # --- GEMENSAM SKALNING ---
-        y_max_bound = max(total1, y_offset2 + total2)
-        y_min_bound = min(0.0, y_offset2)
+        # Gränserna räknas ut för båda lägena av figur 2 (med och utan "Rearrange"),
+        # så att figur 1 ligger exakt still när kryssrutan ändras.
+        offsets2 = [
+            float(lengths1[0]) - _main2_circles(n, lengths2, field, d1_code, flag)[1]
+            for flag in (False, True)
+        ]
+        y_max_bound = max(total1, max(o + total2 for o in offsets2))
+        y_min_bound = min(0.0, min(offsets2))
         pad = (y_max_bound - y_min_bound) * 0.05
         y_min, y_max = y_min_bound - pad, y_max_bound + pad
 
