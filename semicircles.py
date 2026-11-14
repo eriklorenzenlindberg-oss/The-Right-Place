@@ -374,8 +374,14 @@ def render(math_data):
             set(combos2) | {tuple(k + shift for k in c) for c in combos1},
             key=lambda c: (len(c), c),
         )
-    # I figur 2 är 1 utbytt mot 1 + v, så det finns ingen cirkel med diametern 1 (x^0)
-    combos2 = [c for c in combos2 if 0 not in c]
+    # Extracirklar ritas bara om huvudledet i figur 2 är en geometrisk följd med kvoten x,
+    # dvs. om 1 + v exakt är x^0 eller x^n (sidorna är då på varandra följande potenser).
+    is_geometric = main2_equiv is not None and main2_equiv[-1] - main2_equiv[0] == n - 1
+    if not is_geometric:
+        combos2 = []
+    elif main2_equiv[0] != 0:
+        # 1 är utbytt mot 1 + v, så det finns ingen cirkel med diametern 1 (x^0)
+        combos2 = [c for c in combos2 if 0 not in c]
     hidden2 = [c for c in combos2 if c != main2_equiv]
 
     # --- KONTROLLER ---
