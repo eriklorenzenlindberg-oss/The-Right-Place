@@ -367,6 +367,8 @@ def render(math_data):
             set(combos2) | {tuple(k + shift for k in c) for c in combos1},
             key=lambda c: (len(c), c),
         )
+    # I figur 2 är 1 utbytt mot 1 + v, så det finns ingen cirkel med diametern 1 (x^0)
+    combos2 = [c for c in combos2 if 0 not in c]
     hidden2 = [c for c in combos2 if c != main2_equiv]
 
     # --- KONTROLLER ---
@@ -390,34 +392,11 @@ def render(math_data):
     circles2_by_layout = [main2_circles] + [
         _pure_circles(o, field, x_numeric, "fig2") for o in order2
     ]
-    circles2_by_combo = {
-        tuple(sorted(o)): circ for o, circ in zip(order2, circles2_by_layout[1:])
-    }
-
     def label_of(order):
         return " + ".join(get_math_label(k) for k in order)
 
-    # Alternativ i listan: (etikett, markering i figur 1, markering i figur 2)
-    entries = [(label_of(main1), main1_circles, main2_circles)]
-    linked = set()
-    for order, circles in zip(order1, circles1_by_layout[1:]):
-        counterpart = None
-        if shift is not None:
-            wanted = tuple(sorted(k + shift for k in order))
-            if wanted == main2_equiv:
-                counterpart = main2_circles
-                linked.add(wanted)
-            elif wanted in circles2_by_combo:
-                counterpart = circles2_by_combo[wanted]
-                linked.add(wanted)
-        entries.append((label_of(order), circles, counterpart))
-    # Kombinationer som bara finns i figur 2
-    for order, circles in zip(order2, circles2_by_layout[1:]):
-        if tuple(sorted(order)) not in linked:
-            entries.append(("Fig. 2: " + label_of(order), None, circles))
-
     with col_controls:
-        combo_labels = [e[0] for e in entries]
+        combo_labels = [label_of(o) for o in [main1] + order1]
         chooser = st.radio if len(combo_labels) <= 15 else st.selectbox
         selected_option = chooser(
             "Select combination to highlight:",
@@ -426,7 +405,6 @@ def render(math_data):
             key=f"circles_highlight_{n}_{max_overlap}",
         )
         selected_idx = combo_labels.index(selected_option)
-        highlight1, highlight2 = entries[selected_idx][1], entries[selected_idx][2]
 
         if not (complete1 and complete2):
             st.caption("The search was limited, so more combinations may exist.")
@@ -446,7 +424,7 @@ def render(math_data):
         # Höjdjustering: cirkeln x ska ligga på samma höjd i båda figurerna
         y_offset2 = float(lengths1[0]) - float(lengths2[0])
 
-        def trace_coords(layouts, x_shift, y_shift, baseline_len):
+        def trace_coords(layouts, x_shift, y_shift, baseline_len, with_baseline=True):
             xs, ys, drawn = [], [], set()
             for layout in layouts:
                 for key, start, diameter in layout:
@@ -456,32 +434,37 @@ def render(math_data):
                     cx, cy = _semicircle_xy(start, diameter, x_shift, y_shift, theta)
                     xs.extend(list(cx) + [None])
                     ys.extend(list(cy) + [None])
-            xs.extend([x_shift, x_shift, None])
-            ys.extend([y_shift, y_shift + baseline_len, None])
+            if with_baseline:
+                xs.extend([x_shift, x_shift, None])
+                ys.extend([y_shift, y_shift + baseline_len, None])
             return xs, ys
 
         fig = go.Figure()
 
         # Underliggande (tunna) cirklar
-        for layouts, x_shift, y_shift, total in (
-            (circles1_by_layout, 0.0, 0.0, total1),
-            (circles2_by_layout, fig2_x_offset, y_offset2, total2),
+        for layouts, x_shift, y_shift, total, with_baseline in (
+            (circles1_by_layout, 0.0, 0.0, total1, True),
+            (circles2_by_layout, fig2_x_offset, y_offset2, total2, False),
         ):
-            xs, ys = trace_coords(layouts, x_shift, y_shift, total)
+            xs, ys = trace_coords(layouts, x_shift, y_shift, total, with_baseline)
             fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines",
                                      line=dict(color=line_color, width=0.7),
                                      hoverinfo="skip", showlegend=False))
 
-        # Markerad kombination (tjock) i båda figurerna
+        # Tjocka linjer: vald kombination i figur 1, och huvudledet (med 1 + v) i figur 2
         for circles, x_shift, y_shift in (
-            (highlight1, 0.0, 0.0),
-            (highlight2, fig2_x_offset, y_offset2),
+            (circles1_by_layout[selected_idx], 0.0, 0.0),
+            (main2_circles, fig2_x_offset, y_offset2),
         ):
-            for _, start, diameter in (circles or []):
+            for _, start, diameter in circles:
                 cx, cy = _semicircle_xy(start, diameter, x_shift, y_shift, theta)
                 fig.add_trace(go.Scatter(x=cx, y=cy, mode="lines",
                                          line=dict(color=line_color, width=2.5),
                                          hoverinfo="skip", showlegend=False))
+        fig.add_trace(go.Scatter(
+            x=[fig2_x_offset, fig2_x_offset], y=[y_offset2, y_offset2 + total2],
+            mode="lines", line=dict(color=line_color, width=2.5),
+            hoverinfo="skip", showlegend=False))
 
         # --- GEMENSAM SKALNING ---
         y_max_bound = max(total1, y_offset2 + total2)
