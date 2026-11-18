@@ -121,9 +121,11 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
                 chosen[i] = lengths2[i] if i < len(lengths2) else x_numeric ** i
         return chosen
 
-    # 3. FIGUR 1 OCH FIGUR 2. Figur 2 flyttas i höjdled så att ett hörn hamnar på samma
-    #    höjd som motsvarande hörn i figur 1, och i sidled så att det blir ett litet
-    #    mellanrum mellan pyramiderna.
+    # 3. FIGUR 1 OCH FIGUR 2. Figur 2 flyttas så att ett hörn (som tillhör ett block utan
+    #    bredden 1 + v) hamnar på samma ställe i förhållande till figur 1 oavsett om
+    #    Rearrange är ibockad. Då ligger alla block utan 1 + v exakt still när man växlar.
+    #    Mellanrummet mellan pyramiderna är ett enda gemensamt värde för båda lägena,
+    #    så att det inte ändrar något i sidled.
     faces1 = pyramid_faces(n, lengths1, z_gap, x_gap)
     box1 = bounding_box(faces1)
     f1_fix = fix_point(lengths1, n - 1, n - 2, n - 3, z_gap, x_gap)
@@ -137,19 +139,21 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
             z, b, a = n - 2, n - 3, n - 4
         z, b, a = max(2, z), max(1, b), max(0, a)
         f2_fix = fix_point(chosen, z, b, a, z_gap, x_gap)
+        dx_align = f1_fix[0] - f2_fix[0]
         dy = f1_fix[1] - f2_fix[1]
-        variants[rearranged] = (chosen, dy, bounding_box(pyramid_faces(n, chosen, z_gap, x_gap, 0.0, dy)))
+        box0 = bounding_box(pyramid_faces(n, chosen, z_gap, x_gap, dx_align, dy))
+        variants[rearranged] = (chosen, dx_align, dy, box0)
 
     widest = max(
-        [box1[1] - box1[0]] + [v[2][1] - v[2][0] for v in variants.values()]
+        [box1[1] - box1[0]] + [v[3][1] - v[3][0] for v in variants.values()]
     )
     spacing = 0.1 * widest
+    # Gemensamt mellanrum: tillräckligt stort för att ingen av varianterna ska nå figur 1
+    gap = max(box1[1] + spacing - v[3][0] for v in variants.values())
 
-    # Pyramid 2 placeras med vänsterkanten en bit till höger om pyramid 1
     placed = {}
-    for rearranged, (chosen, dy, box0) in variants.items():
-        dx = box1[1] + spacing - box0[0]
-        faces = pyramid_faces(n, chosen, z_gap, x_gap, dx, dy)
+    for rearranged, (chosen, dx_align, dy, _) in variants.items():
+        faces = pyramid_faces(n, chosen, z_gap, x_gap, dx_align + gap, dy)
         placed[rearranged] = (faces, bounding_box(faces))
 
     # 4. AXELGRÄNSER: räknas ut från alla hörn i figur 1 och figur 2 i BÅDA lägena, så att
