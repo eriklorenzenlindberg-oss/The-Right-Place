@@ -17,6 +17,26 @@ MAX_STATES = 3000
 
 
 # ==================================================
+# KRYSSRUTA SOM KOMMER IHÅG SITT VAL
+# Streamlit glömmer en kryssrutas värde om den inte ritas i en körning
+# (t.ex. när appen visar ett felmeddelande och stannar). Därför sparar vi
+# valet under en egen nyckel och använder det som startvärde.
+# ==================================================
+def _remembering_checkbox(label, default, key):
+    pref_key = f"pref_{label}"
+
+    def remember():
+        st.session_state[pref_key] = st.session_state[key]
+
+    return st.checkbox(
+        label,
+        value=st.session_state.get(pref_key, default),
+        key=key,
+        on_change=remember,
+    )
+
+
+# ==================================================
 # ETIKETTER
 # ==================================================
 def get_math_label(power):
@@ -387,7 +407,7 @@ def render(math_data):
     # --- KONTROLLER ---
     col_plot, col_controls = st.columns([8, 2])
     with col_controls:
-        max_overlap = st.checkbox("Overlap", value=True, key=f"circles_overlap_{n}")
+        max_overlap = _remembering_checkbox("Overlap", True, f"circles_overlap_{n}")
         rearrange2 = st.checkbox("Rearrange fig. 2", value=False, key=f"circles_rearrange_{n}")
 
     # --- ORDNING OCH CIRKLAR ---
@@ -454,7 +474,7 @@ def render(math_data):
             options=list(range(len(combo_labels))),
             index=0,
             format_func=lambda i: combo_labels[i],
-            key=f"circles_highlight_{n}_{max_overlap}",
+            key=f"circles_highlight_{n}_{max_overlap}_{highlight_target}",
         )
 
         if not (complete1 and complete2):
@@ -515,12 +535,6 @@ def render(math_data):
                 fig.add_trace(go.Scatter(x=cx, y=cy, mode="lines",
                                          line=dict(color=line_color, width=2.5),
                                          hoverinfo="skip", showlegend=False))
-        # Baslinjen i figur 2 blir tjock när huvudledet där är markerat
-        if highlight2 is main2_circles:
-            fig.add_trace(go.Scatter(
-                x=[fig2_x_offset, fig2_x_offset], y=[y_offset2, y_offset2 + total2],
-                mode="lines", line=dict(color=line_color, width=2.5),
-                hoverinfo="skip", showlegend=False))
 
         # --- GEMENSAM SKALNING ---
         # Gränserna räknas ut för båda lägena av figur 2 (med och utan "Rearrange"),
