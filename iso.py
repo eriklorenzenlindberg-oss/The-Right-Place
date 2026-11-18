@@ -35,8 +35,11 @@ def format_label(power, is_fig2=False):
 # u = 1 är storleksföljden.
 
 def allowed_steps(n):
-    """Alla steg u (1 <= u < n) med gcd(u, n) = 1."""
-    return [u for u in range(1, n) if math.gcd(u, n) == 1]
+    """
+    Steg u med gcd(u, n) = 1. Steg u och n - u ger spegelbilder av varandra,
+    så vi behåller bara den mindre (u <= n/2). För n = 2 är det u = 1.
+    """
+    return [u for u in range(1, n) if math.gcd(u, n) == 1 and 2 * u <= n]
 
 
 def side_order(n, u):
@@ -133,11 +136,7 @@ def render(math_data):
         steps = allowed_steps(n)
         if len(steps) > 1:
             def step_label(u):
-                if u == 1:
-                    return "1 (size order)"
-                if u == n - 1:
-                    return f"{u} (reverse order)"
-                return str(u)
+                return "1 (size order)" if u == 1 else str(u)
 
             step = st.selectbox(
                 "Order of sides (step):",
@@ -149,7 +148,8 @@ def render(math_data):
                     "Side x^e is placed on direction k when e = step·k mod n. "
                     "Step 1 is size order. Only steps that are coprime with n "
                     "can make fig. 2 identical to fig. 1 when v = x^n − 1; "
-                    "Rotate then turns fig. 2 by the angle that matches the step."
+                    "Rotate then turns fig. 2 by the angle that matches the step. "
+                    "Mirror-image orders are left out."
                 ),
             )
         else:
