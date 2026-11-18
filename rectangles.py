@@ -20,10 +20,10 @@ def render(math_data):
     line_color = "#FFFFFF"
     bg_color = "rgba(0,0,0,0)"
     
-    # --- NYA INSTÄLLNINGAR FÖR DEN STRECKADE KOLUMNEN ---
+    # --- INSTÄLLNINGAR FÖR DEN STRECKADE KOLUMNEN ---
     dashed_line_color = "#FFFFFF"  
     dashed_line_width = 0.5        # Tunn linje
-    dashed_pattern = "3px 3px"     # Förhållande mellan streck och mellanrum (t.ex. "5px 3px")
+    dashed_pattern = "3px,3px"     # Streck och mellanrum, kommaseparerat (t.ex. "5px,3px")
     
     # --- PANEL-LAYOUT (Exakt som i iso.py) ---
     col_plot, col_controls = st.columns([8, 2])
@@ -72,7 +72,7 @@ def render(math_data):
 
             # 2. Rektanglar och bredd-texter
             for col in range(n - 1):
-                # --- UPPDATERAT: Generera den streckade kolumnen 1 i Figur 2 ---
+                # --- Generera den streckade kolumnen 1 i Figur 2 ---
                 if fig_idx == 1 and col == 0:
                     dash_col_width = unit 
                     x_dl = x_start + v_num
@@ -110,10 +110,18 @@ def render(math_data):
                     width = powers[col]
 
                 if not (fig_idx == 1 and rotate):
-                    x_texts.append(x_offset + (width/2))
-                    y_texts.append(-(unit * 0.3))
-                    text_labels.append("1+v" if (fig_idx == 1 and col == 0) else get_math_label(col))
-                    text_positions.append("bottom center")
+                    if fig_idx == 1 and col == 0 and v_num > 0:
+                        # 1 står under kolumnen med bredden 1 (den streckade) och v under
+                        # kolumnen med extrarektanglarna, som är v bred och ligger till vänster
+                        x_texts.extend([x_start + v_num / 2, x_start + v_num + unit / 2])
+                        y_texts.extend([-(unit * 0.3)] * 2)
+                        text_labels.extend(["v", "1"])
+                        text_positions.extend(["bottom center"] * 2)
+                    else:
+                        x_texts.append(x_offset + (width/2))
+                        y_texts.append(-(unit * 0.3))
+                        text_labels.append("1+v" if (fig_idx == 1 and col == 0) else get_math_label(col))
+                        text_positions.append("bottom center")
 
                 y_offset = 0.0
                 for power in range(n - 1, col, -1):
@@ -157,7 +165,7 @@ def render(math_data):
         # Huvudlinjer (Solida)
         fig.add_trace(go.Scatter(x=x_lines, y=y_lines, mode="lines", line=dict(color=line_color, width=1.0), hoverinfo="skip", showlegend=False))
         
-        # --- NYTT: Lägg till den streckade kolumnen som ett eget lager ---
+        # Den streckade kolumnen som ett eget lager
         if x_dashed:
             fig.add_trace(go.Scatter(
                 x=x_dashed, y=y_dashed, mode="lines", 
@@ -191,14 +199,6 @@ def render(math_data):
             yaxis=dict(visible=False, range=[y_min, y_max])
         )
         
-        # Gömmer verktygsraden precis som i iso.py
-        st.markdown(
-            """
-            <style>
-            .modebar { display: none !important; }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-        
-        st.plotly_chart(fig, use_container_width=True, key="rectangles_plot_short")
+        st.plotly_chart(fig, use_container_width=True,
+                        config={'displayModeBar': False},
+                        key="rectangles_plot_short")
