@@ -1,6 +1,7 @@
+import math
+
 import plotly.graph_objects as go
 import streamlit as st
-import math
 
 # --------------------------------------------------
 # SANN ISOMETRISKA AXLAR (120 grader mellan alla axlar)
@@ -9,81 +10,97 @@ VX = (-math.cos(math.radians(30)), math.sin(math.radians(30)))  # ca (-0.866, 0.
 VY = (math.cos(math.radians(30)), math.sin(math.radians(30)))   # ca (0.866, 0.5)
 VZ = (0.0, -1.0)                                                # Rakt ner
 
+LINE_COLOR = "#FFFFFF"
+FILL_COLOR = "#0041BA"
+SHADE_COLOR = "#003699"
+BG_COLOR = "#0041BA"
+
+
 def iso_point(px, py, pz):
     return (
         px * VX[0] + py * VY[0] + pz * VZ[0],
         px * VX[1] + py * VY[1] + pz * VZ[1]
     )
 
-# --------------------------------------------------
-# HJÄLP (Rita en solid yta i en gemensam figur)
-# --------------------------------------------------
-def add_face(fig, corners, line_color, fill_color):
-    xs = [p[0] for p in corners]
-    ys = [p[1] for p in corners]
-
-    xs.append(corners[0][0])
-    ys.append(corners[0][1])
-
-    fig.add_trace(
-        go.Scatter(
-            x=xs, y=ys,
-            mode="lines",
-            fill="toself",
-            fillcolor=fill_color,
-            line=dict(color=line_color, width=0.8),
-            hoverinfo="skip", showlegend=False
-        )
-    )
 
 # --------------------------------------------------
-# GENERELLT BLOCK (Rita solida rätblock)
+# GEOMETRI (ritas senare; här räknas bara hörnen ut)
 # --------------------------------------------------
-def draw_block(fig, block_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=0.0, dy=0.0):
-    x_size = block_lengths[a]
-    y_size = block_lengths[b]
-    z_size = block_lengths[z_power]
+def block_faces(lengths, a, b, z_power, offset_x, offset_y, offset_z):
+    """De tre synliga ytorna i ett rätblock, som (hörn, fyllnadsfärg)."""
+    x_size = lengths[a]
+    y_size = lengths[b]
+    z_size = lengths[z_power]
 
     xy = [
-        (p[0] + dx, p[1] + dy) for p in [
-            iso_point(offset_x, offset_y, offset_z),
-            iso_point(offset_x + x_size, offset_y, offset_z),
-            iso_point(offset_x + x_size, offset_y + y_size, offset_z),
-            iso_point(offset_x, offset_y + y_size, offset_z)
-        ]
+        iso_point(offset_x, offset_y, offset_z),
+        iso_point(offset_x + x_size, offset_y, offset_z),
+        iso_point(offset_x + x_size, offset_y + y_size, offset_z),
+        iso_point(offset_x, offset_y + y_size, offset_z),
     ]
     yz = [
-        (p[0] + dx, p[1] + dy) for p in [
-            iso_point(offset_x, offset_y, offset_z),
-            iso_point(offset_x, offset_y + y_size, offset_z),
-            iso_point(offset_x, offset_y + y_size, offset_z + z_size),
-            iso_point(offset_x, offset_y, offset_z + z_size)
-        ]
+        iso_point(offset_x, offset_y, offset_z),
+        iso_point(offset_x, offset_y + y_size, offset_z),
+        iso_point(offset_x, offset_y + y_size, offset_z + z_size),
+        iso_point(offset_x, offset_y, offset_z + z_size),
     ]
     xz = [
-        (p[0] + dx, p[1] + dy) for p in [
-            iso_point(offset_x, offset_y, offset_z),
-            iso_point(offset_x + x_size, offset_y, offset_z),
-            iso_point(offset_x + x_size, offset_y, offset_z + z_size),
-            iso_point(offset_x, offset_y, offset_z + z_size)
-        ]
+        iso_point(offset_x, offset_y, offset_z),
+        iso_point(offset_x + x_size, offset_y, offset_z),
+        iso_point(offset_x + x_size, offset_y, offset_z + z_size),
+        iso_point(offset_x, offset_y, offset_z + z_size),
     ]
+    return [(xy, FILL_COLOR), (yz, SHADE_COLOR), (xz, FILL_COLOR)]
 
-    add_face(fig, xy, line_color, fill_color)
-    add_face(fig, yz, line_color, "#003699")
-    add_face(fig, xz, line_color, fill_color)
+
+def pyramid_faces(n, lengths, z_gap, x_gap, dx=0.0, dy=0.0):
+    """Alla ytor i pyramiden i ritordning (bakre först), förskjutna med (dx, dy)."""
+    faces = []
+    for z_power in range(n - 1, 1, -1):
+        offset_z = sum(lengths[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
+        for b in range(1, z_power):
+            offset_y = -sum(lengths[p] for p in range(1, b + 1))
+            for a in range(0, b):
+                offset_x = -sum(lengths[p] for p in range(a + 1)) - a * x_gap
+                for corners, fill in block_faces(
+                    lengths, a, b, z_power, offset_x, offset_y, offset_z
+                ):
+                    faces.append(([(px + dx, py + dy) for px, py in corners], fill))
+    return faces
+
+
+def fix_point(lengths, z_power, b, a, z_gap, x_gap):
+    """Hörnpunkt som pyramiderna linjeras upp efter (i höjdled)."""
+    fz = sum(lengths[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
+    fy = -sum(lengths[p] for p in range(1, b + 1))
+    fx = -sum(lengths[p] for p in range(a + 1)) - a * x_gap
+    return iso_point(fx, fy, fz)
+
+
+def bounding_box(faces):
+    xs = [p[0] for corners, _ in faces for p in corners]
+    ys = [p[1] for corners, _ in faces for p in corners]
+    return min(xs), max(xs), min(ys), max(ys)
+
+
+def face_xy(corners):
+    xs = [p[0] for p in corners] + [corners[0][0]]
+    ys = [p[1] for p in corners] + [corners[0][1]]
+    return xs, ys
+
 
 # --------------------------------------------------
 # RENDER
 # --------------------------------------------------
 def render(math_data, z_gap=0.0, x_gap=0.0):
     n = math_data["n"]
+    if n < 3:
+        st.info("3-faces need at least n = 3 dimensions.")
+        return
+
     lengths1 = math_data["lengths1_numeric"]
     lengths2 = math_data["lengths2_numeric"]
-
-    line_color = "#FFFFFF"
-    fill_color = "#0041BA"
-    bg_color = "#0041BA" 
+    x_numeric = math_data["x_numeric"]
 
     # 1. LAYOUT MED TVÅ KOLUMNER (80% för diagrammet, 20% för reglage till höger)
     col_plot, col_controls = st.columns([8, 2])
@@ -91,95 +108,90 @@ def render(math_data, z_gap=0.0, x_gap=0.0):
     with col_controls:
         rotate = st.checkbox("Rearrange fig. 2", value=False, key="pyramid_rotate")
 
-    # 2. SKAPA EN ENSTAKA GEMENSAM FIGUR FÖR BÅDA PYRAMIDERNA
+    # 2. LÄNGDER FÖR FIGUR 2 (med och utan omordning)
+    def lengths_for_fig2(rearranged):
+        chosen = {}
+        for i in range(n + 5):
+            if rearranged:
+                if i == n - 1:
+                    chosen[i] = lengths2[0]
+                else:
+                    chosen[i] = lengths1[i + 1] if (i + 1) < len(lengths1) else x_numeric ** (i + 1)
+            else:
+                chosen[i] = lengths2[i] if i < len(lengths2) else x_numeric ** i
+        return chosen
+
+    # 3. FIGUR 1 OCH FIGUR 2. Figur 2 flyttas i höjdled så att ett hörn hamnar på samma
+    #    höjd som motsvarande hörn i figur 1, och i sidled så att det blir ett litet
+    #    mellanrum mellan pyramiderna.
+    faces1 = pyramid_faces(n, lengths1, z_gap, x_gap)
+    box1 = bounding_box(faces1)
+    f1_fix = fix_point(lengths1, n - 1, n - 2, n - 3, z_gap, x_gap)
+
+    variants = {}
+    for rearranged in (False, True):
+        chosen = lengths_for_fig2(rearranged)
+        if not rearranged:
+            z, b, a = n - 1, n - 2, n - 3
+        else:
+            z, b, a = n - 2, n - 3, n - 4
+        z, b, a = max(2, z), max(1, b), max(0, a)
+        f2_fix = fix_point(chosen, z, b, a, z_gap, x_gap)
+        dy = f1_fix[1] - f2_fix[1]
+        variants[rearranged] = (chosen, dy, bounding_box(pyramid_faces(n, chosen, z_gap, x_gap, 0.0, dy)))
+
+    widest = max(
+        [box1[1] - box1[0]] + [v[2][1] - v[2][0] for v in variants.values()]
+    )
+    spacing = 0.1 * widest
+
+    # Pyramid 2 placeras med vänsterkanten en bit till höger om pyramid 1
+    placed = {}
+    for rearranged, (chosen, dy, box0) in variants.items():
+        dx = box1[1] + spacing - box0[0]
+        faces = pyramid_faces(n, chosen, z_gap, x_gap, dx, dy)
+        placed[rearranged] = (faces, bounding_box(faces))
+
+    # 4. AXELGRÄNSER: räknas ut från alla hörn i figur 1 och figur 2 i BÅDA lägena, så att
+    #    inget hamnar utanför, och så att figur 1 ligger still när man växlar Rearrange.
+    boxes = [box1] + [box for _, box in placed.values()]
+    x_min = min(b[0] for b in boxes)
+    x_max = max(b[1] for b in boxes)
+    y_min = min(b[2] for b in boxes)
+    y_max = max(b[3] for b in boxes)
+    pad = 0.04 * max(x_max - x_min, y_max - y_min)
+    x_range = [x_min - pad, x_max + pad]
+    y_range = [y_min - pad, y_max + pad]
+
+    # 5. RITA
     fig = go.Figure()
-
-    # RITA PYRAMID 1
-    for z_power in range(n - 1, 1, -1):
-        offset_z = sum(lengths1[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
-        for b in range(1, z_power):
-            offset_y = -sum(lengths1[p] for p in range(1, b + 1))
-            for a in range(0, b):
-                offset_x = -sum(lengths1[p] for p in range(a + 1)) - a * x_gap
-                draw_block(fig, lengths1, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color)
-
-    # 3. BERÄKNA GEOMETRISK PLACERING AV PYRAMID 2
-    v_modified_value = lengths2[0]
-
-    chosen_lengths = {}
-    if rotate:
-        for i in range(n + 5):
-            if i == n - 1:
-                chosen_lengths[i] = v_modified_value
-            else:
-                chosen_lengths[i] = lengths1[i + 1] if (i + 1) < len(lengths1) else (math_data["x_numeric"] ** (i + 1))
-    else:
-        for i in range(n + 5):
-            if i < len(lengths2):
-                chosen_lengths[i] = lengths2[i]
-            else:
-                chosen_lengths[i] = math_data["x_numeric"] ** i
-
-    f1_z_power = n - 1
-    f1_b = n - 2
-    f1_a = n - 3
-
-    f1_fix_z = sum(lengths1[p] for p in range(2, f1_z_power)) + (f1_z_power - 2) * z_gap
-    f1_fix_y = -sum(lengths1[p] for p in range(1, f1_b + 1))
-    f1_fix_x = -sum(lengths1[p] for p in range(f1_a + 1)) - f1_a * x_gap
-    f1_fix_pt = iso_point(f1_fix_x, f1_fix_y, f1_fix_z)
-
-    if not rotate:
-        f2_z_power = n - 1
-        f2_b = n - 2
-        f2_a = n - 3
-    else:
-        f2_z_power = n - 2  
-        f2_b = n - 3
-        f2_a = n - 4
-
-    f2_z_power = max(2, f2_z_power)
-    f2_b = max(1, f2_b)
-    f2_a = max(0, f2_a)
-
-    f2_fix_z = sum(chosen_lengths[p] for p in range(2, f2_z_power)) + (f2_z_power - 2) * z_gap
-    f2_fix_y = -sum(chosen_lengths[p] for p in range(1, f2_b + 1))
-    f2_fix_x = -sum(chosen_lengths[p] for p in range(f2_a + 1)) - f2_a * x_gap
-    f2_fix_pt = iso_point(f2_fix_x, f2_fix_y, f2_fix_z)
-
-    # Här lägger vi till en extra separation i X-led (t.ex. max_span) 
-    # så att Pyramid 2 ritas till höger om Pyramid 1 i samma koordinatsystem
-    max_span = sum(lengths1[p] for p in range(1, len(lengths1))) * 1.5
-    gap_between_pyramids = max_span * 1.5
-
-    dx = f1_fix_pt[0] - f2_fix_pt[0] + gap_between_pyramids
-    dy = f1_fix_pt[1] - f2_fix_pt[1]
-
-    # RITA PYRAMID 2 (i samma fig-objekt)
-    for z_power in range(n - 1, 1, -1):
-        offset_z = sum(chosen_lengths[p] for p in range(2, z_power)) + (z_power - 2) * z_gap
-        for b in range(1, z_power):
-            offset_y = -sum(chosen_lengths[p] for p in range(1, b + 1))
-            for a in range(0, b):
-                offset_x = -sum(chosen_lengths[p] for p in range(a + 1)) - a * x_gap
-                draw_block(fig, chosen_lengths, a, b, z_power, offset_x, offset_y, offset_z, line_color, fill_color, dx=dx, dy=dy)
-    
-    # 4. SKALA OCH ANPASSNING AV DEN GEMENSAMMA PROJEKTIONEN
-    # Vi expanderar X-axeln så att den täcker in båda pyramiderna bredvid varandra
-    fixed_range_x = [-max_span, max_span / 2 + gap_between_pyramids]
-    fixed_range_y = [-max_span, max_span / 2]
+    for faces in (faces1, placed[rotate][0]):
+        for corners, fill in faces:
+            xs, ys = face_xy(corners)
+            fig.add_trace(
+                go.Scatter(
+                    x=xs, y=ys,
+                    mode="lines",
+                    fill="toself",
+                    fillcolor=fill,
+                    line=dict(color=LINE_COLOR, width=0.8),
+                    hoverinfo="skip", showlegend=False
+                )
+            )
 
     fig.update_layout(
-        height=290,  # Matchar höjden på ditt andra rektangel-diagram!
-        plot_bgcolor=bg_color,
-        paper_bgcolor=bg_color,
+        height=290,  # Matchar höjden på de andra diagrammen
+        plot_bgcolor=BG_COLOR,
+        paper_bgcolor=BG_COLOR,
         showlegend=False,
         dragmode=False,
         margin=dict(l=10, r=10, t=10, b=10),
-        xaxis=dict(visible=False, range=fixed_range_x, fixedrange=True),
-        yaxis=dict(visible=False, scaleanchor="x", scaleratio=1, range=fixed_range_y, fixedrange=True)
+        xaxis=dict(visible=False, range=x_range, fixedrange=True, constrain="domain"),
+        yaxis=dict(visible=False, scaleanchor="x", scaleratio=1,
+                   range=y_range, fixedrange=True, constrain="domain"),
     )
 
-    # 5. RENDERAS I EN GEMENSAM BEHÅLLARE
     with col_plot:
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'scrollZoom': False}, key="pyramid_combined_plot")
+        st.plotly_chart(fig, use_container_width=True,
+                        config={'displayModeBar': False, 'scrollZoom': False},
+                        key="pyramid_combined_plot")
