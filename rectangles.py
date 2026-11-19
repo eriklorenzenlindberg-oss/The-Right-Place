@@ -48,6 +48,9 @@ def render(math_data):
     dashed_line_width = 0.5        # Tunn linje
     dashed_pattern = "3px,3px"     # Streck och mellanrum, kommaseparerat (t.ex. "5px,3px")
     
+    # --- SKRAFFERING FÖR GNOMON (samma för rektanglar och kvadrat) ---
+    hatch = dict(shape="/", size=6, solidity=0.35, fgcolor="#FFFFFF")  # 45 graders linjer
+    
     # --- PANEL-LAYOUT (Exakt som i iso.py) ---
     col_plot, col_controls = st.columns([8, 2])
     
@@ -202,12 +205,13 @@ def render(math_data):
         # --------------------------------------------------
         # TRACES & LAYOUT (Matchad höjd och hastighet med iso)
         # --------------------------------------------------
-        # Gnomon: markerade rektanglar (ljus fyllning) och den tänkta kvadraten
-        # (45-graders skraffering, utan kontur). Ritas före linjerna så att konturerna ligger överst.
+        # Gnomon: markerade rektanglar och den tänkta kvadraten får exakt samma skraffering
+        # (kvadraten utan kontur). Ritas före linjerna så att konturerna ligger överst.
         if x_marked:
             fig.add_trace(go.Scatter(
                 x=x_marked, y=y_marked, mode="none", fill="toself",
-                fillcolor="rgba(255,255,255,0.3)", hoverinfo="skip", showlegend=False
+                fillcolor="rgba(0,0,0,0)", fillpattern=hatch,
+                hoverinfo="skip", showlegend=False
             ))
         if gnomon and gnomon_m is not None and gnomon_m in col_starts:
             sx = col_starts[gnomon_m]
@@ -217,7 +221,7 @@ def render(math_data):
                 x=[sx, sx + side, sx + side, sx, sx],
                 y=[sy, sy, sy + side, sy + side, sy],
                 mode="none", fill="toself", fillcolor="rgba(0,0,0,0)",
-                fillpattern=dict(shape="/", size=6, solidity=0.35, fgcolor="#FFFFFF"),
+                fillpattern=hatch,
                 hoverinfo="skip", showlegend=False
             ))
 
