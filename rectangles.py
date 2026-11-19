@@ -1,11 +1,33 @@
 import plotly.graph_objects as go
 import streamlit as st
+import sympy as sp
+
+X = sp.Symbol("x")
 
 def get_math_label(power):
     if power == 0: return "1"
     if power == 1: return "x"
     superscripts = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}
     return f"x{''.join(superscripts.get(c, c) for c in str(power))}"
+
+def gnomon_exponent(math_data):
+    """
+    Returnerar m (1 <= m < n) om v exakt är x^m, annars None.
+    Kontrollen är exakt: v - x^m ska vara delbart med minimalpolynomet.
+    """
+    n = math_data["n"]
+    v = math_data.get("v_exact")
+    if v is None or math_data["x_numeric"] <= 1.0:
+        return None
+    try:
+        minimal_poly = sp.expand(math_data["minimal_poly"])
+        for m in range(1, n):
+            if sp.rem(sp.expand(v - X ** m), minimal_poly, X) == 0:
+                return m
+    except Exception:
+        pass
+    return None
+
 
 def render(math_data):
     n = math_data["n"]
@@ -16,6 +38,7 @@ def render(math_data):
     
     # Plockar ut det numeriska v på ett säkert sätt via index 0
     v_num = lengths2[0] - powers[0]
+    gnomon_m = gnomon_exponent(math_data)
     
     line_color = "#FFFFFF"
     bg_color = "rgba(0,0,0,0)"
@@ -31,11 +54,18 @@ def render(math_data):
     with col_controls:
         # Sätter en unik nyckel så den inte krockar med iso
         rotate = st.checkbox("Rearrange fig. 2", value=False, key="rectangles_rotate")
+        gnomon = st.checkbox("Gnomon", value=False, key="rectangles_gnomon")
+        if gnomon and gnomon_m is None:
+            st.caption("No gnomon: v is not a power x^m with 1 ≤ m < n.")
     
     with col_plot:
         fig = go.Figure()
         x_lines, y_lines = [], []
         x_texts, y_texts, text_labels, text_positions = [], [], [], []
+        
+        # Rektanglar i figur 2 som har samma form som extrarektanglarna (gnomon)
+        x_marked, y_marked = [], []
+        col_starts = {}  # x-läge där varje kolumn i figur 2 börjar
         
         # Separata listor för de streckade linjerna i Fig 2
         x_dashed, y_dashed = [], []
@@ -72,6 +102,8 @@ def render(math_data):
 
             # 2. Rektanglar och bredd-texter
             for col in range(n - 1):
+                if fig_idx == 1:
+                    col_starts[col] = x_offset
                 # --- Generera den streckade kolumnen 1 i Figur 2 ---
                 if fig_idx == 1 and col == 0:
                     dash_col_width = unit 
@@ -129,8 +161,16 @@ def render(math_data):
                     x1, y1 = x0 + width, y0 + powers[power]
                     x_lines.extend([x0, x1, x1, x0, x0, None])
                     y_lines.extend([y0, y0, y1, y1, y0, None])
+                    # Sidorna x^col och x^power: formen {x^m, x^p} om en av dem är x^m
+                    if (gnomon and gnomon_m is not None and fig_idx == 1 and col >= 1
+                            and (col == gnomon_m or power == gnomon_m)):
+                        x_marked.extend([x0, x1, x1, x0, x0, None])
+                        y_marked.extend([y0, y0, y1, y1, y0, None])
                     y_offset += powers[power]
                 x_offset += width
+
+            if fig_idx == 1:
+                col_starts[n - 1] = x_offset
 
             if fig_idx == 0:
                 x_max_fig1 = x_offset 
@@ -162,6 +202,25 @@ def render(math_data):
         # --------------------------------------------------
         # TRACES & LAYOUT (Matchad höjd och hastighet med iso)
         # --------------------------------------------------
+        # Gnomon: markerade rektanglar (ljus fyllning) och den tänkta kvadraten
+        # (45-graders skraffering, utan kontur). Ritas före linjerna så att konturerna ligger överst.
+        if x_marked:
+            fig.add_trace(go.Scatter(
+                x=x_marked, y=y_marked, mode="none", fill="toself",
+                fillcolor="rgba(255,255,255,0.3)", hoverinfo="skip", showlegend=False
+            ))
+        if gnomon and gnomon_m is not None and gnomon_m in col_starts:
+            sx = col_starts[gnomon_m]
+            sy = sum(powers[q] for q in range(gnomon_m + 1, n))
+            side = powers[gnomon_m]
+            fig.add_trace(go.Scatter(
+                x=[sx, sx + side, sx + side, sx, sx],
+                y=[sy, sy, sy + side, sy + side, sy],
+                mode="none", fill="toself", fillcolor="rgba(0,0,0,0)",
+                fillpattern=dict(shape="/", size=6, solidity=0.35, fgcolor="#FFFFFF"),
+                hoverinfo="skip", showlegend=False
+            ))
+
         # Huvudlinjer (Solida)
         fig.add_trace(go.Scatter(x=x_lines, y=y_lines, mode="lines", line=dict(color=line_color, width=1.0), hoverinfo="skip", showlegend=False))
         
