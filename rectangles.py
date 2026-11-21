@@ -123,6 +123,10 @@ def render(math_data):
         # Separata listor för de streckade linjerna i Fig 2
         x_dashed, y_dashed = [], []
         
+        # Med Rearrange ritas den streckade kolumnen som en rad längst ner (om v > 0):
+        # raderna blir uppifrån och ner x^2, ..., x^(n-1), 1, v.
+        row_layout = rotate and v_num > 0
+        
         unit = powers[0]  # Detta är alltid 1.0
         left_col_width = unit + v_num  
         gap = unit * 5.0
@@ -159,6 +163,10 @@ def render(math_data):
                     col_starts[col] = x_offset
                 # --- Generera den streckade kolumnen 1 i Figur 2 ---
                 if fig_idx == 1 and col == 0:
+                    if row_layout:
+                        # Den streckade kolumnen ritas som en rad längst ner (se "Vid rotation")
+                        x_offset += left_col_width
+                        continue
                     dash_col_width = unit 
                     x_dl = x_start + v_num
                     x_dr = x_dl + dash_col_width
@@ -239,10 +247,17 @@ def render(math_data):
             if fig_idx == 1 and rotate:
                 y_bottom = -left_col_width
                 
-                x_texts.append(x_label_pos - (unit * 0.3))
-                y_texts.append(y_bottom + (left_col_width / 2))
-                text_labels.append("1+v")
-                text_positions.append("middle left")
+                if row_layout:
+                    # Raden (1+v) delas i raden 1 (överst, streckad) och raden v (under)
+                    x_texts.extend([x_label_pos - (unit * 0.3)] * 2)
+                    y_texts.extend([-unit / 2, -unit - v_num / 2])
+                    text_labels.extend(["1", "v"])
+                    text_positions.extend(["middle left"] * 2)
+                else:
+                    x_texts.append(x_label_pos - (unit * 0.3))
+                    y_texts.append(y_bottom + (left_col_width / 2))
+                    text_labels.append("1+v")
+                    text_positions.append("middle left")
                 
                 x_row_offset = x_start + left_col_width
                 for col in range(1, n):
@@ -251,6 +266,12 @@ def render(math_data):
                     x_lines.extend([x0, x1, x1, x0, x0, None])
                     y_lines.extend([y0, y0, y1, y1, y0, None])
                     prop_rects.append((1, x0, y0, x1, y1, col, j_sum))
+                    if row_layout:
+                        # Streckad kontur runt cellerna i raden 1 (höjd 1, närmast rutnätet)
+                        x_dashed.extend([x0, x1, x1, x0, x0, None])
+                        y_dashed.extend([-unit, -unit, 0.0, 0.0, -unit, None])
+                        prop_rects.append((1, x0, -unit, x1, 0.0, col, 0))        # raden 1: x^col × 1
+                        prop_rects.append((1, x0, y_bottom, x1, -unit, col, j_v))  # raden v: x^col × v
                     
                     x_texts.append(x_row_offset + (powers[col]/2))
                     y_texts.append(y_bottom - (unit * 0.3))
