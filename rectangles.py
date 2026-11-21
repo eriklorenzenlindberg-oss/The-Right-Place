@@ -1,3 +1,5 @@
+import math
+
 import plotly.graph_objects as go
 import streamlit as st
 import sympy as sp
@@ -9,6 +11,27 @@ def get_math_label(power):
     if power == 1: return "x"
     superscripts = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}
     return f"x{''.join(superscripts.get(c, c) for c in str(power))}"
+
+def exact_power_exponent(expr, numeric_value, math_data):
+    """
+    Returnerar j (heltal >= 0) om expr exakt är x^j, annars None.
+    Kontrollen är exakt (delbarhet med minimalpolynomet). Det numeriska värdet
+    används bara för att välja vilket j som ska kontrolleras.
+    """
+    x = math_data["x_numeric"]
+    if expr is None or x <= 1.0 or numeric_value <= 0:
+        return None
+    j = round(math.log(numeric_value) / math.log(x))
+    if j < 0 or j > 200:
+        return None
+    try:
+        minimal_poly = sp.expand(math_data["minimal_poly"])
+        if sp.rem(sp.expand(expr - X ** j), minimal_poly, X) == 0:
+            return j
+    except Exception:
+        pass
+    return None
+
 
 def gnomon_exponent(math_data):
     """
@@ -39,6 +62,14 @@ def render(math_data):
     # Plockar ut det numeriska v på ett säkert sätt via index 0
     v_num = lengths2[0] - powers[0]
     gnomon_m = gnomon_exponent(math_data)
+
+    # Exponenter för kolumnerna i figur 2: v = x^j_v och 1 + v = x^j_sum (annars None).
+    # Behövs för att veta vilka proportioner kolumnerna har.
+    v_exact = math_data.get("v_exact")
+    j_v = exact_power_exponent(v_exact, v_num, math_data) if v_num > 0 else None
+    j_sum = exact_power_exponent(
+        None if v_exact is None else 1 + v_exact, lengths2[0], math_data
+    )
     
     line_color = "#FFFFFF"
     bg_color = "rgba(0,0,0,0)"
@@ -60,11 +91,25 @@ def render(math_data):
         gnomon = st.checkbox("Gnomon", value=False, key="rectangles_gnomon")
         if gnomon and gnomon_m is None:
             st.caption("No gnomon: v is not a power x^m with 1 ≤ m < n.")
+
+        proportions = st.checkbox("Proportions", value=False, key="rectangles_proportions")
+        prop_d = None
+        if proportions:
+            prop_d = st.selectbox(
+                "Proportion:",
+                options=list(range(1, n)),
+                format_func=lambda d: f"1 : {get_math_label(d)}",
+                key=f"rectangles_proportion_{n}",
+            )
     
     with col_plot:
         fig = go.Figure()
         x_lines, y_lines = [], []
         x_texts, y_texts, text_labels, text_positions = [], [], [], []
+        
+        # Alla rektanglar med sidornas exponenter: (figur, x0, y0, x1, y1, exp bredd, exp höjd).
+        # Används för att markera en proportion med diagonaler.
+        prop_rects = []
         
         # Rektanglar i figur 2 som har samma form som extrarektanglarna (gnomon)
         x_marked, y_marked = [], []
@@ -131,10 +176,15 @@ def render(math_data):
                     y_dashed.extend([y_dash_offset, y_dash_offset, None])
                     
                     for power in range(n - 1, 0, -1):
+                        y_before = y_dash_offset
                         y_dash_offset += powers[power]
                         # Mellanväggar och topplinje
                         x_dashed.extend([x_dl, x_dr, None])
                         y_dashed.extend([y_dash_offset, y_dash_offset, None])
+                        # Kolumn 1 (bredd 1) och, utan Rearrange, kolumn v (bredd v)
+                        prop_rects.append((1, x_dl, y_before, x_dr, y_dash_offset, 0, power))
+                        if not rotate and v_num > 0:
+                            prop_rects.append((1, x_start, y_before, x_start + v_num, y_dash_offset, j_v, power))
                     
                     if rotate:
                         x_offset += left_col_width
@@ -164,6 +214,8 @@ def render(math_data):
                     x1, y1 = x0 + width, y0 + powers[power]
                     x_lines.extend([x0, x1, x1, x0, x0, None])
                     y_lines.extend([y0, y0, y1, y1, y0, None])
+                    prop_rects.append((fig_idx, x0, y0, x1, y1,
+                                       j_sum if (fig_idx == 1 and col == 0) else col, power))
                     # Sidorna x^col och x^power: formen {x^m, x^p} om en av dem är x^m
                     if (gnomon and gnomon_m is not None and fig_idx == 1 and col >= 1
                             and (col == gnomon_m or power == gnomon_m)):
@@ -193,6 +245,7 @@ def render(math_data):
                     x1, y1 = x0 + powers[col], 0
                     x_lines.extend([x0, x1, x1, x0, x0, None])
                     y_lines.extend([y0, y0, y1, y1, y0, None])
+                    prop_rects.append((1, x0, y0, x1, y1, col, j_sum))
                     
                     x_texts.append(x_row_offset + (powers[col]/2))
                     y_texts.append(y_bottom - (unit * 0.3))
@@ -227,6 +280,25 @@ def render(math_data):
 
         # Huvudlinjer (Solida)
         fig.add_trace(go.Scatter(x=x_lines, y=y_lines, mode="lines", line=dict(color=line_color, width=1.0), hoverinfo="skip", showlegend=False))
+        
+        # Proportion: en diagonal i varje rektangel med den valda proportionen 1 : x^d.
+        # Stående rektanglar: från övre vänstra hörnet. Liggande: från nedre vänstra hörnet.
+        if prop_d is not None:
+            x_diag, y_diag = [], []
+            for _, x0, y0, x1, y1, w_exp, h_exp in prop_rects:
+                if w_exp is None or h_exp is None or abs(h_exp - w_exp) != prop_d:
+                    continue
+                x_diag.extend([x0, x1, None])
+                if h_exp > w_exp:   # stående
+                    y_diag.extend([y1, y0, None])
+                else:               # liggande
+                    y_diag.extend([y0, y1, None])
+            if x_diag:
+                fig.add_trace(go.Scatter(
+                    x=x_diag, y=y_diag, mode="lines",
+                    line=dict(color=line_color, width=1.0),
+                    hoverinfo="skip", showlegend=False
+                ))
         
         # Den streckade kolumnen som ett eget lager
         if x_dashed:
