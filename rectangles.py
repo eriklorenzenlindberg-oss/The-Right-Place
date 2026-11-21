@@ -322,7 +322,7 @@ def render(math_data):
             if x_diag:
                 fig.add_trace(go.Scatter(
                     x=x_diag, y=y_diag, mode="lines",
-                    line=dict(color=line_color, width=1.0),
+                    line=dict(color=line_color, width=0.5),
                     hoverinfo="skip", showlegend=False
                 ))
         
