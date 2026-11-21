@@ -14,19 +14,24 @@ def get_math_label(power):
 
 def exact_power_exponent(expr, numeric_value, math_data):
     """
-    Returnerar j (heltal >= 0) om expr exakt är x^j, annars None.
+    Returnerar j (heltal, kan vara negativt) om expr exakt är x^j, annars None.
     Kontrollen är exakt (delbarhet med minimalpolynomet). Det numeriska värdet
     används bara för att välja vilket j som ska kontrolleras.
+    Negativa j behövs när v < 1, t.ex. v = 1/x.
     """
     x = math_data["x_numeric"]
     if expr is None or x <= 1.0 or numeric_value <= 0:
         return None
     j = round(math.log(numeric_value) / math.log(x))
-    if j < 0 or j > 200:
+    if abs(j) > 200:
         return None
     try:
         minimal_poly = sp.expand(math_data["minimal_poly"])
-        if sp.rem(sp.expand(expr - X ** j), minimal_poly, X) == 0:
+        # expr = x^j  <=>  expr - x^j = 0  (för j < 0: expr * x^(-j) - 1 = 0)
+        diff = expr - X ** j if j >= 0 else expr * X ** (-j) - 1
+        # Uttryck som 1 + 1/x är bråk: x är inte noll, så täljaren avgör
+        numerator, _ = sp.fraction(sp.together(sp.expand(diff)))
+        if sp.rem(sp.expand(numerator), minimal_poly, X) == 0:
             return j
     except Exception:
         pass
