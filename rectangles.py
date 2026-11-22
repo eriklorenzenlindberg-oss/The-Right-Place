@@ -38,6 +38,21 @@ def exact_power_exponent(expr, numeric_value, math_data):
     return None
 
 
+def v_is_zero(math_data, v_num):
+    """True om v exakt är 0 (t.ex. v = 0 eller v = x^2 - x - 1 när x^2 = x + 1)."""
+    if abs(v_num) > 1e-12:
+        return False
+    v = math_data.get("v_exact")
+    if v is None:
+        return True
+    try:
+        numerator, _ = sp.fraction(sp.together(sp.expand(v)))
+        minimal_poly = sp.expand(math_data["minimal_poly"])
+        return sp.rem(sp.expand(numerator), minimal_poly, X) == 0
+    except Exception:
+        return False
+
+
 def gnomon_exponent(math_data):
     """
     Returnerar m (1 <= m < n) om v exakt är x^m, annars None.
@@ -67,6 +82,7 @@ def render(math_data):
     # Plockar ut det numeriska v på ett säkert sätt via index 0
     v_num = lengths2[0] - powers[0]
     gnomon_m = gnomon_exponent(math_data)
+    v_zero = v_is_zero(math_data, v_num)  # v = 0: ingen streckad linje och ingen "+v"
 
     # Exponenter för kolumnerna i figur 2: v = x^j_v och 1 + v = x^j_sum (annars None).
     # Behövs för att veta vilka proportioner kolumnerna har.
@@ -167,6 +183,7 @@ def render(math_data):
                         # Den streckade kolumnen ritas som en rad längst ner (se "Vid rotation")
                         x_offset += left_col_width
                         continue
+                    n_dash_before, n_rect_before = len(x_dashed), len(prop_rects)
                     dash_col_width = unit 
                     x_dl = x_start + v_num
                     x_dr = x_dl + dash_col_width
@@ -199,6 +216,12 @@ def render(math_data):
                         if not rotate and v_num > 0:
                             prop_rects.append((1, x_start, y_before, x_start + v_num, y_dash_offset, j_v, power))
                     
+                    if v_zero:
+                        # v = 0: ingen streckad kolumn (den skulle bara ligga ovanpå kolumnen)
+                        del x_dashed[n_dash_before:]
+                        del y_dashed[n_dash_before:]
+                        del prop_rects[n_rect_before:]
+                    
                     if rotate:
                         x_offset += left_col_width
                         continue
@@ -218,7 +241,7 @@ def render(math_data):
                     else:
                         x_texts.append(x_offset + (width/2))
                         y_texts.append(-(unit * 0.3))
-                        text_labels.append("1+v" if (fig_idx == 1 and col == 0) else get_math_label(col))
+                        text_labels.append(("1" if v_zero else "1+v") if (fig_idx == 1 and col == 0) else get_math_label(col))
                         text_positions.append("bottom center")
 
                 y_offset = 0.0
@@ -256,7 +279,7 @@ def render(math_data):
                 else:
                     x_texts.append(x_label_pos - (unit * 0.3))
                     y_texts.append(y_bottom + (left_col_width / 2))
-                    text_labels.append("1+v")
+                    text_labels.append("1" if v_zero else "1+v")
                     text_positions.append("middle left")
                 
                 x_row_offset = x_start + left_col_width
@@ -322,7 +345,7 @@ def render(math_data):
             if x_diag:
                 fig.add_trace(go.Scatter(
                     x=x_diag, y=y_diag, mode="lines",
-                    line=dict(color=line_color, width=0.5),
+                    line=dict(color=line_color, width=1.0),
                     hoverinfo="skip", showlegend=False
                 ))
         
