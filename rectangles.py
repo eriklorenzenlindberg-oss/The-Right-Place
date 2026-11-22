@@ -109,9 +109,9 @@ def render(math_data):
     with col_controls:
         # Sätter en unik nyckel så den inte krockar med iso
         rotate = st.checkbox("Rearrange fig. 2", value=False, key="rectangles_rotate")
-        gnomon = st.checkbox("Gnomon", value=False, key="rectangles_gnomon")
-        if gnomon and gnomon_m is None:
-            st.caption("No gnomon: v is not a power x^m with 1 ≤ m < n.")
+        #gnomon = st.checkbox("Gnomon", value=False, key="rectangles_gnomon")
+        #if gnomon and gnomon_m is None:
+            #st.caption("No gnomon: v is not a power x^m with 1 ≤ m < n.")
 
         proportions = st.checkbox("Proportions", value=False, key="rectangles_proportions")
         prop_d = None
