@@ -12,6 +12,10 @@ X = sp.Symbol("x")
 # Högsta antal element i en kombination för att pröva alla ordningar exakt (2^m steg).
 # Längre kombinationer får en girig placering.
 DP_LIMIT = 10
+# Streckad linje för extracirklar efter ett hål i den geometriska följden
+# (tunn respektive tjock markerad linje). Kommaseparerat: streck, mellanrum.
+dashed_pattern = "3px,3px"
+dashed_pattern_thick = "6px,4px"
 # Övre gräns för antal tillstånd i sökningen efter kombinationer.
 MAX_STATES = 3000
 
@@ -205,6 +209,19 @@ def _search_combinations(start_vector, p_coeffs, x_numeric):
                         complete = False
 
     return sorted(combos, key=lambda c: (len(c), c)), complete
+
+
+def _continuous_limit(base, exponents):
+    """
+    Största K så att alla heltal från max(base) upp till K finns bland exponenterna.
+    Cirklar med exponent <= K ingår i den obrutna geometriska följd som huvudledet
+    börjar; cirklar med exponent > K ligger efter ett "hål" i följden.
+    """
+    have = set(base) | set(exponents)
+    k = max(base)
+    while k + 1 in have:
+        k += 1
+    return k
 
 
 def _best_order(combo, field, drawn):
@@ -404,6 +421,18 @@ def render(math_data):
         combos2 = [c for c in combos2 if 0 not in c]
     hidden2 = [c for c in combos2 if c != main2_equiv]
 
+    # Extracirklar som ligger efter ett hål i den geometriska följden ritas streckade
+    exps1 = {k for c in combos1 for k in c}
+    dashed_codes1 = set()
+    dashed_codes2 = set()
+    if field is not None:
+        limit1 = _continuous_limit(main1, exps1)
+        dashed_codes1 = {field.pcode(k) for k in exps1 if k > limit1}
+        if main2_equiv is not None:
+            exps2 = {k for c in combos2 for k in c}
+            limit2 = _continuous_limit(main2_equiv, exps2)
+            dashed_codes2 = {field.pcode(k) for k in exps2 if k > limit2}
+
     # --- KONTROLLER ---
     col_plot, col_controls = st.columns([8, 2])
     with col_controls:
@@ -495,46 +524,58 @@ def render(math_data):
         # Höjdjustering: cirkeln x ska ligga på samma höjd i båda figurerna
         y_offset2 = float(lengths1[0]) - x_start2
 
-        def trace_coords(layouts, x_shift, y_shift, baseline_len, with_baseline=True):
-            xs, ys, drawn = [], [], set()
+        def trace_coords(layouts, x_shift, y_shift, baseline_len, dashed_codes, with_baseline=True):
+            xs, ys, dxs, dys, drawn = [], [], [], [], set()
             for layout in layouts:
                 for key, start, diameter in layout:
                     if key in drawn:
                         continue
                     drawn.add(key)
                     cx, cy = _semicircle_xy(start, diameter, x_shift, y_shift, theta)
-                    xs.extend(list(cx) + [None])
-                    ys.extend(list(cy) + [None])
+                    if key[0] in dashed_codes:
+                        dxs.extend(list(cx) + [None])
+                        dys.extend(list(cy) + [None])
+                    else:
+                        xs.extend(list(cx) + [None])
+                        ys.extend(list(cy) + [None])
             if with_baseline:
                 xs.extend([x_shift, x_shift, None])
                 ys.extend([y_shift, y_shift + baseline_len, None])
-            return xs, ys
+            return xs, ys, dxs, dys
 
         fig = go.Figure()
 
-        # Underliggande (tunna) cirklar
-        for layouts, x_shift, y_shift, total, with_baseline in (
-            (circles1_by_layout, 0.0, 0.0, total1, True),
-            (circles2_by_layout, fig2_x_offset, y_offset2, total2, True),
+        # Underliggande (tunna) cirklar. Extracirklar efter ett hål i den geometriska
+        # följden ritas streckade.
+        for layouts, x_shift, y_shift, total, with_baseline, dashed_codes in (
+            (circles1_by_layout, 0.0, 0.0, total1, True, dashed_codes1),
+            (circles2_by_layout, fig2_x_offset, y_offset2, total2, True, dashed_codes2),
         ):
-            xs, ys = trace_coords(layouts, x_shift, y_shift, total, with_baseline)
+            xs, ys, dxs, dys = trace_coords(layouts, x_shift, y_shift, total, dashed_codes, with_baseline)
             fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines",
                                      line=dict(color=line_color, width=0.7),
                                      hoverinfo="skip", showlegend=False))
+            if dxs:
+                fig.add_trace(go.Scatter(x=dxs, y=dys, mode="lines",
+                                         line=dict(color=line_color, width=0.7, dash=dashed_pattern),
+                                         hoverinfo="skip", showlegend=False))
 
         # Tjocka linjer: bara i de figurer som är ibockade under "Highlight in"
         highlight2 = counterparts[selected_idx][0] if highlight_fig2 else None
         thick = []
         if highlight_fig1:
-            thick.append((circles1_by_layout[selected_idx], 0.0, 0.0))
+            thick.append((circles1_by_layout[selected_idx], 0.0, 0.0, dashed_codes1))
         if highlight2 is not None:
-            thick.append((highlight2, fig2_x_offset, y_offset2))
-        for circles, x_shift, y_shift in thick:
-            for _, start, diameter in circles:
+            thick.append((highlight2, fig2_x_offset, y_offset2, dashed_codes2))
+        for circles, x_shift, y_shift, dashed_codes in thick:
+            for key, start, diameter in circles:
                 cx, cy = _semicircle_xy(start, diameter, x_shift, y_shift, theta)
-                fig.add_trace(go.Scatter(x=cx, y=cy, mode="lines",
-                                         line=dict(color=line_color, width=2.5),
-                                         hoverinfo="skip", showlegend=False))
+                is_dashed = key[0] in dashed_codes
+                fig.add_trace(go.Scatter(
+                    x=cx, y=cy, mode="lines",
+                    line=dict(color=line_color, width=2.5,
+                              **({"dash": dashed_pattern_thick} if is_dashed else {})),
+                    hoverinfo="skip", showlegend=False))
 
         # --- GEMENSAM SKALNING ---
         # Gränserna räknas ut för båda lägena av figur 2 (med och utan "Rearrange"),
