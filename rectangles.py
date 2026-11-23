@@ -103,15 +103,21 @@ def render(math_data):
     # --- SKRAFFERING FÖR GNOMON (samma för rektanglar och kvadrat) ---
     hatch = dict(shape="/", size=6, solidity=0.35, fgcolor="#FFFFFF")  # 45 graders linjer
     
+    # --- DIAGONALER FÖR PROPORTIONER ---
+    diagonal_line_width = 0.5      # Tunn linje (konturerna är 1.0)
+    
     # --- PANEL-LAYOUT (Exakt som i iso.py) ---
     col_plot, col_controls = st.columns([8, 2])
     
     with col_controls:
         # Sätter en unik nyckel så den inte krockar med iso
         rotate = st.checkbox("Rearrange fig. 2", value=False, key="rectangles_rotate")
-        gnomon = st.checkbox("Gnomon", value=False, key="rectangles_gnomon")
-        if gnomon and gnomon_m is None:
-            st.caption("No gnomon: v is not a power x^m with 1 ≤ m < n.")
+        # Gnomon är tillfälligt avstängd. För att slå på den igen: ta bort # på de tre
+        # raderna nedan och radera raden "gnomon = False".
+        # gnomon = st.checkbox("Gnomon", value=False, key="rectangles_gnomon")
+        # if gnomon and gnomon_m is None:
+        #     st.caption("No gnomon: v is not a power x^m with 1 ≤ m < n.")
+        gnomon = False
 
         proportions = st.checkbox("Proportions", value=False, key="rectangles_proportions")
         prop_d = None
@@ -345,7 +351,7 @@ def render(math_data):
             if x_diag:
                 fig.add_trace(go.Scatter(
                     x=x_diag, y=y_diag, mode="lines",
-                    line=dict(color=line_color, width=1.0),
+                    line=dict(color=line_color, width=diagonal_line_width),
                     hoverinfo="skip", showlegend=False
                 ))
         
